@@ -1,0 +1,140 @@
+
+<%- include("../../views/partials/user/header/") %>
+
+
+
+
+
+
+
+
+<body>
+
+	
+	
+
+	
+	<section class="banner-area organic-breadcrumb">
+		<div class="container">
+			<div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+				<div class="col-first">
+					<h1>Login/Register</h1>
+					<nav class="d-flex align-items-center">
+						<a href="/">Home<span class="lnr lnr-arrow-right"></span></a>
+						<a href="/login">Login/Register</a>
+					</nav>
+				</div>
+			</div>
+		</div>
+	</section>
+	
+
+	
+	<section class="login_box_area section_gap">
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-6">
+					<div class="login_box_img">
+						<img class="img-fluid" src="img/login.jpg" alt="Login Image">
+						<div class="hover">
+							<h4>New to our website?</h4>
+							<p>There are advances being made in science and technology everyday, and a good example of this is the...</p>
+							<a class="primary-btn" href="/signup">Create an Account</a>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-6">
+					<div class="login_form_inner">
+						<h3>Log in to enter</h3>
+						<form class="row login_form" action="/login" method="post" id="contactForm" novalidate="novalidate">
+							<div class="col-md-12 form-group">
+								<input type="text" class="form-control" id="name" name="email" placeholder="EmailId"
+									onfocus="this.placeholder = ''" onblur="this.placeholder = 'Username'">
+							</div>
+							<div class="col-md-12 form-group">
+								<input type="password" class="form-control" id="password" name="password" placeholder="Password"
+									onfocus="this.placeholder = ''" onblur="this.placeholder = 'Password'" required>
+							</div>
+
+							<% if(locals.message && message.length > 0) { %>
+								<div class="alert alert-danger text-center alert-dismissible fade show" role="alert">
+									<strong>Warning!</strong> <%= message %>
+									<button type="button" class="close" data-dismiss="alert" aria-label="Close">
+										<span aria-hidden="true">&times;</span>
+									</button>
+								</div>
+							<% } %>
+							
+
+							<div class="col-md-12 form-group">
+								<div class="creat_account">
+									<input type="checkbox" id="f-option2" name="selector">
+									<label for="f-option2">Keep me logged in</label>
+								</div>
+							</div>
+							<div class="col-md-12 form-group">
+								<button type="submit" value="submit" class="primary-btn">Log In</button>
+								<a href="#">Forgot Password?</a>
+							</div>
+							
+							
+							<div class="col-md-12 form-group text-center">
+								<a href="/auth/google" class="google-btn">
+									<img src="/img/i added/user signup 2.png" alt="Google logo" class="google-logo" />
+									Continue with Google
+								</a>
+							</div>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<style>
+		.google-btn {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: #fff; 
+		color: rgb(0, 0, 0);
+		padding: 10px 20px;
+		border: 2px solid #4285F4; 
+		border-radius: 4px;
+		text-decoration: none;
+		font-size: 16px;
+		font-weight: bold; 
+		transition: background-color 0.3s ease, color 0.3s ease; 
+		width: 100%;
+		max-width: 300px; 
+		margin: 0 auto; 
+	}
+	
+	.google-btn:hover {
+		 background: linear-gradient(45deg, #1E90FF, #00BFFF);
+		color: rgb(255, 255, 255); 
+	}
+	
+	.google-logo {
+		width: 20px;
+		height: 20px;
+		margin-right: 10px;
+	}
+	
+	.google-btn img {
+		vertical-align: middle;
+	}
+
+	.alert {
+    border-radius: 10px; /* Rounded corners */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    margin: 15px 0; /* Space above and below the alert */
+    font-size: 1.1em; /* Slightly larger font size */
+}
+
+	
+	
+	</style>
+
+
+
+	<%- include("../../views/partials/user/footer/") %>

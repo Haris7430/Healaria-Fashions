@@ -1,0 +1,343 @@
+
+
+
+<link rel="stylesheet" href="css/main.css">
+
+    <title>Sign Up</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #bdc3c7, #2c3e50);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .signup-container {
+            display: flex;
+            width: 70%;
+            max-width: 800px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            transform: scale(1);
+            transition: transform 0.5s ease;
+        }
+
+        .signup-container:hover {
+            transform: scale(1.05);
+        }
+
+        .signup-form {
+            padding: 40px;
+            flex: 1;
+        }
+
+        .signup-form h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 2rem;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+            animation-delay: 0.3s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #ff6700;
+            box-shadow: 0px 0px 10px rgba(255, 103, 0, 0.3);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 10px;
+            background-color: #ff6700;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: #ff4500;
+            transform: translateY(-3px);
+        }
+
+        .signup-google {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            background-color: white;
+            color: #555;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .signup-google img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .signup-google:hover {
+            background-color: #f5f5f5;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .signup-image {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+            opacity: 0;
+            animation: slideIn 1s ease forwards;
+            animation-delay: 0.6s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .signup-image img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            margin-bottom: 20px;
+        }
+
+        .login-option {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-option a {
+            text-decoration: none;
+            color: #ff6700;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .login-option a:hover {
+            color: #ff4500;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            color: red;
+            font-size: 0.75rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    
+    
+    <div class="signup-container">
+        <div class="signup-image">
+            <img src="/img/i added/user-signup-3.jpg" alt="Sign Up Image">
+            <div class="login-option">
+                <p>Already registered? <a href="/login">Login</a></p>
+            </div>
+        </div>
+        <div class="signup-form">
+            <h2>Create an Account</h2>
+            <form id="signform" action="/signup" method="POST">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="name" required>
+                    <div id="error1" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                    <div id="error2" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" required pattern="\d{10}" title="Enter a 10-digit phone number">
+                    <div id="error3" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                    <div id="error4" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="cPassword" required>
+                    <div id="error5" class="error-message"></div>
+                </div>
+
+                <%if(locals.message && message.length>0){%>
+                    <div class="aler alert-danger text-center">
+                        <%=message%>
+                    </div>
+                <%}%>
+
+                <button type="submit" class="btn-submit">Sign Up</button>
+            </form>
+            
+            <div class="signup-google">
+                <a href="/auth/google" class="btn btn-outline-danger">
+                    <img 
+                    src="/img/i added/user signup 2.png" 
+                    alt="Google Logo"
+                    style="width:24px; height: 24px;">
+                </a>
+                <span> Sign up with Google</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const username = document.getElementById("username");
+        const email = document.getElementById("email");
+        const phone = document.getElementById('phone');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const error1 = document.getElementById('error1');
+        const error2 = document.getElementById('error2');
+        const error3 = document.getElementById('error3');
+        const error4 = document.getElementById('error4');
+        const error5 = document.getElementById('error5');
+        const signform = document.getElementById('signform');
+
+        function nameValidateChecking() {
+            const nameval = username.value.trim();
+            const namepattern = /^[A-Za-z\s]{3,20}$/;
+            if (nameval === "") {
+                error1.style.display = "block";
+                error1.innerHTML = "Please enter a valid name.";
+            } else if (!namepattern.test(nameval)) {
+                error1.style.display = "block";
+                error1.innerHTML = "Name can only contain alphabets and spaces (3-20 characters).";
+            } else {
+                error1.style.display = "none";
+                error1.innerHTML = "";
+            }
+        }
+
+        function emailValidateChecking() {
+            const emailval = email.value.trim();
+            const emailpattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+            if (emailval === "") {
+                error2.style.display = "block";
+                error2.innerHTML = "Email is required.";
+            } else if (!emailpattern.test(emailval)) {
+                error2.style.display = "block";
+                error2.innerHTML = "Invalid email format.";
+            } else {
+                error2.style.display = "none";
+                error2.innerHTML = "";
+            }
+        }
+
+        function phoneValidateChecking() {
+            const phoneval = phone.value.trim();
+            const phonepattern = /^\d{10}$/;
+            if (phoneval === '') {
+                error3.style.display = "block";
+                error3.innerHTML = "Phone number is required.";
+            } else if (!phonepattern.test(phoneval)) {
+                error3.style.display = "block";
+                error3.innerHTML = "Invalid phone number format.";
+            } else {
+                error3.style.display = "none";
+                error3.innerHTML = "";
+            }
+        }
+
+        function passwordValidateChecking() {
+            const passval = password.value.trim();
+            if (passval.length < 6) {
+                error4.style.display = "block";
+                error4.innerHTML = "Password should be at least 6 characters long.";
+            } else {
+                error4.style.display = "none";
+                error4.innerHTML = "";
+            }
+        }
+
+        function confirmPasswordValidateChecking() {
+            const confirmPassval = confirmPassword.value.trim();
+            const passval = password.value.trim();
+            if (confirmPassval !== passval) {
+                error5.style.display = "block";
+                error5.innerHTML = "Passwords do not match.";
+            } else {
+                error5.style.display = "none";
+                error5.innerHTML = "";
+            }
+        }
+
+        username.addEventListener("blur", nameValidateChecking);
+        email.addEventListener("blur", emailValidateChecking);
+        phone.addEventListener("blur", phoneValidateChecking);
+        password.addEventListener("blur", passwordValidateChecking);
+        confirmPassword.addEventListener("blur", confirmPasswordValidateChecking);
+
+        signform.addEventListener('submit', function (event) {
+            nameValidateChecking();
+            emailValidateChecking();
+            phoneValidateChecking();
+            passwordValidateChecking();
+            confirmPasswordValidateChecking();
+            if (error1.innerHTML !== "" || error2.innerHTML !== "" || error3.innerHTML !== "" || error4.innerHTML !== "" || error5.innerHTML !== "") {
+                event.preventDefault();
+            }
+        });
+    </script>
+</body>
+</html>

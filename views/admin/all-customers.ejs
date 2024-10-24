@@ -1,0 +1,211 @@
+
+<%- include("../../views/partials/admin/header/") %>
+
+
+
+<!-- / Navbar -->
+
+      
+
+      <!-- Content wrapper -->
+      <div class="content-wrapper">
+
+        <!-- Content -->
+        
+          <div class="container-xxl flex-grow-1 container-p-y">
+            
+            
+<!-- Product List Widget -->
+<div class="card mb-6">
+  <div class="card-widget-separator-wrapper">
+    <div class="card-body card-widget-separator">
+      <div class="row gy-4 gy-sm-1">
+        <div class="col-sm-6 col-lg-3">
+          <div class="d-flex justify-content-between align-items-start card-widget-1 border-end pb-4 pb-sm-0">
+            <div>
+              <p class="mb-1">In-store Sales</p>
+              <h4 class="mb-1">$5,345.43</h4>
+              <p class="mb-0"><span class="me-2">5k orders</span><span class="badge rounded-pill bg-label-success">+5.7%</span></p>
+            </div>
+            <div class="avatar me-sm-6">
+              <span class="avatar-initial rounded bg-label-secondary text-heading">
+                <i class="ri-home-6-line ri-24px"></i>
+              </span>
+            </div>
+          </div>
+          <hr class="d-none d-sm-block d-lg-none me-6">
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="d-flex justify-content-between align-items-start card-widget-2 border-end pb-4 pb-sm-0">
+            <div>
+              <p class="mb-1">Website Sales</p>
+              <h4 class="mb-1">$674,347.12</h4>
+              <p class="mb-0"><span class="me-2">21k orders</span><span class="badge rounded-pill bg-label-success">+12.4%</span></p>
+            </div>
+            <div class="avatar me-lg-6">
+              <span class="avatar-initial rounded bg-label-secondary text-heading">
+                <i class="ri-computer-line ri-24px"></i>
+              </span>
+            </div>
+          </div>
+          <hr class="d-none d-sm-block d-lg-none">
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="d-flex justify-content-between align-items-start border-end pb-4 pb-sm-0 card-widget-3">
+            <div>
+              <p class="mb-1">Discount</p>
+              <h4 class="mb-1">$14,235.12</h4>
+              <p class="mb-0">6k orders</p>
+            </div>
+            <div class="avatar me-sm-6">
+              <span class="avatar-initial rounded bg-label-secondary text-heading">
+                <i class="ri-gift-line ri-24px"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <p class="mb-1">Affiliate</p>
+              <h4 class="mb-1">$8,345.23</h4>
+              <p class="mb-0"><span class="me-2">150 orders</span><span class="badge rounded-pill bg-label-danger">-3.5%</span></p>
+            </div>
+            <div class="avatar">
+              <span class="avatar-initial rounded bg-label-secondary text-heading">
+                <i class="ri-money-dollar-circle-line ri-24px"></i>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0">Filter</h5>
+    <div class="d-flex justify-content-between align-items-center row pt-4 gap-4 gap-md-0">
+      <div class="col-md-4 product_status"></div>
+      <div class="col-md-4 product_category"></div>
+      <div class="col-md-4 product_stock"></div>
+    </div>
+  </div>
+
+  <div class="card-datatable table-responsive">
+    <table class="datatables-products table">
+      <thead>
+        <tr>
+          
+          <th>Name</th>
+          <th>Email</th>
+          <th>Phone No</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+
+
+
+        <% for(let i=0; i<data.length; i++){ %>
+          <tr>
+            <td> <%= data[i].name %> </td>
+            <td> <%= data[i].email %> </td>
+            <td> <%= data[i].phone %> </td>
+            <td>
+              <% if (data[i].isBlocked) { %>
+                <!-- Customer is blocked, show "Unblock" button -->
+                <a href="/admin/unblockCustomer?id=<%= data[i]._id %>" class="btn btn-success text-white">Unblock</a>
+              <% } else { %>
+                <!-- Customer is not blocked, show "Block" button -->
+                <a href="/admin/blockCustomer?id=<%= data[i]._id %>" class="btn btn-danger text-white">Block</a>
+              <% } %>
+            </td>
+          </tr>
+        <% } %>
+        
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div>
+          <!-- / Content -->
+
+
+          <div class="container mt-3">
+            <nav aria-label="Page navigation">
+              <ul class="pagination justify-content-center mb-20" style="margin-right:200px">
+                <%for(let i=1;i<=totalPages; i++) {%>
+                  <li class="page-item <%=(i===currentPage) ?'active': '' %>">
+                    <a class="page-link" href="?page=<%=i%> "><%= i %> </a>
+ 
+                  </li>
+
+                     <%}%>
+                </ul>
+            </nav>
+          </div>
+          
+          
+
+<!-- Footer -->
+<footer class="content-footer footer bg-footer-theme">
+  <div class="container-xxl">
+    <div class="footer-container d-flex align-items-center justify-content-between py-4 flex-md-row flex-column">
+      <div class="text-body mb-2 mb-md-0">
+        © <script>
+        document.write(new Date().getFullYear())
+
+        </script>, made with <span class="text-danger"><i class="tf-icons ri-heart-fill"></i></span> by <a href="https://themeselection.com/" target="_blank" class="footer-link">ThemeSelection</a>
+      </div>
+      <div class="d-none d-lg-inline-block">
+        
+        <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
+        <a href="https://themeselection.com/" target="_blank" class="footer-link me-4">More Themes</a>
+        
+        <a href="https://demos.themeselection.com/materio-bootstrap-html-admin-template/documentation/" target="_blank" class="footer-link me-4">Documentation</a>
+        
+        
+        <a href="https://themeselection.com/support/" target="_blank" class="footer-link d-none d-sm-inline-block">Support</a>
+        
+      </div>
+    </div>
+  </div>
+</footer>
+<!-- / Footer -->
+
+          
+          <div class="content-backdrop fade"></div>
+        </div>
+        <!-- Content wrapper -->
+      </div>
+      <!-- / Layout page -->
+    </div>
+
+    
+    
+    <!-- Overlay -->
+    <div class="layout-overlay layout-menu-toggle"></div>
+    
+    
+    <!-- Drag Target Area To SlideIn Menu On Small Screens -->
+    <div class="drag-target"></div>
+    
+  </div>
+  <!-- / Layout wrapper -->
+
+  
+ 
+  
+
+  
+
+    
+  <%- include("../../views/partials/admin/footer/") %>
+

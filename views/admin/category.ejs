@@ -1,0 +1,221 @@
+<%- include("../../views/partials/admin/header/") %>
+
+
+<!-- Content Wrapper -->
+<div class="content-wrapper">
+    <div class="container-xxl flex-grow-1 container-p-y">
+
+        <!-- Search Bar and Add Category Button Row -->
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <!-- Search Bar -->
+            <div class="col-md-6">
+                <input type="text" id="category-search" class="form-control" placeholder="Search categories" onkeyup="filterCategories()">
+            </div>
+            <!-- Add Category Button -->
+            <div class="col-md-3 text-end">
+                <button class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasEcommerceCategoryList">
+                    + Add Category
+                </button>
+            </div>
+        </div>
+
+        <!-- Category List Table -->
+        <div class="app-ecommerce-category">
+            <div class="card">
+                <div class="card-datatable table-responsive">
+                    <table class="datatables-category-list table">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th>Name</th>
+                                <th class="text-nowrap text-sm-end">Description</th>
+                                <th class="text-lg-center">Status</th>
+                                <th class="text-lg-center">List/Unlist</th>
+                                <th>Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% cat.reverse().forEach((category, index) => { %>
+                            <tr>
+                                <td></td>
+                                <!-- Category Name -->
+                                <td><%= category.name %></td>
+
+                                <!-- Category Description -->
+                                <td class="text-nowrap text-sm-end"><%= category.description %></td>
+
+                                <!-- Status Column with Listed/Unlisted Badge -->
+                                   <td class="text-lg-center">
+                                      <% if (category.isListed) { %>
+                                        <span class="badge bg-success">Listed</span>
+                                      <% } else { %>
+                                        <span class="badge bg-danger">Unlisted</span>
+                                      <% } %>
+                                    </td>
+                                    
+                                    <!-- List/Unlist Button Column -->
+                                    <td class="text-start">
+                                        <% if(category.isListed) {%>
+                                            <button class="btn btn-danger" style="width: 70px">
+                                                <a href="/admin/listCategory?id=<%=category._id%>" class="text-white" >Unlist</a>
+                                            </button>
+                                        <% } else  {%>
+                                            <button class="btn btn-success" style="width:70px">
+                                                <a href="/admin/unlistCategory?id=<%=category._id%>" class="text-white"> List</a>
+
+                                            </button>
+
+                                        <% } %>
+                                    </td>
+  
+
+                                <!-- Edit Button Column -->
+                                <td class="text-lg-center">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="openEditModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')">
+                                        Edit
+                                    </button>
+                                </td>
+                            </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Offcanvas to Add New Category -->
+        <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasEcommerceCategoryList" aria-labelledby="offcanvasEcommerceCategoryListLabel">
+            <div class="offcanvas-header py-6">
+                <h5 id="offcanvasEcommerceCategoryListLabel" class="offcanvas-title">Add Category</h5>
+                <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+            </div>
+
+            <div class="offcanvas-body border-top">
+                <form id="category-form" action="/addCategory" method="POST" onsubmit="return handleFormSubmit(event)">
+                    <!-- Name -->
+                    <div class="form-floating form-floating-outline mb-5">
+                        <input type="text" class="form-control" id="category-name" placeholder="Enter category name" name="name">
+                        <label for="category-name">Name</label>
+                        <div id="name-error" class="error-message" style="display:none;color:red;"></div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-floating form-floating-outline mb-5">
+                        <input type="text" id="ecommerce-category-description" class="form-control" placeholder="Enter description" name="description">
+                        <label for="ecommerce-category-description">Description</label>
+                        <div id="description-error" class="error-message" style="display:none;color:red;"></div>
+                    </div>
+
+                    <!-- Submit and Reset -->
+                    <div class="mb-4">
+                        <button type="submit" class="btn btn-primary me-sm-3 me-1 data-submit">Add</button>
+                        <button type="reset" class="btn btn-outline-danger" data-bs-dismiss="offcanvas">Discard</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+
+
+<!-- Search Functionality -->
+<script>
+  function handleFormSubmit(event) {
+     // Temporary alert for testing
+      event.preventDefault(); // Prevent default form submission
+      console.log("Form submission initiated"); // Debug log
+
+      // Validate form
+      if (!validateForm()) {
+          console.log("Form validation failed");
+          return false; // Prevent submission if validation fails
+      }
+
+      const name = document.querySelector('input[name="name"]').value;
+      const description = document.querySelector('input[name="description"]').value;
+
+      console.log("Submitting data:", { name, description }); // Log the submitted data
+
+      // Fetch API call to send data to the server
+      fetch('/admin/addCategory', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, description })
+      })
+      .then(response => {
+          console.log('Response Status:', response.status); // Log response status
+          return response.json(); // Always return JSON
+      })
+      .then(data => {
+          console.log('Response Data:', data); // Log response data
+          if (data.message) {
+              Swal.fire({
+                  icon: 'success',
+                  title: 'Success!',
+                  text: data.message,
+              }).then(() => {
+                  location.reload(); // Reload page on success
+              });
+          } else {
+              throw new Error(data.error || 'Unexpected error occurred');
+          }
+      })
+      .catch(error => {
+          console.error('Fetch Error:', error); // Log any errors
+          Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: error.message || 'An error occurred while adding the category',
+          });
+      });
+  }
+
+  function validateForm() {
+      clearErrorMessages(); // Clear previous error messages
+
+      const name = document.querySelector('input[name="name"]').value.trim();
+      const description = document.querySelector('input[name="description"]').value.trim();
+      let isValid = true;
+
+      // Name validation
+      if (name === '') {
+          displayErrorMessage('name-error', 'Please enter a name');
+          isValid = false;
+      } else if (!/^[a-zA-Z\s]+$/.test(name)) {
+          displayErrorMessage('name-error', 'Category name should contain only alphabetic characters');
+          isValid = false;
+      }
+
+      // Description validation
+      if (description === '') {
+          displayErrorMessage('description-error', 'Please enter a description');
+          isValid = false;
+      }
+
+      return isValid; // Return whether the form is valid
+  }
+
+  function displayErrorMessage(elementId, message) {
+      var errorElement = document.getElementById(elementId);
+      errorElement.innerText = message;
+      errorElement.style.display = 'block';
+  }
+
+  function clearErrorMessages() {
+      const errorElements = document.getElementsByClassName('error-message');
+      Array.from(errorElements).forEach(element => {
+          element.innerText = "";
+          element.style.display = 'none';
+      });
+  }
+</script>
+
+
+<!-- Include SweetAlert2 -->
+
+
+<%- include("../../views/partials/admin/footer/") %>
