@@ -9,11 +9,14 @@ const session= require('express-session')
 const db=require('./config/db');
 const adminRouter= require('./routes/adminRouter')
 const userRouter= require('./routes/userRouter');
+const flash = require('connect-flash');
+
 db()
 
 
 app.use(express.json());
 app.use(express.urlencoded({extended:true}));
+
 app.use(session({
     secret:process.env.SESSION_SECRET,
     resave:false,
@@ -21,10 +24,13 @@ app.use(session({
     cookie:{
         secure:false,
         httpOnly:true,
-maxAge:72*60*60*1000
+maxAge:24*60*60*1000
     }
 }));
 
+app.use(flash());
+
+// Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -48,10 +54,15 @@ app.set('views',[path.join(__dirname,'views/user'),path.join(__dirname,'views/ad
 app.use(express.static(path.join(__dirname,'public/user')));
 
 app.use('/dashboard-assets',express.static(path.join(__dirname,'/public/dashboard-assets')));
+app.use('/uploads', express.static(path.join(__dirname, '/public/uploads')));
 
 app.use('/',userRouter) 
 app.use('/admin',adminRouter);
        
+
+
+
+
 
 app.listen(process.env.PORT, ()=> {
     console.log(`server running http://localhost:${process.env.PORT}`);

@@ -1,0 +1,146 @@
+// editProduct.ejs
+<%- include("../../views/partials/admin/header/") %>
+
+<!-- Content wrapper -->
+<div class="content-wrapper">
+    <!-- Content -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="card mb-4">
+            <h5 class="card-header">Edit Product</h5>
+            <div class="card-body">
+                <form id="editProductForm" action="/admin/editProduct/<%= product._id %>" method="POST">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="productName" name="productName" 
+                            value="<%= product.productName %>"
+                            >
+                        <% if (locals.errors && errors.productName) { %>
+                            <div class="text-danger"><%= errors.productName %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"><%= product.description %></textarea>
+                        <% if (locals.errors && errors.description) { %>
+                            <div class="text-danger"><%= errors.description %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" >
+                            <% categories.forEach(category => { %>
+                                <option value="<%= category._id %>" 
+                                    <%= product.category._id.toString() === category._id.toString() ? 'selected' : '' %>>
+                                    <%= category.name %>
+                                </option>
+                            <% }); %>
+                        </select>
+                        <% if (locals.errors && errors.category) { %>
+                            <div class="text-danger"><%= errors.category %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regularPrice" class="form-label">Regular Price</label>
+                        <input type="number" class="form-control" id="regularPrice" name="regularPrice" 
+                            value="<%= product.regularPrice %>"
+                            >
+                        <% if (locals.errors && errors.regularPrice) { %>
+                            <div class="text-danger"><%= errors.regularPrice %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="salesPrice" class="form-label">Sales Price</label>
+                        <input type="number" class="form-control" id="salesPrice" name="salesPrice" 
+                            value="<%= product.salesPrice %>"
+                            >
+                        <% if (locals.errors && errors.salesPrice) { %>
+                            <div class="text-danger"><%= errors.salesPrice %></div>
+                        <% } %>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Product</button>
+                    <a href="/admin/products" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include footer -->
+<%- include("../../views/partials/admin/footer/") %>
+
+<!-- Client-side validation script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editProductForm');
+    
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // Reset previous error messages
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+        
+        let isValid = true;
+        const errors = {};
+
+        // Product Name validation
+        const productName = document.getElementById('productName').value.trim();
+        if (!productName) {
+            errors.productName = 'Product name is ';
+            isValid = false;
+        }
+
+        // Description validation (optional but with max length)
+        const description = document.getElementById('description').value.trim();
+        if (description.length > 500) {
+            errors.description = 'Description cannot exceed 500 characters';
+            isValid = false;
+        }
+
+        // Regular Price validation
+        const regularPrice = parseFloat(document.getElementById('regularPrice').value);
+        if (isNaN(regularPrice) || regularPrice <= 0) {
+            errors.regularPrice = 'Please enter a valid regular price';
+            isValid = false;
+        }
+
+        // Sales Price validation
+        const salesPrice = parseFloat(document.getElementById('salesPrice').value);
+        if (isNaN(salesPrice) || salesPrice <= 0) {
+            errors.salesPrice = 'Please enter a valid sales price';
+            isValid = false;
+        }
+
+        if (salesPrice >= regularPrice) {
+            errors.salesPrice = 'Sales price must be less than regular price';
+            isValid = false;
+        }
+
+        // Category validation
+        const category = document.getElementById('category').value;
+        if (!category) {
+            errors.category = 'Please select a category';
+            isValid = false;
+        }
+
+        // Display errors if any
+        if (!isValid) {
+            Object.keys(errors).forEach(key => {
+                const input = document.getElementById(key);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message text-danger mt-1';
+                errorDiv.textContent = errors[key];
+                input.parentNode.appendChild(errorDiv);
+            });
+            return;
+        }
+
+        // If validation passes, submit the form
+        form.submit();
+    });
+});
+</script>

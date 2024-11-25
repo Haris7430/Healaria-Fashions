@@ -1,0 +1,217 @@
+<style>
+/* General Styles */
+body {
+    background-color: #f7f8fc;
+    font-family: Arial, sans-serif;
+}
+
+.order-summary-container {
+    max-width: 600px;
+    margin: 30px auto;
+    background-color: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+}
+
+.order-header {
+    text-align: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+
+.order-id {
+    color: #007bff;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.order-date {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-top: 10px;
+}
+
+.status-pending {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-processing {
+    background-color: #cce5ff;
+    color: #004085;
+}
+
+.status-shipped {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.order-items {
+    margin-bottom: 20px;
+}
+
+.item-card {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+}
+
+.item-card:last-child {
+    border-bottom: none;
+}
+
+.item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    object-fit: cover;
+    margin-right: 15px;
+}
+
+.item-details {
+    flex-grow: 1;
+}
+
+.item-name {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.item-quantity {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.item-price {
+    font-weight: bold;
+    color: #28a745;
+}
+
+.address-section,
+.payment-info {
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.total-section {
+    padding-top: 15px;
+    border-top: 2px solid #eee;
+}
+
+.total-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    font-size: 16px;
+}
+
+.total-row.final {
+    font-size: 18px;
+    font-weight: 700;
+    color: #007bff;
+}
+
+.action-buttons {
+    text-align: center;
+    margin-top: 20px;
+}
+
+.primary-btn {
+    display: inline-block;
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-weight: 600;
+    text-decoration: none;
+    margin: 5px;
+    transition: 0.3s;
+}
+
+.primary-btn:hover {
+    background-color: #0056b3;
+}
+</style>
+
+<!-- Order Summary Section -->
+<div class="order-summary-container">
+    <!-- Order Header -->
+    <div class="order-header">
+        <h3>Order Summary</h3>
+        <p>Order #<span class="order-id"><%= order._id %></span></p>
+        <p class="order-date">Placed on <%= new Date(order.createdAt).toLocaleDateString() %></p>
+        <span class="status-badge status-<%= order.status.toLowerCase() %>"><%= order.status %></span>
+    </div>
+
+    <!-- Order Items -->
+    <% orderItems.forEach(item => { %>
+        <div class="order-item">
+            <h5><%= item.product.productName %></h5>
+            
+            <!-- Display product images from productImages array -->
+            <% if (item.product.productImages && item.product.productImages.length > 0) { %>
+                <img src="/uploads/product-images/<%= item.product.productImages[0] %>" alt="Product Image" style="width: 100px;">
+            <% } else if (item.product.variantImages.length > 0) { %>
+                <!-- If no productImages, display variant image as base64 -->
+                <img src="data:<%= item.product.variantImages[0].contentType %>;base64,<%= item.product.variantImages[0].data.toString('base64') %>" alt="Variant Image" style="width: 100px;">
+            <% } else { %>
+                <p>No image available</p>
+            <% } %>
+    
+            <p>Price: $<%= item.price %></p>
+            <p>Quantity: <%= item.quantity %></p>
+        </div>
+    <% }) %>
+    
+    <!-- Shipping Address -->
+    <div class="address-section">
+        <h5>Shipping Address</h5>
+        <p><strong><%= order.shippingAddress.name %></strong></p>
+        <p><%= order.shippingAddress.landmark %></p>
+        <p><%= order.shippingAddress.city %>, <%= order.shippingAddress.state %> - <%= order.shippingAddress.pincode %></p>
+        <p>Phone: <%= order.shippingAddress.phone %></p>
+    </div>
+
+    <!-- Payment Information -->
+    <div class="payment-info">
+        <h5>Payment Information</h5>
+        <p><strong>Method:</strong> <%= order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment' %></p>
+        <p><strong>Status:</strong> <%= order.paymentStatus || 'Pending' %></p>
+    </div>
+
+    <!-- Order Total -->
+    <div class="total-section">
+        <div class="total-row">
+            <span>Subtotal:</span>
+            <span>$<%= order.subtotal.toFixed(2) %></span>
+        </div>
+        <div class="total-row">
+            <span>Shipping:</span>
+            <span>$<%= order.shippingCost.toFixed(2) %></span>
+        </div>
+        <div class="total-row final">
+            <span>Total:</span>
+            <span>$<%= order.total.toFixed(2) %></span>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <a href="/profile/orders" class="primary-btn">View All Orders</a>
+        <a href="/shop-page" class="primary-btn">Continue Shopping</a>
+    </div>
+</div>

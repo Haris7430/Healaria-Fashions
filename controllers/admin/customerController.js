@@ -81,10 +81,26 @@ const customerunBlocked= async (req,res) => {
     }
 };
 
+const deleteCustomer = async (req, res) => {
+    try {
+        const customerId = req.query.id;
+        
+        // Find and delete the customer by ID
+        await User.findByIdAndDelete(customerId);
+
+        // Redirect back to the customers page with a success message
+        res.redirect('/admin/all-customers'); // Change this to the appropriate route
+    } catch (error) {
+        console.error("Error deleting customer:", error);
+        res.redirect('/admin/all-customers');
+    }
+};
+
 
 
 module.exports={
     customerInfo,
     customerBlocked,
     customerunBlocked,
+    deleteCustomer,
 }

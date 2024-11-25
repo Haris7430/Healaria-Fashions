@@ -1,0 +1,88 @@
+<%- include("../../views/partials/admin/header") %>
+
+<!-- Content Wrapper -->
+<div class="content-wrapper">
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Edit Category Form -->
+        <div class="card">
+            <div class="card-header">
+                <h4>Edit Category</h4>
+            </div>
+            <div class="card-body">
+                <!-- Update form action to include category ID in URL -->
+                <form id="edit-category-form" action="/admin/editCategory/<%= category._id %>" method="POST">
+                    <input type="hidden" id="edit-category-id" name="id" value="<%= category._id %>">
+                    
+                    <!-- Name -->
+                    <div class="form-floating form-floating-outline mb-4">
+                        <input type="text" class="form-control" id="edit-category-name" name="name" placeholder="Enter category name" value="<%= category.name %>">
+                        <label for="edit-category-name">Name</label>
+                    </div>
+                
+                    <!-- Simple Textarea for Description -->
+                    <div class="form-floating form-floating-outline mb-4">
+                        <textarea id="edit-category-description" name="description" class="form-control" placeholder="Enter description" rows="5"><%= category.description %></textarea>
+                        <label for="edit-category-description">Description</label>
+                    </div>
+                
+                    <!-- Submit and Reset -->
+                    <div class="mb-4">
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                        <a href="/admin/categories" class="btn btn-outline-danger">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+  function handleEditFormSubmit(event) {
+      event.preventDefault();  // Prevent default form submission
+      
+      const id = document.getElementById('edit-category-id').value;
+      const name = document.getElementById('edit-category-name').value.trim();
+      const description = document.getElementById('edit-category-description').value.trim();
+
+      if (!name || !description) {
+          Swal.fire({
+              icon: 'error',
+              title: 'Validation Error',
+              text: 'Both name and description are required!',
+          });
+          return;
+      }
+
+      fetch(`/admin/editCategory/${id}`, {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, description })
+      })
+      .then(response => response.json())
+      .then(data => {
+          if (data.message) {
+              Swal.fire({
+                  icon: 'success',
+                  title: 'Category Updated!',
+                  text: data.message,
+              }).then(() => {
+                  window.location.href = '/admin/categories';
+              });
+          } else {
+              throw new Error(data.error || 'Unexpected error occurred');
+          }
+      })
+      .catch(error => {
+          console.error('Fetch Error:', error);
+          Swal.fire({
+              icon: 'error',
+              title: 'Oops...',
+              text: error.message || 'An error occurred while updating the category',
+          });
+      });
+  }
+</script>
+
+<%- include("../../views/partials/admin/footer") %>

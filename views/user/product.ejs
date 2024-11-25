@@ -1,0 +1,1007 @@
+
+
+<%- include("../../views/partials/user/header/") %>
+
+
+<style>
+
+.zoomContainer {
+        z-index: 999;
+    }
+    .zoomLens {
+        border: 2px solid #384aeb !important;
+        opacity: 0.5;
+    }
+
+
+    .product-detail-area {
+        padding: 60px 0;
+        background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+    }
+
+    /* Product Images */
+    .product-images {
+        background: #fff;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+    }
+
+    .product-images:hover {
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+    }
+
+    .main-image {
+        width: 100%;
+        height: 500px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        overflow: hidden;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .main-image img:hover {
+        transform: scale(1.05);
+    }
+
+    .thumbnail-row {
+        display: flex;
+        gap: 12px;
+        overflow-x: auto;
+        padding: 10px 0;
+        scrollbar-width: thin;
+    }
+
+    .thumbnail-row::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .thumbnail-row::-webkit-scrollbar-thumb {
+        background: #384aeb;
+        border-radius: 10px;
+    }
+
+    .thumbnail {
+        width: 90px;
+        height: 90px;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        cursor: pointer;
+        overflow: hidden;
+        flex-shrink: 0;
+        transition: all 0.2s ease;
+    }
+
+    .thumbnail.active {
+        border-color: #384aeb;
+        transform: translateY(-2px);
+    }
+
+    .thumbnail:hover {
+        border-color: #384aeb;
+    }
+
+    .thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Product Info */
+    .product-info {
+        background: #fff;
+        padding: 35px;
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    }
+
+    .product-title {
+        font-size: 28px;
+        color: #2d2d2d;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
+    .product-price {
+        font-size: 26px;
+        background: linear-gradient(45deg, #384aeb, #5c6bc0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: bold;
+        margin-bottom: 25px;
+    }
+
+    /* Variants */
+    .variant-options {
+        margin: 25px 0;
+    }
+
+    .variant-title {
+        font-size: 18px;
+        color: #333;
+        margin-bottom: 15px;
+        font-weight: 500;
+    }
+
+    .color-options {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .color-option {
+        width: 80px;
+        height: 80px;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        cursor: pointer;
+        overflow: hidden;
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .color-option::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
+        z-index: 1;
+    }
+
+    .color-option.active {
+        border-color: #384aeb;
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(56,74,235,0.2);
+    }
+
+    .color-option:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .color-option img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .color-name {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: #fff;
+        padding: 8px 4px;
+        font-size: 12px;
+        text-align: center;
+        z-index: 2;
+    }
+
+    /* Size Options */
+    .size-options {
+        margin: 25px 0;
+    }
+
+    .size-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 15px;
+    }
+
+    .size-btn {
+        min-width: 85px;
+        padding: 12px;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .size-btn:hover:not(.out-of-stock) {
+        border-color: #384aeb;
+        transform: translateY(-2px);
+    }
+
+    .size-btn.active {
+        border-color: #384aeb;
+        background: linear-gradient(45deg, #384aeb, #5c6bc0);
+        color: #fff;
+        transform: translateY(-2px);
+    }
+
+    .size-btn.out-of-stock {
+        opacity: 0.6;
+        cursor: not-allowed;
+        background: #f5f5f5;
+    }
+
+    .stock-info {
+        font-size: 11px;
+        color: #666;
+        margin-top: 6px;
+    }
+
+    /* Add to Cart Button */
+    .add-cart-btn {
+        width: 100%;
+        padding: 16px;
+        background: linear-gradient(45deg, #384aeb, #5c6bc0);
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .add-cart-btn:hover:not(:disabled) {
+        background: linear-gradient(45deg, #2a3bcc, #4a5ab0);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(56,74,235,0.3);
+    }
+
+    .add-cart-btn:disabled {
+        background: linear-gradient(45deg, #ccc, #999);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .product-description {
+        padding: 20px 0;
+        border-top: 1px solid #eee;
+        border-bottom: 1px solid #eee;
+        margin: 20px 0;
+        line-height: 1.6;
+        color: #666;
+    }
+</style>
+
+
+
+
+
+	<!-- End Header Area -->
+
+	<!-- Start Banner Area -->
+	<section class="banner-area organic-breadcrumb">
+		<div class="container">
+			<div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+				<div class="col-first">
+					<h1>Product Details Page</h1>
+					<nav class="d-flex align-items-center">
+						<a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
+						<a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
+						<a href="single-product.html">product-details</a>
+					</nav>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- End Banner Area -->
+
+
+
+
+
+
+
+<!--================Single Product Area =================-->
+<% if (product) { %>
+	<div class="product-detail-area">
+		<div class="container">
+			<div class="row">
+				<!-- Product Images -->
+				<div class="col-lg-6">
+					<div class="product-images">
+						<div class="main-image" id="imageZoomContainer">
+							<% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
+								<img id="mainImage" 
+									 src="/uploads/product-images/<%= initialVariant.images[0].filename %>" 
+									 alt="<%= product.productName %>"
+									 data-zoom-image="/uploads/product-images/<%= initialVariant.images[0].filename %>"
+									 class="zoom-image">
+							<% } else { %>
+								<img id="mainImage" 
+									 src="/images/default-product.jpg" 
+									 alt="Default product image"
+									 class="zoom-image">
+							<% } %>
+						</div>
+						
+						<!-- Thumbnails -->
+						<div class="thumbnail-row">
+							<% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
+								<% initialVariant.images.forEach((image, index) => { %>
+									<div class="thumbnail <%= index === 0 ? 'active' : '' %>"
+										 onclick="changeMainImage('/uploads/product-images/<%= image.filename %>', this, '<%= image.filename %>')">
+										<img src="/uploads/product-images/<%= image.filename %>" 
+											 alt="Product view <%= index + 1 %>">
+									</div>
+								<% }); %>
+							<% } %>
+						</div>
+					</div>
+				</div>
+	
+				<!-- Product Info -->
+				<div class="col-lg-6">
+					<div class="product-info">
+						<h1 class="product-title"><%= product.productName %></h1>
+						<div class="product-price">₹<%= product.salesPrice.toFixed(2) %></div>
+						
+						<div class="product-description">
+							<p><%= product.description %></p>
+						</div>
+	
+						<!-- Color Variants -->
+						<div class="variant-options">
+							<h4 class="variant-title">Available Colors</h4>
+							<div class="color-options">
+								<% if (variants && variants.length > 0) { %>
+									<% variants.forEach(variant => { %>
+										<% if (variant.images && variant.images.length > 0) { %>
+											<div class="color-option <%= variant._id.toString() === initialVariant._id.toString() ? 'active' : '' %>"
+												 onclick="selectVariant('<%= product._id %>', '<%= variant._id %>', this)">
+												<img src="/uploads/product-images/<%= variant.images[0].filename %>" 
+													 alt="<%= variant.color %>">
+												<span class="color-name"><%= variant.color %></span>
+											</div>
+										<% } %>
+									<% }); %>
+								<% } %>
+							</div>
+						<!-- Size Options -->
+						<div class="size-options">
+							<h4 class="variant-title">Select Size</h4>
+							<div class="size-grid" id="sizeGrid">
+								<% variantSizes.forEach(sizeObj => { %>
+									<button type="button" 
+											class="size-btn <%= sizeObj.quantity === 0 ? 'out-of-stock' : '' %>"
+											onclick="selectSize(this, '<%= sizeObj.size %>')"
+											<%= sizeObj.quantity === 0 ? 'disabled' : '' %>>
+										UK <%= sizeObj.size %>
+										<div class="stock-info">
+											<%= sizeObj.quantity === 0 ? 'Out of Stock' : `${sizeObj.quantity} left` %>
+										</div>
+									</button>
+								<% }) %>
+							</div>
+						</div>
+	
+						<!-- Add to Cart Form -->
+						<form id="addToCartForm" onsubmit="return handleAddToCart(event)">
+							<input type="hidden" id="selectedSize" name="size" value="">
+							<input type="hidden" id="selectedVariant" name="variantId" value="<%= initialVariant._id %>">
+							<button type="submit" class="add-cart-btn" id="addToCartBtn" disabled>
+								Add to Cart
+							</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+<% } else { %>
+	<p>Product not found.</p>
+<% } %>
+<!--================End Single Product Area =================-->
+
+
+	<!--================Product Description Area =================-->
+	<section class="product_description_area">
+		<div class="container">
+			<ul class="nav nav-tabs" id="myTab" role="tablist">
+				<li class="nav-item">
+					<a class="nav-link" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true">Description</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile"
+					 aria-selected="false">Specification</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" id="contact-tab" data-toggle="tab" href="#contact" role="tab" aria-controls="contact"
+					 aria-selected="false">Comments</a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link active" id="review-tab" data-toggle="tab" href="#review" role="tab" aria-controls="review"
+					 aria-selected="false">Reviews</a>
+				</li>
+			</ul>
+			<div class="tab-content" id="myTabContent">
+				<div class="tab-pane fade" id="home" role="tabpanel" aria-labelledby="home-tab">
+					<p>Beryl Cook is one of Britain’s most talented and amusing artists .Beryl’s pictures feature women of all shapes
+						and sizes enjoying themselves .Born between the two world wars, Beryl Cook eventually left Kendrick School in
+						Reading at the age of 15, where she went to secretarial school and then into an insurance office. After moving to
+						London and then Hampton, she eventually married her next door neighbour from Reading, John Cook. He was an
+						officer in the Merchant Navy and after he left the sea in 1956, they bought a pub for a year before John took a
+						job in Southern Rhodesia with a motor company. Beryl bought their young son a box of watercolours, and when
+						showing him how to use it, she decided that she herself quite enjoyed painting. John subsequently bought her a
+						child’s painting set for her birthday and it was with this that she produced her first significant work, a
+						half-length portrait of a dark-skinned lady with a vacant expression and large drooping breasts. It was aptly
+						named ‘Hangover’ by Beryl’s husband and</p>
+					<p>It is often frustrating to attempt to plan meals that are designed for one. Despite this fact, we are seeing
+						more and more recipe books and Internet websites that are dedicated to the act of cooking for one. Divorce and
+						the death of spouses or grown children leaving for college are all reasons that someone accustomed to cooking for
+						more than one would suddenly need to learn how to adjust all the cooking practices utilized before into a
+						streamlined plan of cooking that is more efficient for one person creating less</p>
+				</div>
+				<div class="tab-pane fade" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+					<div class="table-responsive">
+						<table class="table">
+							<tbody>
+								<tr>
+									<td>
+										<h5>Width</h5>
+									</td>
+									<td>
+										<h5>128mm</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Height</h5>
+									</td>
+									<td>
+										<h5>508mm</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Depth</h5>
+									</td>
+									<td>
+										<h5>85mm</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Weight</h5>
+									</td>
+									<td>
+										<h5>52gm</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Quality checking</h5>
+									</td>
+									<td>
+										<h5>yes</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Freshness Duration</h5>
+									</td>
+									<td>
+										<h5>03days</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>When packeting</h5>
+									</td>
+									<td>
+										<h5>Without touch of hand</h5>
+									</td>
+								</tr>
+								<tr>
+									<td>
+										<h5>Each Box contains</h5>
+									</td>
+									<td>
+										<h5>60pcs</h5>
+									</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+				<div class="tab-pane fade" id="contact" role="tabpanel" aria-labelledby="contact-tab">
+					<div class="row">
+						<div class="col-lg-6">
+							<div class="comment_list">
+								<div class="review_item">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-1.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<h5>12th Feb, 2018 at 05:56 pm</h5>
+											<a class="reply_btn" href="#">Reply</a>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+								<div class="review_item reply">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-2.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<h5>12th Feb, 2018 at 05:56 pm</h5>
+											<a class="reply_btn" href="#">Reply</a>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+								<div class="review_item">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-3.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<h5>12th Feb, 2018 at 05:56 pm</h5>
+											<a class="reply_btn" href="#">Reply</a>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-6">
+							<div class="review_box">
+								<h4>Post a comment</h4>
+								<form class="row contact_form" action="contact_process.php" method="post" id="contactForm" novalidate="novalidate">
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="text" class="form-control" id="name" name="name" placeholder="Your Full name">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="email" class="form-control" id="email" name="email" placeholder="Email Address">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="text" class="form-control" id="number" name="number" placeholder="Phone Number">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<textarea class="form-control" name="message" id="message" rows="1" placeholder="Message"></textarea>
+										</div>
+									</div>
+									<div class="col-md-12 text-right">
+										<button type="submit" value="submit" class="btn primary-btn">Submit Now</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="tab-pane fade show active" id="review" role="tabpanel" aria-labelledby="review-tab">
+					<div class="row">
+						<div class="col-lg-6">
+							<div class="row total_rate">
+								<div class="col-6">
+									<div class="box_total">
+										<h5>Overall</h5>
+										<h4>4.0</h4>
+										<h6>(03 Reviews)</h6>
+									</div>
+								</div>
+								<div class="col-6">
+									<div class="rating_list">
+										<h3>Based on 3 Reviews</h3>
+										<ul class="list">
+											<li><a href="#">5 Star <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+													 class="fa fa-star"></i><i class="fa fa-star"></i> 01</a></li>
+											<li><a href="#">4 Star <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+													 class="fa fa-star"></i><i class="fa fa-star"></i> 01</a></li>
+											<li><a href="#">3 Star <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+													 class="fa fa-star"></i><i class="fa fa-star"></i> 01</a></li>
+											<li><a href="#">2 Star <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+													 class="fa fa-star"></i><i class="fa fa-star"></i> 01</a></li>
+											<li><a href="#">1 Star <i class="fa fa-star"></i><i class="fa fa-star"></i><i class="fa fa-star"></i><i
+													 class="fa fa-star"></i><i class="fa fa-star"></i> 01</a></li>
+										</ul>
+									</div>
+								</div>
+							</div>
+							<div class="review_list">
+								<div class="review_item">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-1.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+								<div class="review_item">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-2.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+								<div class="review_item">
+									<div class="media">
+										<div class="d-flex">
+											<img src="img/product/review-3.png" alt="">
+										</div>
+										<div class="media-body">
+											<h4>Blake Ruiz</h4>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+											<i class="fa fa-star"></i>
+										</div>
+									</div>
+									<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et
+										dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+										commodo</p>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-6">
+							<div class="review_box">
+								<h4>Add a Review</h4>
+								<p>Your Rating:</p>
+								<ul class="list">
+									<li><a href="#"><i class="fa fa-star"></i></a></li>
+									<li><a href="#"><i class="fa fa-star"></i></a></li>
+									<li><a href="#"><i class="fa fa-star"></i></a></li>
+									<li><a href="#"><i class="fa fa-star"></i></a></li>
+									<li><a href="#"><i class="fa fa-star"></i></a></li>
+								</ul>
+								<p>Outstanding</p>
+								<form class="row contact_form" action="contact_process.php" method="post" id="contactForm" novalidate="novalidate">
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="text" class="form-control" id="name" name="name" placeholder="Your Full name" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Your Full name'">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="email" class="form-control" id="email" name="email" placeholder="Email Address" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Email Address'">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<input type="text" class="form-control" id="number" name="number" placeholder="Phone Number" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Phone Number'">
+										</div>
+									</div>
+									<div class="col-md-12">
+										<div class="form-group">
+											<textarea class="form-control" name="message" id="message" rows="1" placeholder="Review" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Review'"></textarea></textarea>
+										</div>
+									</div>
+									<div class="col-md-12 text-right">
+										<button type="submit" value="submit" class="primary-btn">Submit Now</button>
+									</div>
+								</form>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!--================End Product Description Area =================-->
+
+	<!-- Start related-product Area -->
+	<section class="related-product-area section_gap_bottom">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-lg-6 text-center">
+					<div class="section-title">
+						<h1>Deals of the Week</h1>
+						<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
+							magna aliqua.</p>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-9">
+					<div class="row">
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r1.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r2.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r3.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r5.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r6.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r7.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r9.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r10.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r11.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-3">
+					<div class="ctg-right">
+						<a href="#" target="_blank">
+							<img class="img-fluid d-block mx-auto" src="img/category/c5.jpg" alt="">
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- End related-product Area -->
+
+
+	<%- include("../../views/partials/user/footer/") %>
+
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
+
+	
+
+
+	<script>
+
+
+
+
+
+
+		// Function to change main image
+		function changeMainImage(src, element) {
+			const mainImage = document.getElementById('mainImage');
+			
+			// Add fade effect
+			mainImage.style.opacity = '0';
+			setTimeout(() => {
+				mainImage.src = src;
+				mainImage.style.opacity = '1';
+			}, 200);
+			
+			// Update active thumbnail
+			document.querySelectorAll('.thumbnail').forEach(thumb => {
+				thumb.classList.remove('active');
+			});
+			element.classList.add('active');
+		}
+		
+		// Function to select variant
+		function selectVariant(productId, variantId, element) {
+			console.log('Selecting variant:', variantId); // Debug log
+			
+			// Update active state
+			document.querySelectorAll('.color-option').forEach(option => {
+				option.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form values
+			document.getElementById('selectedVariant').value = variantId;
+			document.getElementById('selectedSize').value = '';
+			document.getElementById('addToCartBtn').disabled = true;
+			
+			// Fetch variant details
+			fetch(`/product/${productId}/variant/${variantId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.images && data.images.length > 0) {
+            // Update main image
+            const mainImage = document.getElementById('mainImage');
+            mainImage.src = data.images[0].fullPath;
+            
+            // Update thumbnails
+            const thumbnailRow = document.querySelector('.thumbnail-row');
+            thumbnailRow.innerHTML = data.images.map((image, index) => `
+                <div class="thumbnail ${index === 0 ? 'active' : ''}"
+                     onclick="changeMainImage('${image.fullPath}', this)">
+                    <img src="${image.fullPath}" 
+                         alt="Product view ${index + 1}">
+                </div>
+            `).join('');
+        }
+					
+					// Update sizes
+					if (data.sizes) {
+						updateSizeOptions(data.sizes);
+					}
+				})
+				.catch(error => {
+					console.error('Error fetching variant details:', error);
+				});
+		}
+		
+		// Function to update size options
+		function updateSizeOptions(sizes) {
+			const sizeGrid = document.getElementById('sizeGrid');
+			sizeGrid.innerHTML = sizes.map(size => `
+				<button type="button" 
+						class="size-btn ${size.quantity === 0 ? 'out-of-stock' : ''}"
+						onclick="selectSize(this, ${size.size})"
+						${size.quantity === 0 ? 'disabled' : ''}>
+					UK ${size.size}
+					<div class="stock-info">
+						${size.quantity === 0 ? 'Out of Stock' : `${size.quantity} left`}
+					</div>
+				</button>
+			`).join('');
+		}
+		
+		// Function to select size
+		function selectSize(element, size) {
+			// Update active state
+			document.querySelectorAll('.size-btn').forEach(btn => {
+				btn.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form value
+			document.getElementById('selectedSize').value = size;
+			document.getElementById('addToCartBtn').disabled = false;
+		}
+		
+		// Function to handle add to cart
+		function handleAddToCart(event) {
+			event.preventDefault();
+			
+			const size = document.getElementById('selectedSize').value;
+			if (!size) {
+				alert('Please select a size');
+				return false;
+			}
+			
+			const variantId = document.getElementById('selectedVariant').value;
+			console.log('Adding to cart:', { variantId, size });
+			
+			// Add your cart logic here
+			
+			return false;
+		}
+		
+		// Initialize any necessary elements on page load
+		document.addEventListener('DOMContentLoaded', function() {
+			// Any initialization code can go here
+			console.log('Product page initialized');
+		});
+		</script>

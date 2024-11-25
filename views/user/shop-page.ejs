@@ -1,0 +1,675 @@
+
+
+<%- include("../../views/partials/user/header/") %>
+
+
+
+<style>
+	.sidebar-categories {
+		background: #fff;
+		padding: 20px;
+		border-radius: 8px;
+		box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+	}
+	
+	.sidebar-categories .head {
+		font-size: 18px;
+		font-weight: 600;
+		color: #333;
+		padding-bottom: 15px;
+		border-bottom: 1px solid #eee;
+		margin-bottom: 20px;
+	}
+	
+	.filter-options {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+	}
+	
+	.filter-list {
+		margin-bottom: 15px;
+	}
+	
+	.filter-box {
+		background: #f8f9fa;
+		border: 1px solid #e9ecef;
+		border-radius: 6px;
+		padding: 12px 15px;
+		transition: all 0.3s ease;
+		cursor: pointer;
+	}
+	
+	.filter-box:hover {
+		background: #fff;
+		border-color: #007bff;
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	}
+	
+	.filter-box input[type="radio"] {
+		margin-right: 10px;
+	}
+	
+	.filter-box label {
+		cursor: pointer;
+		margin-bottom: 0;
+		font-size: 14px;
+		color: #555;
+		display: inline-block;
+		vertical-align: middle;
+	}
+	
+	/* Custom radio button styling */
+	.pixel-radio {
+		-webkit-appearance: none;
+		-moz-appearance: none;
+		appearance: none;
+		width: 16px;
+		height: 16px;
+		border: 2px solid #ddd;
+		border-radius: 50%;
+		outline: none;
+		margin-right: 10px;
+		position: relative;
+		vertical-align: middle;
+		cursor: pointer;
+	}
+	
+	.pixel-radio:checked {
+		border-color: #007bff;
+	}
+	
+	.pixel-radio:checked:after {
+		content: '';
+		width: 8px;
+		height: 8px;
+		background: #007bff;
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		transform: translate(-50%, -50%);
+		border-radius: 50%;
+	}
+	
+	/* Active state styling */
+	.filter-box input[type="radio"]:checked + label {
+		color: #007bff;
+		font-weight: 500;
+	}
+	
+	.filter-box input[type="radio"]:checked ~ .filter-box {
+		border-color: #007bff;
+		background: #f0f7ff;
+	}
+	
+	/* Responsive adjustments */
+	@media (max-width: 768px) {
+		.sidebar-categories {
+			margin-bottom: 20px;
+		}
+		
+		.filter-box {
+			padding: 10px 12px;
+		}
+		
+		.filter-box label {
+			font-size: 13px;
+		}
+	}
+	</style>
+
+
+
+
+
+	<!-- Start Banner Area -->
+	<section class="banner-area organic-breadcrumb">
+		<div class="container">
+			<div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+				<div class="col-first">
+					<h1>Shop Category page</h1>
+					<nav class="d-flex align-items-center">
+						<a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
+						<a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
+						<a href="category.html">Fashon Category</a>
+					</nav>
+				</div>
+			</div>
+		</div>
+	</section>
+	
+	<!-- End Banner Areas -->
+	<div class="container">
+		<div class="row">
+			<div class="col-xl-3 col-lg-4 col-md-5">
+				<div class="sidebar-categories">
+					<div class="head">Sort By</div>
+					<div class="common-filter">
+						<form action="/shop-page" method="GET" id="sortForm">
+							<ul class="filter-options">
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="default" name="sort" value="default" 
+											<%= currentSort === 'default' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="default">Default sorting</label>
+									</div>
+								</li>
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="price-low" name="sort" value="price-low" 
+											<%= currentSort === 'price-low' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="price-low">Price: Low to High</label>
+									</div>
+								</li>
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="price-high" name="sort" value="price-high" 
+											<%= currentSort === 'price-high' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="price-high">Price: High to Low</label>
+									</div>
+								</li>
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="name-asc" name="sort" value="name-asc" 
+											<%= currentSort === 'name-asc' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="name-asc">Name: A to Z</label>
+									</div>
+								</li>
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="name-desc" name="sort" value="name-desc" 
+											<%= currentSort === 'name-desc' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="name-desc">Name: Z to A</label>
+									</div>
+								</li>
+								<li class="filter-list">
+									<div class="filter-box">
+										<input class="pixel-radio" type="radio" id="new-arrivals" name="sort" value="new-arrivals" 
+											<%= currentSort === 'new-arrivals' ? 'checked' : '' %> onchange="this.form.submit()">
+										<label for="new-arrivals">New Arrivals</label>
+									</div>
+								</li>
+							</ul>
+						</form>
+					</div>
+				</div>
+			</div>
+
+
+
+			<div class="col-xl-9 col-lg-8 col-md-7">
+				<!-- Start Filter Bar -->
+				
+				<!-- End Filter Bar -->
+				<!-- Start Best Seller -->
+				<section class="lattest-product-area pb-40 category-list">
+					
+						<div class="row">
+							
+							<!-- single product -->
+							<%for(let i=0; i<products.length; i++){%>
+								<div class="col-lg-4 col-md-6">
+									<div class="single-product">
+										<a href="/productDetails?id=<%= products[i]._id %>">
+											<img class="img-fluid" src="/uploads/product-images/<%= products[i].productImages[0] %>" alt="<%= products[i].productName %>">
+										</a>
+										<div class="product-details">
+											<%= products[i].productName.length > 20 ? products[i].productName.substring(0, 20) + '...' : products[i].productName %>
+				
+											<div class="price">
+												<h6>$ <%= products[i].regularPrice %></h6>
+												<h6 class="l-through">$ <%=products[i].salesPrice %> </h6>
+											</div>
+											<div class="prd-bottom">
+				
+												<a href="" class="social-info">
+													<span class="ti-bag"></span>
+													<p class="hover-text">add to bag</p>
+												</a>
+												
+												<a href="" class="social-info">
+													<span class="lnr lnr-heart"></span>
+													<p class="hover-text">Wishlist</p>
+												</a>
+												<a href="" class="social-info">
+													<span class="lnr lnr-sync"></span>
+													<p class="hover-text">compare</p>
+												</a>
+												<a href="" class="social-info">
+													<span class="lnr lnr-move"></span>
+													<p class="hover-text">view more</p>
+												</a>
+											</div>
+										</div>
+									</div>
+								</div>
+								<% } %>
+										
+						
+					</div>
+
+					<% if (locals.searchTerm) { %>
+						<div class="search-results-header">
+							<h3>Search Results for "<%= searchTerm %>"</h3>
+							<% if (products.length === 0) { %>
+								<p>No products found matching your search.</p>
+							<% } %>
+						</div>
+					<% } %>
+				</section>
+
+                
+
+				<!-- End Best Seller -->
+
+
+
+				
+				<!-- Start Filter Bar -->
+				<div class="filter-bar d-flex flex-wrap align-items-center">
+
+					<div class="sorting">
+						<div class="sorting-options">
+							<form action="/shop-page" method="GET" id="sortForm">
+								<select name="sort" class="form-control" onchange="this.form.submit()">
+									<option value="default" <%= currentSort === 'default' ? 'selected' : '' %>>Default sorting</option>
+									<option value="price-low" <%= currentSort === 'price-low' ? 'selected' : '' %>>Price: Low to High</option>
+									<option value="price-high" <%= currentSort === 'price-high' ? 'selected' : '' %>>Price: High to Low</option>
+									<option value="name-asc" <%= currentSort === 'name-asc' ? 'selected' : '' %>>Name: A to Z</option>
+									<option value="name-desc" <%= currentSort === 'name-desc' ? 'selected' : '' %>>Name: Z to A</option>
+									<option value="new-arrivals" <%= currentSort === 'new-arrivals' ? 'selected' : '' %>>New Arrivals</option>
+								</select>
+							</form>
+						</div>
+					</div>
+					<div class="sorting mr-auto">
+						
+					</div>
+					<div class="filter-bar d-flex flex-wrap align-items-center">
+						<% if (pagination.totalPages > 1) { %>
+							<div class="pagination">
+								<% if (pagination.hasPrev) { %>
+									<a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>" class="prev-arrow">
+										<i class="fa fa-long-arrow-left" aria-hidden="true"></i>
+									</a>
+								<% } %>
+					
+								<% 
+								let startPage = Math.max(1, pagination.currentPage - 2);
+								let endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+								
+								if (startPage > 1) { %>
+									<a href="/shop-page?page=1&sort=<%= currentSort %>">1</a>
+									<% if (startPage > 2) { %>
+										<span class="dot-dot">...</span>
+									<% } %>
+								<% } %>
+					
+								<% for(let i = startPage; i <= endPage; i++) { %>
+									<a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>" 
+									   class="<%= pagination.currentPage === i ? 'active' : '' %>">
+										<%= i %>
+									</a>
+								<% } %>
+					
+								<% if (endPage < pagination.totalPages) { %>
+									<% if (endPage < pagination.totalPages - 1) { %>
+										<span class="dot-dot">...</span>
+									<% } %>
+									<a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>">
+										<%= pagination.totalPages %>
+									</a>
+								<% } %>
+					
+								<% if (pagination.hasNext) { %>
+									<a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>" class="next-arrow">
+										<i class="fa fa-long-arrow-right" aria-hidden="true"></i>
+									</a>
+								<% } %>
+							</div>
+						<% } %>
+					</div>
+				</div>
+				<!-- End Filter Bar -->
+			</div>
+		</div>
+	</div>
+
+	<!-- Start related-product Area -->
+	<section class="related-product-area section_gap">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-lg-6 text-center">
+					<div class="section-title">
+						<h1>Deals of the Week</h1>
+						<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
+							magna aliqua.</p>
+					</div>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-9">
+					<div class="row">
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r1.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r2.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r3.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r5.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r6.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r7.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r9.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r10.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-4 col-md-4 col-sm-6">
+							<div class="single-related-product d-flex">
+								<a href="#"><img src="img/r11.jpg" alt=""></a>
+								<div class="desc">
+									<a href="#" class="title">Black lace Heels</a>
+									<div class="price">
+										<h6>$189.00</h6>
+										<h6 class="l-through">$210.00</h6>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-3">
+					<div class="ctg-right">
+						<a href="#" target="_blank">
+							<img class="img-fluid d-block mx-auto" src="img/category/c5.jpg" alt="">
+						</a>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+	<!-- End related-product Area -->
+
+	<!-- start footer Area -->
+	<footer class="footer-area section_gap">
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-3  col-md-6 col-sm-6">
+					<div class="single-footer-widget">
+						<h6>About Us</h6>
+						<p>
+							Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore dolore
+							magna aliqua.
+						</p>
+					</div>
+				</div>
+				<div class="col-lg-4  col-md-6 col-sm-6">
+					<div class="single-footer-widget">
+						<h6>Newsletter</h6>
+						<p>Stay update with our latest</p>
+						<div class="" id="mc_embed_signup">
+
+							<form target="_blank" novalidate="true" action="https://spondonit.us12.list-manage.com/subscribe/post?u=1462626880ade1ac87bd9c93a&amp;id=92a4423d01"
+							 method="get" class="form-inline">
+
+								<div class="d-flex flex-row">
+
+									<input class="form-control" name="EMAIL" placeholder="Enter Email" onfocus="this.placeholder = ''" onblur="this.placeholder = 'Enter Email '"
+									 required="" type="email">
+
+
+									<button class="click-btn btn btn-default"><i class="fa fa-long-arrow-right" aria-hidden="true"></i></button>
+									<div style="position: absolute; left: -5000px;">
+										<input name="b_36c4fd991d266f23781ded980_aefe40901a" tabindex="-1" value="" type="text">
+									</div>
+
+									<!-- <div class="col-lg-4 col-md-4">
+													<button class="bb-btn btn"><span class="lnr lnr-arrow-right"></span></button>
+												</div>  -->
+								</div>
+								<div class="info"></div>
+							</form>
+						</div>
+					</div>
+				</div>
+				<div class="col-lg-3  col-md-6 col-sm-6">
+					<div class="single-footer-widget mail-chimp">
+						<h6 class="mb-20">Instragram Feed</h6>
+						<ul class="instafeed d-flex flex-wrap">
+							<li><img src="img/i1.jpg" alt=""></li>
+							<li><img src="img/i2.jpg" alt=""></li>
+							<li><img src="img/i3.jpg" alt=""></li>
+							<li><img src="img/i4.jpg" alt=""></li>
+							<li><img src="img/i5.jpg" alt=""></li>
+							<li><img src="img/i6.jpg" alt=""></li>
+							<li><img src="img/i7.jpg" alt=""></li>
+							<li><img src="img/i8.jpg" alt=""></li>
+						</ul>
+					</div>
+				</div>
+				<div class="col-lg-2 col-md-6 col-sm-6">
+					<div class="single-footer-widget">
+						<h6>Follow Us</h6>
+						<p>Let us be social</p>
+						<div class="footer-social d-flex align-items-center">
+							<a href="#"><i class="fa fa-facebook"></i></a>
+							<a href="#"><i class="fa fa-twitter"></i></a>
+							<a href="#"><i class="fa fa-dribbble"></i></a>
+							<a href="#"><i class="fa fa-behance"></i></a>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="footer-bottom d-flex justify-content-center align-items-center flex-wrap">
+				<p class="footer-text m-0"><!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
+Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved | This template is made with <i class="fa fa-heart-o" aria-hidden="true"></i> by <a href="https://colorlib.com" target="_blank">Colorlib</a>
+<!-- Link back to Colorlib can't be removed. Template is licensed under CC BY 3.0. -->
+</p>
+			</div>
+		</div>
+	</footer>
+	<!-- End footer Area -->
+
+	<!-- Modal Quick Product View -->
+	<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-hidden="true">
+		<div class="modal-dialog" role="document">
+			<div class="container relative">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<div class="product-quick-view">
+					<div class="row align-items-center">
+						<div class="col-lg-6">
+							<div class="quick-view-carousel">
+								<div class="item" style="background: url(img/organic-food/q1.jpg);">
+
+								</div>
+								<div class="item" style="background: url(img/organic-food/q1.jpg);">
+
+								</div>
+								<div class="item" style="background: url(img/organic-food/q1.jpg);">
+
+								</div>
+							</div>
+						</div>
+						<div class="col-lg-6">
+							<div class="quick-view-content">
+								<div class="top">
+									<h3 class="head">Mill Oil 1000W Heater, White</h3>
+									<div class="price d-flex align-items-center"><span class="lnr lnr-tag"></span> <span class="ml-10">$149.99</span></div>
+									<div class="category">Category: <span>Household</span></div>
+									<div class="available">Availibility: <span>In Stock</span></div>
+								</div>
+								<div class="middle">
+									<p class="content">Mill Oil is an innovative oil filled radiator with the most modern technology. If you are
+										looking for something that can make your interior look awesome, and at the same time give you the pleasant
+										warm feeling during the winter.</p>
+									<a href="#" class="view-full">View full Details <span class="lnr lnr-arrow-right"></span></a>
+								</div>
+								<div class="bottom">
+									<div class="color-picker d-flex align-items-center">Color:
+										<span class="single-pick"></span>
+										<span class="single-pick"></span>
+										<span class="single-pick"></span>
+										<span class="single-pick"></span>
+										<span class="single-pick"></span>
+									</div>
+									<div class="quantity-container d-flex align-items-center mt-15">
+										Quantity:
+										<input type="text" class="quantity-amount ml-15" value="1" />
+										<div class="arrow-btn d-inline-flex flex-column">
+											<button class="increase arrow" type="button" title="Increase Quantity"><span class="lnr lnr-chevron-up"></span></button>
+											<button class="decrease arrow" type="button" title="Decrease Quantity"><span class="lnr lnr-chevron-down"></span></button>
+										</div>
+
+									</div>
+									<div class="d-flex mt-20">
+										<a href="#" class="view-btn color-2"><span>Add to Cart</span></a>
+										<a href="#" class="like-btn"><span class="lnr lnr-layers"></span></a>
+										<a href="#" class="like-btn"><span class="lnr lnr-heart"></span></a>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+	<script src="js/vendor/jquery-2.2.4.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4"
+	 crossorigin="anonymous"></script>
+	<script src="js/vendor/bootstrap.min.js"></script>
+	<script src="js/jquery.ajaxchimp.min.js"></script>
+	<script src="js/jquery.nice-select.min.js"></script>
+	<script src="js/jquery.sticky.js"></script>
+	<script src="js/nouislider.min.js"></script>
+	<script src="js/jquery.magnific-popup.min.js"></script>
+	<script src="js/owl.carousel.min.js"></script>
+	<!--gmaps Js-->
+	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCjCGmQ0Uq4exrzdcL6rvxywDDOvfAu6eE"></script>
+	<script src="js/gmaps.min.js"></script>
+	<script src="js/main.js"></script>
+</body>
+
+
+
+
+<script>
+
+
+	// Add this to your main.js or create a new JavaScript file
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle sorting form submission
+    const sortForm = document.getElementById('sortForm');
+    if (sortForm) {
+        sortForm.addEventListener('change', function(e) {
+            const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
+            const sortValue = e.target.value;
+            
+            window.location.href = `/shop-page?page=${currentPage}&sort=${sortValue}`;
+        });
+    }
+
+    // Update URL when changing page without losing sort parameter
+    const paginationLinks = document.querySelectorAll('.pagination a');
+    paginationLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            if (!this.classList.contains('dot-dot')) {
+                e.preventDefault();
+                const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
+                const page = this.getAttribute('href').split('page=')[1].split('&')[0];
+                
+                window.location.href = `/shop-page?page=${page}&sort=${currentSort}`;
+            }
+        });
+    });
+});
+</script>
+
+</html>

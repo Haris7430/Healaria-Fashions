@@ -19,7 +19,7 @@ const userSchema= new Schema ({
         required: false,
         unique: true,
         sparse:true,
-        default:null
+        default:undefined
     },
     googleId:{
         type:String,
@@ -42,6 +42,7 @@ const userSchema= new Schema ({
         type: Schema.Types.ObjectId,
         ref: 'Cart'
     }],
+    
     wallet: {
         type: Number,
         default:0,
@@ -56,16 +57,16 @@ const userSchema= new Schema ({
     }],
     createdOn : {
         type:Date,
-        defaulte:Date.now,
+        default:Date.now,
     },
-    referalCode: {
+    referralCode: {
         type: String,
         // required:true
     },
     redeemed: {
         type: Boolean,
         // defaulte:false
-
+ 
     },
     redeemedUsers: [{
         type: Schema.Types.ObjectId,
@@ -86,7 +87,7 @@ const userSchema= new Schema ({
             default: Date.now
         }
     }]
-})
+},{timestamps:true})
 
 
 

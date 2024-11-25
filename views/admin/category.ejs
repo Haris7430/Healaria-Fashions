@@ -71,9 +71,7 @@
 
                                 <!-- Edit Button Column -->
                                 <td class="text-lg-center">
-                                    <button class="btn btn-outline-primary btn-sm" onclick="openEditModal('<%= category._id %>', '<%= category.name %>', '<%= category.description %>')">
-                                        Edit
-                                    </button>
+                                    <a href="/admin/editCategory?id=<%=category._id%>" class="btn btn-info text-white"> Edit </a>
                                 </td>
                             </tr>
                             <% }) %>

@@ -15,73 +15,6 @@
           <div class="container-xxl flex-grow-1 container-p-y">
             
             
-<!-- Product List Widget -->
-<div class="card mb-6">
-  <div class="card-widget-separator-wrapper">
-    <div class="card-body card-widget-separator">
-      <div class="row gy-4 gy-sm-1">
-        <div class="col-sm-6 col-lg-3">
-          <div class="d-flex justify-content-between align-items-start card-widget-1 border-end pb-4 pb-sm-0">
-            <div>
-              <p class="mb-1">In-store Sales</p>
-              <h4 class="mb-1">$5,345.43</h4>
-              <p class="mb-0"><span class="me-2">5k orders</span><span class="badge rounded-pill bg-label-success">+5.7%</span></p>
-            </div>
-            <div class="avatar me-sm-6">
-              <span class="avatar-initial rounded bg-label-secondary text-heading">
-                <i class="ri-home-6-line ri-24px"></i>
-              </span>
-            </div>
-          </div>
-          <hr class="d-none d-sm-block d-lg-none me-6">
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="d-flex justify-content-between align-items-start card-widget-2 border-end pb-4 pb-sm-0">
-            <div>
-              <p class="mb-1">Website Sales</p>
-              <h4 class="mb-1">$674,347.12</h4>
-              <p class="mb-0"><span class="me-2">21k orders</span><span class="badge rounded-pill bg-label-success">+12.4%</span></p>
-            </div>
-            <div class="avatar me-lg-6">
-              <span class="avatar-initial rounded bg-label-secondary text-heading">
-                <i class="ri-computer-line ri-24px"></i>
-              </span>
-            </div>
-          </div>
-          <hr class="d-none d-sm-block d-lg-none">
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="d-flex justify-content-between align-items-start border-end pb-4 pb-sm-0 card-widget-3">
-            <div>
-              <p class="mb-1">Discount</p>
-              <h4 class="mb-1">$14,235.12</h4>
-              <p class="mb-0">6k orders</p>
-            </div>
-            <div class="avatar me-sm-6">
-              <span class="avatar-initial rounded bg-label-secondary text-heading">
-                <i class="ri-gift-line ri-24px"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="col-sm-6 col-lg-3">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <p class="mb-1">Affiliate</p>
-              <h4 class="mb-1">$8,345.23</h4>
-              <p class="mb-0"><span class="me-2">150 orders</span><span class="badge rounded-pill bg-label-danger">-3.5%</span></p>
-            </div>
-            <div class="avatar">
-              <span class="avatar-initial rounded bg-label-secondary text-heading">
-                <i class="ri-money-dollar-circle-line ri-24px"></i>
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 
 
@@ -106,6 +39,7 @@
           <th>Email</th>
           <th>Phone No</th>
           <th>Action</th>
+          <th>Delete</th>
         </tr>
       </thead>
       <tbody>
@@ -125,6 +59,10 @@
                 <!-- Customer is not blocked, show "Block" button -->
                 <a href="/admin/blockCustomer?id=<%= data[i]._id %>" class="btn btn-danger text-white">Block</a>
               <% } %>
+             
+            </td>
+            <td>
+              <a href="/admin/deleteCustomer?id=<%= data[i]._id %>" class="btn btn-danger text-white">Delete</a>
             </td>
           </tr>
         <% } %>

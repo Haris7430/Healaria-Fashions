@@ -21,6 +21,7 @@ const login= async(req,res)=>{
             
             if(passwordMatch){
                 req.session.isAdmin= true;
+                // req.session.user = admin._id; //// not need
                 return res.redirect('/admin/admin-dashboard')
             }else {
                 console.log('admin password not match (const login-admin controller)');

@@ -1,0 +1,157 @@
+<%- include("../../views/partials/admin/header/") %>
+
+<div class="content-wrapper">
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="fw-bold"><%= product.productName %></h4>
+            <a href="/admin/colorVarient/<%= product._id %>" class="btn btn-primary">Add Color Variant</a>
+        </div>
+
+        <div class="card">
+            <h5 class="card-header">Color Variants</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Color</th>
+                            <th>Sizes & Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (variants && variants.length > 0) { %>
+                            <% variants.forEach(variant => { %>
+                                <tr>
+                                    <td>
+                                        <% if (variant.images && variant.images.length > 0) { %>
+                                            <img src="/uploads/product-images/<%= variant.images[0].filename %>" 
+                                                 alt="Product Image" 
+                                                 style="width: 80px; height: 80px; object-fit: cover;">
+                                        <% } %>
+                                    </td>
+                                    <td><%= variant.color %></td>
+                                    <td>
+                                        <% variant.sizes.forEach(size => { %>
+                                            <div class="mb-1">
+                                                UK <%= size.size %>: <span class="badge bg-info"><%= size.quantity %></span>
+                                            </div>
+                                        <% }) %>
+                                    </td>
+                                    <td>
+                                        <span class="badge <%= variant.isListed ? 'bg-success' : 'bg-danger' %>">
+                                            <%= variant.isListed ? 'Listed' : 'Unlisted' %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-secondary btn-sm dropdown-toggle" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <% if (variant.isListed) { %>
+                                                    <li><a class="dropdown-item" href="#" 
+                                                        onclick="handleUnlist('<%= product._id %>', '<%= variant._id %>')">
+                                                        Unlist
+                                                    </a></li>
+                                                <% } else { %>
+                                                    <li><a class="dropdown-item" href="#" 
+                                                        onclick="handleList('<%= product._id %>', '<%= variant._id %>')">
+                                                        List
+                                                    </a></li>
+                                                <% } %>
+                                                <li><a class="dropdown-item" 
+                                                    href="/admin/editVariant/<%= variant._id %>">Edit</a></li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li><a class="dropdown-item text-danger" href="#" 
+                                                    onclick="handleDelete('<%= product._id %>', '<%= variant._id %>')">
+                                                    Delete
+                                                </a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="text-center">No variants found</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <% if (totalPages > 1) { %>
+            <div class="d-flex justify-content-center mt-4">
+                <nav>
+                    <ul class="pagination">
+                        <li class="page-item <%= currentPage === 1 ? 'disabled' : '' %>">
+                            <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search %>">Previous</a>
+                        </li>
+                        <% for(let i = 1; i <= totalPages; i++) { %>
+                            <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                <a class="page-link" href="?page=<%= i %>&search=<%= search %>"><%= i %></a>
+                            </li>
+                        <% } %>
+                        <li class="page-item <%= currentPage === totalPages ? 'disabled' : '' %>">
+                            <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search %>">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        <% } %>
+    </div>
+</div>
+
+<%- include("../../views/partials/admin/footer/") %>
+
+<script>
+    async function handleList(productId, variantId) {
+        try {
+            const response = await fetch(`/admin/variant/list/${productId}/${variantId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (response.ok) location.reload();
+            else alert(data.message);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async function handleUnlist(productId, variantId) {
+        try {
+            const response = await fetch(`/admin/variant/unlist/${productId}/${variantId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (response.ok) location.reload();
+            else alert(data.message);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async function handleDelete(productId, variantId) {
+        if (!confirm('Are you sure you want to delete this variant?')) return;
+        
+        try {
+            const response = await fetch(`/admin/variant/delete/${productId}/${variantId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await response.json();
+            if (response.ok) location.reload();
+            else alert(data.message);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+</script>
