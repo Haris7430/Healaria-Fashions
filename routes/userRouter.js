@@ -50,11 +50,10 @@ router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
 
 
-router.get('/userCart',userAuth, userCartController.getCartPage); 
-router.post('/addToCart/:id', userAuth, userCartController.addToCart);
-router.delete('/removeFromCart/:productId', userAuth, userCartController.removeFromCart);
-router.put('/updateCart/:productId', userAuth, userCartController.updateCart);
-
+router.get('/userCart',userAuth, userCartController.getCartPage);
+router.post('/addToCart/:productId', userAuth, userCartController.addToCart);
+// router.delete('/removeFromCart/:productId', userAuth, userCartController.removeFromCart);
+// router.put('/updateCart/:productId', userAuth, userCartController.updateCart);
 
 
 

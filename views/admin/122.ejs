@@ -56,6 +56,40 @@ const Product = mongoose.model("Product", productSchema);
 module.exports = Product;
 
 
+This is my category Schema.js code :- 
+
+const mongoose= require('mongoose');
+const {Schema}= mongoose;
+
+const categorySchema= new mongoose.Schema({
+    name:{
+    type: String,
+    required:true,
+    unique:true
+    },
+    description: {
+        type:String,
+        required:true
+    },
+    isListed: {
+        type:Boolean,
+        default:true
+    },
+    categoryOffer:{
+        type:Number,
+        default:0
+    },
+    createdAt: {
+        type: Date,
+        default:Date.now
+    },
+})
+
+const Category= mongoose.model('Category',categorySchema);
+
+module.exports= Category
+
+
 
 
 
@@ -66,99 +100,99 @@ router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
 
 
-router.get('/userCart',userAuth, userCartController.getCartPage); 
-router.post('/addToCart/:id', userAuth, userCartController.addToCart);
-router.delete('/removeFromCart/:productId', userAuth, userCartController.removeFromCart);
-router.put('/updateCart/:productId', userAuth, userCartController.updateCart);
+router.get('/userCart',userAuth, userCartController.getCartPage);
+router.post('/addToCart/:productId', userAuth, userCartController.addToCart);
 
 
 This is my userController.js code:- 
 
 
 
-// userController.js - Updated getProductDetails function
-const getProductDetails = async (req, res) => {
-    try {
-        const productId = req.query.id;
-        const product = await Product.findById(productId)
-            .populate('category')
-            .lean();
 
-        if (!product) {
-            return res.status(404).send('Product not found');
-        }
 
-        // Filter listed variants and process their data
-        const processedVariants = product.variants
-            .filter(variant => variant.isListed)
-            .map(variant => ({
-                _id: variant._id,
-                color: variant.color,
-                sizes: variant.sizes,
-                images: variant.images,
-                isListed: variant.isListed,
-                mainImage: variant.mainImage
-            }));
-
-        // Find initial variant (either main image or first one)
-        const initialVariant = processedVariants.find(v => v.mainImage) || processedVariants[0];
-
-    
-        res.render('product', {
-            product: product,
-            initialVariant: initialVariant,
-            variants: processedVariants,
-            variantSizes: initialVariant.sizes,
-            productImages: initialVariant.images,
-        });
-
-    } catch (error) {
-        console.error('Error in getProductDetails:', error);
-        res.status(500).send('Server Error');
-    }
-};
-
-const getVariantDetails = async (req, res) => {
-    try {
-        const { productId, variantId } = req.params;
-        
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        const variant = product.variants.find(v => v._id.toString() === variantId);
-        if (!variant) {
-            return res.status(404).json({ error: 'Variant not found' });
-        }
-
-        
-
-        res.json({
-            sizes: variant.sizes,
-            images: variant.images
-        });
-
-    } catch (error) {
-        console.error('Error in getVariantDetails:', error);
-        res.status(500).json({ error: 'Server error' });
-    }
-};
 
 This is my product.ejs code:- 
+
 
 <%- include("../../views/partials/user/header/") %>
 
 
+
+
+
 <style>
 
-.zoomContainer {
-        z-index: 999;
+.product-category {
+    font-size: 16px;
+    color: #666;
+    margin-bottom: 15px;
+    font-style: italic;
+}
+
+.product-category span {
+    color: #384aeb;
+    font-weight: 500;
+}
+
+
+
+
+
+
+
+.main-image {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        height: 500px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: crosshair;
     }
-    .zoomLens {
-        border: 2px solid #384aeb !important;
-        opacity: 0.5;
+
+    .zoom-image {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transition: transform 0.2s ease;
     }
+
+    .zoomed {
+        transform: scale(2); /* Zoom level */
+        cursor: move;
+    }
+
+
+
+
+.main-image {
+        position: relative;
+        overflow: hidden;
+        width: 100%;
+        height: 500px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: crosshair;
+    }
+
+    .main-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        transition: transform 0.2s ease;
+    }
+
+    .main-image img.zoomed {
+        transform: scale(3); /* Adjust zoom level */
+    }
+
+
 
 
     .product-detail-area {
@@ -463,20 +497,26 @@ This is my product.ejs code:-
 				<!-- Product Images -->
 				<div class="col-lg-6">
 					<div class="product-images">
+						<div>
+							<input type="range" id="zoomLevel" min="1" max="5" step="0.1" value="2" />
+						</div>
 						<div class="main-image" id="imageZoomContainer">
 							<% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
 								<img id="mainImage" 
 									 src="/uploads/product-images/<%= initialVariant.images[0].filename %>" 
-									 alt="<%= product.productName %>"
-									 data-zoom-image="/uploads/product-images/<%= initialVariant.images[0].filename %>"
+									 alt="<%= product.productName %>" 
 									 class="zoom-image">
 							<% } else { %>
 								<img id="mainImage" 
 									 src="/images/default-product.jpg" 
-									 alt="Default product image"
+									 alt="Default product image" 
 									 class="zoom-image">
 							<% } %>
 						</div>
+						
+						
+						
+						
 						
 						<!-- Thumbnails -->
 						<div class="thumbnail-row">
@@ -499,9 +539,14 @@ This is my product.ejs code:-
 						<h1 class="product-title"><%= product.productName %></h1>
 						<div class="product-price">₹<%= product.salesPrice.toFixed(2) %></div>
 						
+						<!-- Inside the product-info div, add this section -->
+<div class="product-category">
+    <span>Category: <%= typeof categoryName !== 'undefined' ? categoryName : 'Not Available' %></span>
+</div>
 						<div class="product-description">
 							<p><%= product.description %></p>
 						</div>
+						
 	
 						<!-- Color Variants -->
 						<div class="variant-options">
@@ -556,128 +601,239 @@ This is my product.ejs code:-
 <% } %>
 <!--================End Single Product Area =================-->
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
+	
 
 
-<script>
+	<script>
+ const zoomContainer = document.getElementById('imageZoomContainer');
+    const mainImage = document.getElementById('mainImage');
+    const zoomLevelInput = document.getElementById('zoomLevel');
+
+    let isZoomed = false;
+
+    // Set initial zoom level from the range input
+    let zoomLevel = parseFloat(zoomLevelInput.value);
+
+    zoomLevelInput.addEventListener('input', (event) => {
+        zoomLevel = parseFloat(event.target.value);
+        if (isZoomed) {
+            mainImage.style.transform = `scale(${zoomLevel})`;
+        }
+    });
+
+    // Toggle Zoom on Click
+    zoomContainer.addEventListener('click', () => {
+        isZoomed = !isZoomed;
+        if (isZoomed) {
+            mainImage.classList.add('zoomed');
+            mainImage.style.transform = `scale(${zoomLevel})`;
+        } else {
+            mainImage.classList.remove('zoomed');
+            mainImage.style.transform = 'scale(1)';
+            mainImage.style.transformOrigin = 'center center';
+        }
+    });
+
+    // Mousemove for Panning
+    zoomContainer.addEventListener('mousemove', (event) => {
+        if (isZoomed) {
+            const rect = zoomContainer.getBoundingClientRect();
+            const offsetX = ((event.clientX - rect.left) / rect.width) * 100;
+            const offsetY = ((event.clientY - rect.top) / rect.height) * 100;
+
+            mainImage.style.transformOrigin = `${offsetX}% ${offsetY}%`;
+        }
+    });
+
+    // Reset Zoom when Mouse Leaves Container
+    zoomContainer.addEventListener('mouseleave', () => {
+        if (isZoomed) {
+            mainImage.classList.remove('zoomed');
+            mainImage.style.transform = 'scale(1)';
+            mainImage.style.transformOrigin = 'center center';
+            isZoomed = false; // Automatically reset zoom
+        }
+    });
 
 
+	function changeMainImage(imagePath, thumbnailElement) {
+    // Update the main image source
+    const mainImage = document.getElementById('mainImage');
+    mainImage.src = imagePath;
+
+    // Remove active class from all thumbnails
+    document.querySelectorAll('.thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+
+    // Add active class to the clicked thumbnail
+    thumbnailElement.classList.add('active');
+}
 
 
-
-
-    // Function to change main image
-    function changeMainImage(src, element) {
-        const mainImage = document.getElementById('mainImage');
-        
-        // Add fade effect
-        mainImage.style.opacity = '0';
-        setTimeout(() => {
-            mainImage.src = src;
-            mainImage.style.opacity = '1';
-        }, 200);
-        
-        // Update active thumbnail
-        document.querySelectorAll('.thumbnail').forEach(thumb => {
-            thumb.classList.remove('active');
-        });
-        element.classList.add('active');
-    }
-    
-    // Function to select variant
-    function selectVariant(productId, variantId, element) {
-        console.log('Selecting variant:', variantId); // Debug log
-        
-        // Update active state
-        document.querySelectorAll('.color-option').forEach(option => {
-            option.classList.remove('active');
-        });
-        element.classList.add('active');
-        
-        // Update form values
-        document.getElementById('selectedVariant').value = variantId;
-        document.getElementById('selectedSize').value = '';
-        document.getElementById('addToCartBtn').disabled = true;
-        
-        // Fetch variant details
-        fetch(`/product/${productId}/variant/${variantId}`)
-.then(response => response.json())
-.then(data => {
-    if (data.images && data.images.length > 0) {
-        // Update main image
-        const mainImage = document.getElementById('mainImage');
-        mainImage.src = data.images[0].fullPath;
-        
-        // Update thumbnails
-        const thumbnailRow = document.querySelector('.thumbnail-row');
-        thumbnailRow.innerHTML = data.images.map((image, index) => `
-            <div class="thumbnail ${index === 0 ? 'active' : ''}"
-                 onclick="changeMainImage('${image.fullPath}', this)">
-                <img src="${image.fullPath}" 
-                     alt="Product view ${index + 1}">
-            </div>
-        `).join('');
-    }
-                
-                // Update sizes
-                if (data.sizes) {
-                    updateSizeOptions(data.sizes);
-                }
-            })
-            .catch(error => {
-                console.error('Error fetching variant details:', error);
-            });
-    }
-    
-    // Function to update size options
-    function updateSizeOptions(sizes) {
-        const sizeGrid = document.getElementById('sizeGrid');
-        sizeGrid.innerHTML = sizes.map(size => `
-            <button type="button" 
-                    class="size-btn ${size.quantity === 0 ? 'out-of-stock' : ''}"
-                    onclick="selectSize(this, ${size.size})"
-                    ${size.quantity === 0 ? 'disabled' : ''}>
-                UK ${size.size}
-                <div class="stock-info">
-                    ${size.quantity === 0 ? 'Out of Stock' : `${size.quantity} left`}
+		
+		// Function to select variant
+		function selectVariant(productId, variantId, element) {
+			console.log('Selecting variant:', variantId); // Debug log
+			
+			// Update active state
+			document.querySelectorAll('.color-option').forEach(option => {
+				option.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form values
+			document.getElementById('selectedVariant').value = variantId;
+			document.getElementById('selectedSize').value = '';
+			document.getElementById('addToCartBtn').disabled = true;
+			
+			// Fetch variant details
+			fetch(`/product/${productId}/variant/${variantId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.images && data.images.length > 0) {
+            // Update main image
+            const mainImage = document.getElementById('mainImage');
+            mainImage.src = data.images[0].fullPath;
+            
+            // Update thumbnails
+            const thumbnailRow = document.querySelector('.thumbnail-row');
+            thumbnailRow.innerHTML = data.images.map((image, index) => `
+                <div class="thumbnail ${index === 0 ? 'active' : ''}"
+                     onclick="changeMainImage('${image.fullPath}', this)">
+                    <img src="${image.fullPath}" 
+                         alt="Product view ${index + 1}">
                 </div>
-            </button>
-        `).join('');
-    }
-    
-    // Function to select size
-    function selectSize(element, size) {
-        // Update active state
-        document.querySelectorAll('.size-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
-        element.classList.add('active');
-        
-        // Update form value
-        document.getElementById('selectedSize').value = size;
-        document.getElementById('addToCartBtn').disabled = false;
-    }
-    
-    // Function to handle add to cart
-    function handleAddToCart(event) {
-        event.preventDefault();
-        
-        const size = document.getElementById('selectedSize').value;
-        if (!size) {
-            alert('Please select a size');
-            return false;
+            `).join('');
         }
         
-        const variantId = document.getElementById('selectedVariant').value;
-        console.log('Adding to cart:', { variantId, size });
-        
-        // Add your cart logic here
-        
+        // Update sizes
+        if (data.sizes) {
+            updateSizeOptions(data.sizes);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching variant details:', error);
+    });
+		}
+		
+		// Function to update size options
+		function updateSizeOptions(sizes) {
+			const sizeGrid = document.getElementById('sizeGrid');
+			sizeGrid.innerHTML = sizes.map(size => `
+				<button type="button" 
+						class="size-btn ${size.quantity === 0 ? 'out-of-stock' : ''}"
+						onclick="selectSize(this, ${size.size})"
+						${size.quantity === 0 ? 'disabled' : ''}>
+					UK ${size.size}
+					<div class="stock-info">
+						${size.quantity === 0 ? 'Out of Stock' : `${size.quantity} left`}
+					</div>
+				</button>
+			`).join('');
+		}
+		
+		// Function to select size
+		function selectSize(element, size) {
+			// Update active state
+			document.querySelectorAll('.size-btn').forEach(btn => {
+				btn.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form value
+			document.getElementById('selectedSize').value = size;
+			document.getElementById('addToCartBtn').disabled = false;
+		}
+		
+		
+		
+
+		function handleAddToCart(event) {
+    event.preventDefault();
+    
+    const size = document.getElementById('selectedSize').value;
+    const variantId = document.getElementById('selectedVariant').value;
+    const productId = '<%= product._id %>'; 
+    
+    if (!size) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Oops...',
+            text: 'Please select a size before adding to cart!',
+            confirmButtonColor: '#384aeb'
+        });
         return false;
     }
     
-    // Initialize any necessary elements on page load
-    document.addEventListener('DOMContentLoaded', function() {
-        // Any initialization code can go here
-        console.log('Product page initialized');
+    const activeColorElement = document.querySelector('.color-option.active .color-name');
+    const color = activeColorElement ? activeColorElement.textContent : 'Unknown';
+    
+    fetch(`/addToCart/${productId}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            size: size,
+            variantId: variantId,
+            color: color,
+            quantity: 1
+        })
+    })
+    .then(response => {
+        // More robust error handling
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Failed to add to cart');
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Added to Cart!',
+                text: 'Your product has been added to the cart.',
+                showConfirmButton: true,
+                confirmButtonText: 'Go to Cart',
+                confirmButtonColor: '#384aeb',
+                showCancelButton: true,
+                cancelButtonText: 'Continue Shopping',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
+        } else {
+            throw new Error(data.message || 'Unknown error occurred');
+        }
+    })
+    .catch(error => {
+        console.error('Add to Cart Error:', error);
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'There was a problem adding the product to cart. Please try again.',
+            confirmButtonColor: '#384aeb'
+        });
     });
-    </script>
+    
+    return false;
+}
+
+
+		
+		// Initialize any necessary elements on page load
+		document.addEventListener('DOMContentLoaded', function() {
+			// Any initialization code can go here
+			console.log('Product page initialized');
+		});
+</script>

@@ -669,7 +669,7 @@ const getProductDetails = async (req, res) => {
     try {
         const productId = req.query.id;
         const product = await Product.findById(productId)
-            .populate('category')
+            .populate('category')  // Ensure this line is present
             .lean();
 
         if (!product) {
@@ -691,6 +691,8 @@ const getProductDetails = async (req, res) => {
         // Find initial variant (either main image or first one)
         const initialVariant = processedVariants.find(v => v.mainImage) || processedVariants[0];
 
+        // Debug logging
+        console.log('Product Category:', product.category);
     
         res.render('product', {
             product: product,
@@ -698,6 +700,7 @@ const getProductDetails = async (req, res) => {
             variants: processedVariants,
             variantSizes: initialVariant.sizes,
             productImages: initialVariant.images,
+            categoryName: product.category ? product.category.categoryName : 'Uncategorized'
         });
 
     } catch (error) {
@@ -720,20 +723,22 @@ const getVariantDetails = async (req, res) => {
             return res.status(404).json({ error: 'Variant not found' });
         }
 
-        
-
+        // Return full image paths and complete size information
         res.json({
-            sizes: variant.sizes,
-            images: variant.images.map(img => ({
-                ...img,
-                fullPath: `/uploads/product-images/${img.filename}`
+            sizes: variant.sizes.map(size => ({
+                size: size.size,
+                quantity: size.quantity
+            })),
+            images: variant.images.map(image => ({
+                fullPath: `/uploads/product-images/${image.filename}`,
+                filename: image.filename
             }))
         });
 
     } catch (error) {
         console.error('Error in getVariantDetails:', error);
         res.status(500).json({ error: 'Server error' });
-    }
+    } 
 };
 
  
