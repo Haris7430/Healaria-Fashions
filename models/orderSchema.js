@@ -19,6 +19,18 @@ const orderSchema = new Schema({
             ref: 'Product',
             required: true
         },
+        variantId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Product'
+        },
+        color: {
+            type: String,
+            required: true
+        },
+        size: {
+            type: Number,
+            required: true
+        },
         quantity: {
             type: Number,
             required: true

@@ -1,6 +1,7 @@
 const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
 const Cart = require('../../models/cartSchema');
+const Product = require('../../models/productSchema');
 const mongoose = require('mongoose');
 
 const getCheckoutPage = async (req, res) => {
@@ -9,9 +10,39 @@ const getCheckoutPage = async (req, res) => {
         const userAddress = await Address.findOne({ userId: req.user._id });
         const addresses = userAddress ? userAddress.address : [];
 
-        // Get cart items from session or database
-        const cart = await Cart.findOne({ userId: req.user._id }).populate('items.productId');
-        const cartItems = cart ? cart.items : [];
+        // Get cart items from database with full product details
+        const cart = await Cart.findOne({ userId: req.user._id })
+            .populate({
+                path: 'items.productId',
+                model: 'Product',
+                populate: {
+                    path: 'variants',
+                    model: 'Product'
+                }
+            });
+
+        const cartItems = cart ? cart.items.map(item => {
+            // Find the specific variant for the cart item
+            const product = item.productId;
+            const variant = product.variants.find(v => 
+                v._id.toString() === item.variantId.toString()
+            );
+
+            return {
+                ...item.toObject(),
+                productName: product.productName,
+                variantColor: item.color,
+                variantSize: item.size,
+                variantImage: variant ? 
+                    (variant.images.find(img => img.mainImage) || variant.images[0])?.filename 
+                    : null,
+                variantDetails: variant ? {
+                    color: variant.color,
+                    images: variant.images,
+                    mainImage: variant.images.find(img => img.mainImage) || variant.images[0]
+                } : null
+            };
+        }) : [];
 
         // Calculate totals
         const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -50,8 +81,17 @@ const createOrder = async (req, res) => {
             });
         }
 
-        // Get cart items
-        const cart = await Cart.findOne({ userId: req.user._id }).populate('items.productId');
+        // Get cart items with full product details
+        const cart = await Cart.findOne({ userId: req.user._id })
+            .populate({
+                path: 'items.productId',
+                model: 'Product',
+                populate: {
+                    path: 'variants',
+                    model: 'Product'
+                }
+            });
+
         if (!cart || !cart.items.length) {
             return res.status(400).json({
                 success: false,
@@ -64,14 +104,17 @@ const createOrder = async (req, res) => {
         const shippingCost = 0;
         const total = subtotal + shippingCost;
 
-        // Create new order
+        // Create new order with detailed item information
         const newOrder = new Order({
             userId: req.user._id,
             items: cart.items.map(item => ({
                 productId: item.productId._id,
                 quantity: item.quantity,
                 price: item.price,
-                totalPrice: item.price * item.quantity
+                totalPrice: item.price * item.quantity,
+                color: item.color,
+                size: item.size,
+                variantId: item.variantId
             })),
             shippingAddress: selectedAddress,
             paymentMethod,
@@ -101,9 +144,6 @@ const createOrder = async (req, res) => {
     }
 };
 
-
-
-
 const getOrderSummary = async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -115,22 +155,38 @@ const getOrderSummary = async (req, res) => {
         const order = await Order.findById(orderId)
             .populate({
                 path: 'items.productId',
-                select: 'productName salesPrice productImages variants'
+                populate: {
+                    path: 'variants',
+                    model: 'Product'
+                }
             });
 
         if (!order) {
             return res.status(404).render('page-404', { message: 'Order not found' });
         }
 
-        // Prepare items with accessible images
+        // Prepare items with variant images
         const orderItems = order.items.map(item => {
             const product = item.productId;
+            const variant = product.variants.find(v => 
+                v._id.toString() === item.variantId.toString()
+            );
+
             return {
-                ...item._doc,
+                ...item.toObject(),
                 product: {
-                    ...product._doc,
-                    productImages: product.productImages || [],
-                    variantImages: product.variants?.[0]?.images || []
+                    ...product.toObject(),
+                    productImages: variant ? 
+                        variant.images.map(img => img.filename) 
+                        : [],
+                    variantImages: variant ? 
+                        variant.images.map(img => img.filename) 
+                        : [],
+                    variantImage: variant ? 
+                        (variant.images.find(img => img.mainImage) || variant.images[0])?.filename 
+                        : null,
+                    color: item.color,
+                    size: item.size
                 }
             };
         });
@@ -145,10 +201,6 @@ const getOrderSummary = async (req, res) => {
         res.status(500).render('page-404', { message: 'Error loading order summary' });
     }
 };
-
-
-
-
 
 module.exports = {
     getCheckoutPage,

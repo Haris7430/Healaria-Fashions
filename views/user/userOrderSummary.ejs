@@ -158,24 +158,34 @@ body {
     </div>
 
     <!-- Order Items -->
-    <% orderItems.forEach(item => { %>
-        <div class="order-item">
-            <h5><%= item.product.productName %></h5>
-            
-            <!-- Display product images from productImages array -->
+   <!-- Order Items -->
+<% orderItems.forEach(item => { %>
+    <div class="order-item" style="display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+        <div class="item-image-container" style="width: 150px; margin-right: 20px;">
             <% if (item.product.productImages && item.product.productImages.length > 0) { %>
-                <img src="/uploads/product-images/<%= item.product.productImages[0] %>" alt="Product Image" style="width: 100px;">
+                <img src="/uploads/product-images/<%= item.product.productImages[0] %>" alt="Product Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
             <% } else if (item.product.variantImages.length > 0) { %>
-                <!-- If no productImages, display variant image as base64 -->
-                <img src="data:<%= item.product.variantImages[0].contentType %>;base64,<%= item.product.variantImages[0].data.toString('base64') %>" alt="Variant Image" style="width: 100px;">
+                <img src="data:<%= item.product.variantImages[0].contentType %>;base64,<%= item.product.variantImages[0].data.toString('base64') %>" alt="Variant Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
             <% } else { %>
                 <p>No image available</p>
             <% } %>
-    
-            <p>Price: $<%= item.price %></p>
-            <p>Quantity: <%= item.quantity %></p>
         </div>
-    <% }) %>
+        <div class="item-details" style="flex-grow: 1;">
+            <h5 style="margin-bottom: 10px;"><%= item.product.productName %></h5>
+            <div style="display: flex; justify-content: space-between;">
+                <div>
+                    <p><strong>Color:</strong> <%= item.color %></p>
+                    <p><strong>Size:</strong> <%= item.size %></p>
+                    <p><strong>Quantity:</strong> <%= item.quantity %></p>
+                </div>
+                <div style="text-align: right;">
+                    <p><strong>Price:</strong> $<%= item.price %></p>
+                    <p><strong>Total:</strong> $<%= (item.price * item.quantity).toFixed(2) %></p>
+                </div>
+            </div>
+        </div>
+    </div>
+<% }) %>
     
     <!-- Shipping Address -->
     <div class="address-section">

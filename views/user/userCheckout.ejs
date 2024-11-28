@@ -1,6 +1,11 @@
 <%- include("../../views/partials/user/header/") %>
 
 <style>
+
+  .last {
+    color: #384aeb;
+    outline: #000;
+  }
 .card {
     border: 1px solid #ddd;
     border-radius: 12px;
@@ -202,19 +207,32 @@ select.form-control {
               <ul class="list">
                 <li><a href="#">Product <span>Total</span></a></li>
                 <% cartItems.forEach(function(item) { %>
-                  <li>
-                    <a href="#"><%= item.name %>
-                      <span class="middle">x <%= item.quantity %></span>
-                      <span class="last">$<%= (item.price * item.quantity).toFixed(2) %></span>
-                    </a>
-                  </li>
+                    <li>
+                        <a href="#">
+                            <div class="d-flex align-items-center">
+                                <% if (item.variantImage) { %>
+                                    <img src="/uploads/product-images/<%= item.variantImage %>" 
+                                         alt="<%= item.productName %>" 
+                                         style="width: 50px; height: 50px; margin-right: 10px; object-fit: cover;">
+                                <% } %>
+                                <span>
+                                  <small>
+                                    <%= item.productName %> 
+                                    (Color: <%= item.variantColor %>, Size: <%= item.variantSize %>)
+                                  </small>
+                                  </span>
+                            </div>
+                            <span class="middle"></b> <%= item.quantity %> </b></span>
+                            <span class="last"> <b> ₹<%= (item.price * item.quantity).toFixed(2) %> </b></span>
+                        </a>
+                    </li>
                 <% }); %>
-              </ul>
+            </ul>
               
               <ul class="list list_2">
-                <li><a href="#">Subtotal <span>$<%= subtotal.toFixed(2) %></span></a></li>
-                <li><a href="#">Shipping <span>$<%= shippingCost.toFixed(2) %></span></a></li>
-                <li><a href="#">Total <span>$<%= total.toFixed(2) %></span></a></li>
+                <li><a href="#">Subtotal <span>₹<%= subtotal.toFixed(2) %></span></a></li>
+                <li><a href="#">Shipping <span>₹<%= shippingCost.toFixed(2) %></span></a></li>
+                <li><a href="#">Total <span>₹<%= total.toFixed(2) %></span></a></li>
               </ul>
               
               <!-- Payment Options -->
@@ -372,6 +390,7 @@ async function placeOrder() {
         });
     }
 }
+
 
 </script>
 

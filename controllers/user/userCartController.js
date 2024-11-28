@@ -70,7 +70,7 @@ const addToCart = async (req, res) => {
 
         // Find the specific variant
         const selectedVariant = product.variants.find(v => 
-            v._id.toString() === variantId
+            v._id && variantId && v._id.toString() === variantId.toString()
         );
 
         if (!selectedVariant) {
@@ -97,8 +97,10 @@ const addToCart = async (req, res) => {
 
         // Check if item already exists in cart with same product, variant, and size
         const existingItemIndex = cart.items.findIndex(item => 
-            item.productId.toString() === productId &&
-            item.variantId.toString() === variantId &&
+            item.productId && productId && 
+            item.productId.toString() === productId.toString() &&
+            item.variantId && variantId && 
+            item.variantId.toString() === variantId.toString() &&
             item.size === parseInt(size)
         );
 

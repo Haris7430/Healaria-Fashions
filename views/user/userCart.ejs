@@ -1,17 +1,26 @@
 <%- include("../../views/partials/user/header/") %>
 
 <style>
-    .product_count {
+
+.product-image-link {
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+}
+
+.product-image-link:hover {
+    opacity: 0.8;
+}
+
+
+
+    .cart-quantity-control {
         display: flex;
         align-items: center;
         border: 1px solid #e0e0e0;
-        border-radius: 25px;
-        overflow: hidden;
-        max-width: 130px;
         height: 40px;
     }
-    
-    .product_count button {
+
+    .cart-quantity-control button {
         width: 40px;
         height: 40px;
         background-color: transparent;
@@ -22,43 +31,17 @@
         cursor: pointer;
         transition: background-color 0.3s ease;
     }
-    
-    .product_count button:hover {
+
+    .cart-quantity-control button:hover {
         background-color: #f0f0f0;
     }
-    
-    .product_count button::before {
-        content: '';
-        display: block;
-        width: 10px;
-        height: 2px;
-        background-color: #333;
+
+    .cart-quantity-control button i {
+        font-size: 16px;
+        color: #333;
     }
-    
-    .product_count button.increase::before {
-        content: '';
-        position: relative;
-    }
-    
-    .product_count button.increase::before,
-    .product_count button.increase::after {
-        content: '';
-        display: block;
-        width: 10px;
-        height: 2px;
-        background-color: #333;
-        position: absolute;
-    }
-    
-    .product_count button.increase::before {
-        transform: rotate(90deg);
-    }
-    
-    .product_count button.decrease::before {
-        width: 10px;
-    }
-    
-    .product_count input {
+
+    .cart-quantity-control input {
         width: 50px;
         text-align: center;
         border: none;
@@ -68,15 +51,29 @@
         flex-grow: 1;
         padding: 0 10px;
     }
-    
-    .product_count button:disabled {
+
+    .cart-quantity-control button:disabled {
         opacity: 0.5;
         cursor: not-allowed;
     }
-    </style>
 
+    .cart-product-details {
+        display: flex;
+        align-items: center;
+    }
 
+    .cart-product-details img {
+        margin-right: 15px;
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+    }
 
+    .cart-product-info {
+        display: flex;
+        flex-direction: column;
+    }
+</style>
 
 <!-- Start Banner Area -->
 <section class="banner-area organic-breadcrumb">
@@ -108,8 +105,8 @@
                     <table class="table">
                         <thead>
                             <tr>
-                                <th scope="col">Product</th>
-                                <th scope="col">Price</th>
+                                <th scope="col">Product Details</th>
+                                <th scope="col">Unit Price</th>
                                 <th scope="col">Quantity</th>
                                 <th scope="col">Total</th>
                                 <th scope="col">Actions</th>
@@ -126,23 +123,23 @@
                                 data-variant-color="<%= item.color %>"
                                 data-variant-size="<%= item.size %>">
                                 <td>
-                                    <div class="media">
-                                        <div class="d-flex">
-                                            <% if (variant && variant.images && variant.images.length > 0) { %>
-                                                <img class="cart-image" 
-                                                     src="/uploads/product-images/<%= variant.images[0].filename %>" 
+                                    <div class="cart-product-details">
+                                        <% if (variant && variant.images && variant.images.length > 0) { %>
+                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
+                                                <img src="/uploads/product-images/<%= variant.images[0].filename %>" 
                                                      alt="<%= item.productId.productName %>" 
-                                                     style="width: 50px; height: auto;">
-                                            <% } else { %>
-                                                <img class="cart-image" 
-                                                     src="/images/default-product.jpg" 
+                                                     class="cart-product-image">
+                                            </a>
+                                        <% } else { %>
+                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
+                                                <img src="/images/default-product.jpg" 
                                                      alt="<%= item.productId.productName %>" 
-                                                     style="width: 50px; height: auto;">
-                                            <% } %>
-                                        </div>
-                                        <div class="media-body">
-                                            <p><%= item.productId.productName %></p>
-                                            <p>Color: <%= item.color %>, Size: UK <%= item.size %></p>
+                                                     class="cart-product-image">
+                                            </a>
+                                        <% } %>
+                                        <div class="cart-product-info">
+                                            <p class="mb-1"><%= item.productId.productName %></p>
+                                            <small class="text-muted">Color: <%= item.color %>, Size: UK <%= item.size %></small>
                                         </div>
                                     </div>
                                 </td>
@@ -150,10 +147,11 @@
                                     <h5>₹<%= item.price.toFixed(2) %></h5>
                                 </td>
                                 <td>
-                                    <div class="product_count">
+                                    <div class="cart-quantity-control">
                                         <button onclick="decreaseQuantity('<%= item.productId._id %>', '<%= item.color %>', '<%= item.size %>')" 
                                                 class="btn btn-sm decrease"
                                                 aria-label="Decrease Quantity">
+                                            <i class="fas fa-minus"></i>
                                         </button>
                                         <input type="text" 
                                                name="qty" 
@@ -171,6 +169,7 @@
                                         <button onclick="increaseQuantity('<%= item.productId._id %>', '<%= variant._id %>', '<%= item.size %>', '<%= item.color %>')" 
                                                 class="btn btn-sm increase"
                                                 aria-label="Increase Quantity">
+                                            <i class="fas fa-plus"></i>
                                         </button>
                                     </div>
                                 </td>
@@ -180,15 +179,16 @@
                                     </h5>
                                 </td>
                                 <td>
-                                    <button onclick="removeFromCart('<%= item.productId._id %>')" class="btn btn-danger">Remove</button>
+                                    <button onclick="removeFromCart('<%= item.productId._id %>', '<%= item.color %>', '<%= item.size %>')" 
+                                            class="btn btn-danger btn-sm">
+                                        Remove
+                                    </button>
                                 </td>
                             </tr>
                             <% }); %>
                             <tr>
-                                <td></td>
-                                <td></td>
-                                <td>
-                                    <h5>Subtotal</h5>
+                                <td colspan="3">
+                                    <h5 class="text-right">Subtotal</h5>
                                 </td>
                                 <td>
                                     <h5 id="subtotal">₹<%= subtotal.toFixed(2) %></h5>
@@ -213,7 +213,6 @@
 <!--================End Cart Area =================-->
 
 <%- include("../../views/partials/user/footer/") %>
-
 
 <script>
 function increaseQuantity(productId, variantId, size, color) {
@@ -318,11 +317,7 @@ function updateQuantity(productId, newQuantity, color, size, variantId) {
     });
 }
 
-function removeFromCart(productId) {
-    const row = document.querySelector(`tr[data-product-id="${productId}"]`);
-    const color = row.getAttribute('data-variant-color');
-    const size = row.getAttribute('data-variant-size');
-
+function removeFromCart(productId, color, size) {
     Swal.fire({
         title: 'Remove Item',
         text: 'Are you sure you want to remove this item from your cart?',
@@ -354,3 +349,6 @@ function removeFromCart(productId) {
     });
 }
 </script>
+
+<!-- Add Font Awesome for plus and minus icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
