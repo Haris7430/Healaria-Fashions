@@ -1104,8 +1104,29 @@
 		
 		
 
-		function handleAddToCart(event) {
+		function showLoginRequiredAlert() {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Login Required',
+        text: 'You need to log in to add items to your cart.',
+        showConfirmButton: true,
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#384aeb',
+        showCancelButton: true,
+        cancelButtonColor: '#6c757d',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '/login';
+        }
+    });
+}
+
+function handleAddToCart(event) {
     event.preventDefault();
+    
+    // Use the server-side passed isLoggedIn variable
+    const isLoggedIn = "<%= isLoggedIn ? 'true' : 'false' %>";
     
     const size = document.getElementById('selectedSize').value;
     const variantId = document.getElementById('selectedVariant').value;
@@ -1121,8 +1142,13 @@
         return false;
     }
     
-    const activeColorElement = document.querySelector('.color-option.active .color-name');
-    const color = activeColorElement ? activeColorElement.textContent : 'Unknown';
+    // If not logged in, show login prompt
+    if (!isLoggedIn) {
+        showLoginRequiredAlert();
+        return false;
+    }
+    
+    // Removed the color extraction logic
     
     fetch(`/addToCart/${productId}`, {
         method: 'POST',
@@ -1134,15 +1160,18 @@
         body: JSON.stringify({
             size: size,
             variantId: variantId,
-            color: color,
             quantity: 1
         })
     })
     .then(response => {
-        // More robust error handling
         if (!response.ok) {
             return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Failed to add to cart');
+                // Check for unauthorized error
+                if (response.status === 401 || errorData.status === 'unauthorized') {
+                    showLoginRequiredAlert();
+                    throw new Error('Unauthorized');
+                }
+                throw errorData;
             });
         }
         return response.json();
@@ -1152,31 +1181,30 @@
             Swal.fire({
                 icon: 'success',
                 title: 'Added to Cart!',
-                text: 'Your product has been added to the cart.',
+                text: data.message,
                 showConfirmButton: true,
                 confirmButtonText: 'Go to Cart',
                 confirmButtonColor: '#384aeb',
                 showCancelButton: true,
-                cancelButtonText: 'Continue Shopping',
-                cancelButtonColor: '#6c757d'
+                cancelButtonColor: '#6c757d',
+                cancelButtonText: 'Continue Shopping'
             }).then((result) => {
                 if (result.isConfirmed) {
                     window.location.href = '/userCart';
                 }
             });
-        } else {
-            throw new Error(data.message || 'Unknown error occurred');
         }
     })
     .catch(error => {
-        console.error('Add to Cart Error:', error);
-        
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: error.message || 'There was a problem adding the product to cart. Please try again.',
-            confirmButtonColor: '#384aeb'
-        });
+        // Only show error if it's not an unauthorized error (which is already handled)
+        if (error.message !== 'Unauthorized') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'There was a problem adding the product to cart.',
+                confirmButtonColor: '#384aeb'
+            });
+        }
     });
     
     return false;

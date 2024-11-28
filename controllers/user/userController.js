@@ -668,46 +668,35 @@ const shopingPage = async (req, res) => {
 const getProductDetails = async (req, res) => {
     try {
         const productId = req.query.id;
-        const product = await Product.findById(productId)
-            .populate('category')  // Ensure this line is present
-            .lean();
-
+        const product = await Product.findById(productId).populate('category');
+        
         if (!product) {
-            return res.status(404).send('Product not found');
+            return res.status(404).render('error', { message: 'Product not found' });
         }
 
-        // Filter listed variants and process their data
-        const processedVariants = product.variants
-            .filter(variant => variant.isListed)
-            .map(variant => ({
-                _id: variant._id,
-                color: variant.color,
-                sizes: variant.sizes,
-                images: variant.images,
-                isListed: variant.isListed,
-                mainImage: variant.mainImage
-            }));
+        const variants = product.variants.filter(variant => variant.isListed);
+        const initialVariant = variants[0];
 
-        // Find initial variant (either main image or first one)
-        const initialVariant = processedVariants.find(v => v.mainImage) || processedVariants[0];
+        const variantSizes = initialVariant.sizes.map(sizeObj => ({
+            size: sizeObj.size,
+            quantity: sizeObj.quantity
+        }));
 
-        // Debug logging
-        console.log('Product Category:', product.category);
-    
         res.render('product', {
-            product: product,
-            initialVariant: initialVariant,
-            variants: processedVariants,
-            variantSizes: initialVariant.sizes,
-            productImages: initialVariant.images,
-            categoryName: product.category ? product.category.categoryName : 'Uncategorized'
+            product,
+            variants,
+            initialVariant,
+            variantSizes,
+            categoryName: product.category.name,
+            isLoggedIn: !!req.session.user,
         });
-
     } catch (error) {
-        console.error('Error in getProductDetails:', error);
-        res.status(500).send('Server Error');
+        console.error('Error fetching product details:', error);
+        res.status(500).render('error', { message: 'Internal Server Error' });
     }
 };
+
+
 
 const getVariantDetails = async (req, res) => {
     try {
@@ -715,30 +704,33 @@ const getVariantDetails = async (req, res) => {
         
         const product = await Product.findById(productId);
         if (!product) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
 
-        const variant = product.variants.find(v => v._id.toString() === variantId);
+        const variant = product.variants.id(variantId);
         if (!variant) {
-            return res.status(404).json({ error: 'Variant not found' });
+            return res.status(404).json({ message: 'Variant not found' });
         }
 
-        // Return full image paths and complete size information
-        res.json({
-            sizes: variant.sizes.map(size => ({
-                size: size.size,
-                quantity: size.quantity
-            })),
-            images: variant.images.map(image => ({
-                fullPath: `/uploads/product-images/${image.filename}`,
-                filename: image.filename
-            }))
-        });
+        // Transform variant images with full path
+        const images = variant.images.map(img => ({
+            filename: img.filename,
+            fullPath: `/uploads/product-images/${img.filename}`
+        }));
 
+        const sizes = variant.sizes.map(sizeObj => ({
+            size: sizeObj.size,
+            quantity: sizeObj.quantity
+        }));
+
+        res.json({
+            images,
+            sizes
+        });
     } catch (error) {
-        console.error('Error in getVariantDetails:', error);
-        res.status(500).json({ error: 'Server error' });
-    } 
+        console.error('Get Variant Details Error:', error);
+        res.status(500).json({ message: 'Failed to fetch variant details' });
+    }
 };
 
  
