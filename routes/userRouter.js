@@ -58,6 +58,12 @@ router.get('/check-stock/:productId', userAuth, userCartController.checkStockAva
 
 
 
+router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
+router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
+router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
+
+
+
 
 router.get('/userProfile/:section?', userAuth, userProfileController.getUserProfile);
 router.get('/profile/addresses', userAuth, userProfileController.getAddressPage);
@@ -73,14 +79,10 @@ router.post('/update-profile', userAuth, userProfileController.updateProfile);
 //
 router.post('/change-password', userAuth, userProfileController.changePassword);
 router.get('/profile/orders', userAuth,userProfileController.getUserOrders);
-// Route to view specific order details
 
 router.get('/order/:orderId', userAuth,userProfileController.getOrderDetails);
-
-
-router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
-router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
-router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
+router.post('/order/:orderId/cancel-item/:itemId', userAuth, userProfileController.cancelOrderItem);
+router.post('/order/:orderId/cancel-order', userAuth, userProfileController.cancelEntireOrder);
 
 
 

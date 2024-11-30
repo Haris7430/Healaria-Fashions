@@ -18,16 +18,30 @@
         }
     
         .banner {
-            background-image: linear-gradient(rgba(11, 0, 109, 0.3), rgba(255, 251, 3, 0.3)), url('/images/banner-bg.jpg');
-            background-size: cover;
-            background-position: center;
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            margin-bottom: 2rem;
-        }
+    background-image: linear-gradient(rgba(11, 0, 109, 0.3), rgba(255, 251, 3, 0.3)), 
+                      url('https://personal.asuswebstorage.com/wp-content/uploads/2021/12/hc_bnr_bg.jpg');
+    background-size: cover;
+    background-position: center;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    margin-bottom: 2rem;
+}
+
+.banner h1 {
+    font-size: 3rem;
+    text-align: center;
+    -webkit-text-stroke: 2px transparent; /* Default transparent for the outline */
+    background: linear-gradient(to right, #ff0000, #718b09);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 
+        2px 2px 5px rgba(172, 143, 246, 0.5), 
+        -2px -2px 5px rgba(43, 141, 118, 0.944);
+}
+
     
         .breadcrumb {
             padding: 1rem 2rem;
@@ -288,7 +302,139 @@
     </style>
 
 
-<!-- ................ -->
+
+
+
+<style>
+
+    /* order Table Styles */
+.custom-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 1rem;
+    background-color: white;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.custom-table thead {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.custom-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #333;
+    text-transform: uppercase;
+    font-size: 0.9rem;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.custom-table td {
+    padding: 12px 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+    color: #555;
+}
+
+.custom-table tbody tr:hover {
+    background-color: #f1f3f5;
+    transition: background-color 0.3s ease;
+}
+
+/* Status Badge Styles */
+.status-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.badge-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Action Button Styles */
+.btn-action {
+    display: inline-block;
+    padding: 6px 12px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    border-radius: 4px;
+    transition: background-color 0.3s ease;
+}
+
+.btn-action:hover {
+    background-color: #0056b3;
+}
+
+/* Pagination Styles */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.pagination {
+    display: flex;
+    list-style: none;
+    padding: 0;
+}
+
+.pagination .page-item {
+    margin: 0 2px;
+}
+
+.pagination .page-link {
+    color: #007bff;
+    background-color: white;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination .page-link:hover {
+    background-color: #f8f9fa;
+}
+</style>
+
+
+
 
 
 <style>
@@ -488,41 +634,105 @@
     
 
                 <!-- Orders Section -->
-                <!-- Orders Section -->
-<% if (activeSection === 'orders') { %>
-    <h2>Your Orders</h2>
-    <% if (orders && orders.length > 0) { %>
-        <div class="orders-container">
-            <% orders.forEach(order => { %>
-                <div class="order-card mb-3">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Order #<%= order._id %></h5>
-                            <span class="badge bg-<%= order.status === 'pending' ? 'warning' : 
-                                        order.status === 'processing' ? 'info' :
-                                        order.status === 'shipped' ? 'primary' :
-                                        order.status === 'delivered' ? 'success' : 'danger' %>">
-                                <%= order.status %>
-                            </span>
+               <!-- Orders Section -->
+               <% if (activeSection === 'orders') { %>
+                <div class="orders-section">
+                    
+                    
+                    <% if (orders && orders.length > 0) { %>
+                        <div class="table-responsive">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>Order Number</th>
+                                        <th>Date</th>
+                                        <th>Total Amount</th>
+                                        <th>Payment Method</th>
+                                        <th>Order Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% orders.forEach(order => { %>
+                                        <tr>
+                                            <td>#<%= order._id %></td>
+                                            <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
+                                            <td>₹<%= order.total.toFixed(2) %></td>
+                                            <td><%= order.paymentMethod.toUpperCase() %></td>
+                                            <td>
+                                                <span class="status-badge 
+                                                    <%= order.status === 'pending' ? 'badge-warning' : 
+                                                        order.status === 'processing' ? 'badge-info' :
+                                                        order.status === 'shipped' ? 'badge-primary' :
+                                                        order.status === 'delivered' ? 'badge-success' : 'badge-danger' %>">
+                                                    <%= order.status.charAt(0).toUpperCase() + order.status.slice(1) %>
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <a href="/order/<%= order._id %>" class="btn-action view-details">
+                                                    View Details
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="card-body">
-                            <p>Date: <%= new Date(order.createdAt).toLocaleDateString() %></p>
-                            <p>Total Amount: ₹<%= order.total %></p>
-                            <p>Items: <%= order.items.length %></p>
-                            <a href="/order/<%= order._id %>" class="btn btn-primary">View Details</a>
+
+                        <div class="pagination-container">
+                            <nav aria-label="Order navigation">
+                                <ul class="pagination">
+                                    <% if (currentPage > 1) { %>
+                                        <li class="page-item">
+                                            <a class="page-link" href="/profile/orders?page=<%= currentPage - 1 %>" aria-label="Previous">
+                                                <span aria-hidden="true">&laquo;</span>
+                                            </a>
+                                        </li>
+                                    <% } %>
+                    
+                                    <% 
+                                    // Calculate start and end page numbers
+                                    let startPage = Math.max(1, currentPage - 2);
+                                    let endPage = Math.min(totalPages, currentPage + 2);
+                                    
+                                    // Adjust start and end pages to always show 5 page numbers if possible
+                                    if (endPage - startPage + 1 < 5) {
+                                        if (currentPage <= 3) {
+                                            endPage = Math.min(5, totalPages);
+                                        } else {
+                                            startPage = Math.max(1, totalPages - 4);
+                                        }
+                                    }
+                                    %>
+                    
+                                    <% for (let i = startPage; i <= endPage; i++) { %>
+                                        <li class="page-item <%= i === currentPage ? 'active' : '' %>">
+                                            <a class="page-link" href="/profile/orders?page=<%= i %>"><%= i %></a>
+                                        </li>
+                                    <% } %>
+                    
+                                    <% if (currentPage < totalPages) { %>
+                                        <li class="page-item">
+                                            <a class="page-link" href="/profile/orders?page=<%= currentPage + 1 %>" aria-label="Next">
+                                                <span aria-hidden="true">&raquo;</span>
+                                            </a>
+                                        </li>
+                                    <% } %>
+                                </ul>
+                            </nav>
                         </div>
-                    </div>
+            
+                        
+                        
+                    <% } else { %>
+                        <div class="no-orders-container">
+                            <h4>No orders found</h4>
+                            <p>You haven't placed any orders yet.</p>
+                            <a href="/shop" class="btn-primary">Start Shopping</a>
+                        </div>
+                    <% } %>
                 </div>
-            <% }); %>
-        </div>
-    <% } else { %>
-        <div class="text-center py-5">
-            <h4>No orders found</h4>
-            <p>You haven't placed any orders yet.</p>
-            <a href="/shop" class="btn btn-primary">Start Shopping</a>
-        </div>
-    <% } %>
-<% } %>
+            <% } %>
 
 
 
@@ -1076,5 +1286,17 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
 });
 
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
 
 </html>

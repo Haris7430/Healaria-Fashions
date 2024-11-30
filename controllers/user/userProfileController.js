@@ -403,20 +403,34 @@ const changePassword = async (req, res) => {
 
 
 
+
+// In userController.js
 const getUserOrders = async (req, res) => {
     try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 5; // Change to 5 orders per page
+        const skip = (page - 1) * limit;
+
+        const totalOrders = await Order.countDocuments({ userId: req.user._id });
+        const totalPages = Math.ceil(totalOrders / limit);
+
         const orders = await Order.find({ userId: req.user._id })
             .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit)
             .populate({
                 path: 'items.productId',
-                select: 'productName productImages'
-            });
+                select: 'productName category'
+            })
+            .populate('items.productId.category');
 
-            res.render('userProfile', {
-                activeSection: 'orders',
-                orders,
-                user: req.user
-            });
+        res.render('userProfile', {
+            activeSection: 'orders',
+            orders,
+            user: req.user,
+            currentPage: page,
+            totalPages: totalPages
+        });
     } catch (error) {
         console.error('Error fetching orders:', error);
         res.status(500).render('page-404', { 
@@ -426,38 +440,157 @@ const getUserOrders = async (req, res) => {
     }
 };
 
+
+
 const getOrderDetails = async (req, res) => {
     try {
-      const { orderId } = req.params;
+        const { orderId } = req.params;
   
-      if (!mongoose.Types.ObjectId.isValid(orderId)) {
-        return res.status(400).render('page-404', { message: 'Invalid order ID' });
-      }
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).render('page-404', { message: 'Invalid order ID' });
+        }
   
-      const order = await Order.findOne({ _id: orderId, userId: req.user._id }).populate({
-        path: 'items.productId',
-        select: 'productName productImages salesPrice variants',
-      });
+        const order = await Order.findOne({ _id: orderId, userId: req.user._id }).populate({
+            path: 'items.productId',
+            populate: [
+                { path: 'category', select: 'name' },
+                { path: 'variants' }
+            ]
+        });
   
-      if (!order) {
-        return res.status(404).render('page-404', { message: 'Order not found' });
-      }
+        if (!order) {
+            return res.status(404).render('page-404', { message: 'Order not found' });
+        }
   
-      const orderItems = order.items.map((item) => ({
-        ...item.toObject(),
-        product: {
-          ...item.productId.toObject(),
-          productImages: item.productId.productImages || [],
-          variantImages: item.productId.variants?.[0]?.images || [],
-        },
-      }));
+        const orderItems = order.items.map((item) => ({
+            ...item.toObject(),
+            product: {
+                ...item.productId.toObject(),
+                productImages: item.productId.productImages || [],
+                variantImages: item.productId.variants?.[0]?.images || [],
+                category: item.productId.category
+            },
+        }));
   
-      res.render('orderSummary', { order, orderItems, user: req.user });
+        res.render('orderSummary', { order, orderItems, user: req.user });
     } catch (error) {
-      console.error('Error fetching order details:', error);
-      res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
+        console.error('Error fetching order details:', error);
+        res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
     }
-  };
+};
+
+
+
+
+const cancelOrderItem = async (req, res) => {
+    try {
+        const { orderId, itemId } = req.params;
+        
+        // Find the order and ensure it belongs to the current user
+        const order = await Order.findOne({ 
+            _id: orderId, 
+            userId: req.user._id 
+        }).populate('items.productId');
+
+        if (!order) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found' 
+            });
+        }
+
+        // Find the specific item
+        const orderItem = order.items.id(itemId);
+        
+        if (!orderItem) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order item not found' 
+            });
+        }
+
+        // Check if item can be cancelled
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Update order item status
+        orderItem.status = 'cancelled';
+        
+        // If all items are cancelled, update order status
+        const allItemsCancelled = order.items.every(item => item.status === 'cancelled');
+        if (allItemsCancelled) {
+            order.status = 'cancelled';
+        }
+
+        await order.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Item cancelled successfully',
+            orderStatus: order.status,
+            itemStatus: orderItem.status
+        });
+    } catch (error) {
+        console.error('Cancel Order Item Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to cancel order item' 
+        });
+    }
+};
+
+// Add a new function to cancel entire order
+const cancelEntireOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        const order = await Order.findOne({ 
+            _id: orderId, 
+            userId: req.user._id 
+        });
+
+        if (!order) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found' 
+            });
+        }
+
+        // Check if order can be cancelled
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Cancel all items
+        order.items.forEach(item => {
+            item.status = 'cancelled';
+        });
+        
+        // Update order status
+        order.status = 'cancelled';
+
+        await order.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Order cancelled successfully',
+            orderStatus: order.status
+        });
+    } catch (error) {
+        console.error('Cancel Entire Order Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to cancel order' 
+        });
+    }
+};
 
 
   
@@ -479,6 +612,10 @@ module.exports = {
     changePassword,
     getUserOrders,
     getOrderDetails,
+    cancelOrderItem,
+    cancelEntireOrder,
+
+
 
 
 };

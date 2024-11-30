@@ -56,71 +56,6 @@ const Product = mongoose.model("Product", productSchema);
 module.exports = Product;
 
 
-This is my cartSchema.js code:- 
-cconst mongoose= require('mongoose');
-const {Schema}= mongoose;
-
-
-
-
-
-
-
-
-const cartSchema = new mongoose.Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    items: [{
-        productId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Product',
-            required: true
-        },
-        variantId: {  // Add this for variant reference
-            type: Schema.Types.ObjectId,
-            default: null
-        },
-        size: {  // Add this for size
-            type: Number,
-            required: true
-        },
-        color: {  // Add this for color
-            type: String,
-            required: true
-        },
-        quantity: {
-            type: Number,
-            default: 1
-        },
-        price: {
-            type: Number,
-            required: true
-        },
-        totalPrice: {
-            type: Number,
-            required: true
-        },
-        status: {
-            type: String,
-            default: 'placed'
-        },
-        cancellationReason: {
-            type: String,
-            default: 'none'
-        }
-    }]
-});
-
-
-const Cart= mongoose.model('Cart',cartSchema)
-
-module.exports= Cart
-
-
-
 
 This is my orderSchema.js code:- 
 const mongoose = require('mongoose');
@@ -204,88 +139,35 @@ module.exports = Order;
 
 This is my userRouter.js code:- 
 
+router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
+router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
+router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
 
-router.get('/profile/orders', userAuth,userProfileController.getUserOrders);
 router.get('/order/:orderId', userAuth,userProfileController.getOrderDetails);
+router.post('/order/:orderId/cancel-item/:itemId', userAuth, userProfileController.cancelOrderItem);
+router.post('/order/:orderId/cancel-order', userAuth, userProfileController.cancelEntireOrder);
 
 
-This is my userProfileController.js code:- 
 
+This is my checkOutController.js code for your reference it will be correctly work:- active
 
-const getUserOrders = async (req, res) => {
+const createOrder = async (req, res) => {
     try {
-        const orders = await Order.find({ userId: req.user._id })
-            .sort({ createdAt: -1 })
-            .populate({
-                path: 'items.productId',
-                select: 'productName productImages'
+        const { addressId, paymentMethod } = req.body;
+
+        // Validate address
+        const userAddress = await Address.findOne({ userId: req.user._id });
+        const selectedAddress = userAddress.address.find(addr => addr._id.toString() === addressId);
+
+        if (!selectedAddress) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid address selected'
             });
-
-            res.render('userProfile', {
-                activeSection: 'orders',
-                orders,
-                user: req.user
-            });
-    } catch (error) {
-        console.error('Error fetching orders:', error);
-        res.status(500).render('page-404', { 
-            message: 'Error fetching orders',
-            error: error.message 
-        });
-    }
-};
-
-const getOrderDetails = async (req, res) => {
-    try {
-      const { orderId } = req.params;
-  
-      if (!mongoose.Types.ObjectId.isValid(orderId)) {
-        return res.status(400).render('page-404', { message: 'Invalid order ID' });
-      }
-  
-      const order = await Order.findOne({ _id: orderId, userId: req.user._id }).populate({
-        path: 'items.productId',
-        select: 'productName productImages salesPrice variants',
-      });
-  
-      if (!order) {
-        return res.status(404).render('page-404', { message: 'Order not found' });
-      }
-  
-      const orderItems = order.items.map((item) => ({
-        ...item.toObject(),
-        product: {
-          ...item.productId.toObject(),
-          productImages: item.productId.productImages || [],
-          variantImages: item.productId.variants?.[0]?.images || [],
-        },
-      }));
-  
-      res.render('orderSummary', { order, orderItems, user: req.user });
-    } catch (error) {
-      console.error('Error fetching order details:', error);
-      res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
-    }
-  };
-
-
-  
-
-
-
-This is my userCartController.js code:- 
-const User = require('../../models/userSchema');
-const Category = require('../../models/categorySchema');
-const Product = require('../../models/productSchema');
-const Cart = require('../../models/cartSchema');
-
-const getCartPage = async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.redirect('/login');
         }
 
-        const cart = await Cart.findOne({ userId: req.session.user._id })
+        // Get cart items with full product details
+        const cart = await Cart.findOne({ userId: req.user._id })
             .populate({
                 path: 'items.productId',
                 model: 'Product',
@@ -295,423 +177,279 @@ const getCartPage = async (req, res) => {
                 }
             });
 
-        if (!cart) {
-            return res.render('userCart', { 
-                cart: { items: [] },
-                subtotal: 0
+        if (!cart || !cart.items.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cart is empty'
             });
         }
 
-        // Enhanced subtotal calculation
-        const subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+        // Calculate totals
+        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const shippingCost = 0;
+        const total = subtotal + shippingCost;
 
-        res.render('userCart', { 
-            cart, 
-            subtotal 
+        // Create new order with detailed item information
+        const newOrder = new Order({
+            userId: req.user._id,
+            items: cart.items.map(item => ({
+                productId: item.productId._id,
+                quantity: item.quantity,
+                price: item.price,
+                totalPrice: item.price * item.quantity,
+                color: item.color,
+                size: item.size,
+                variantId: item.variantId
+            })),
+            shippingAddress: selectedAddress,
+            paymentMethod,
+            subtotal,
+            shippingCost,
+            total,
+            status: paymentMethod === 'COD' ? 'pending' : 'processing'
+        });
+
+        await newOrder.save();
+
+        // Clear cart after order creation
+        await Cart.deleteOne({ userId: req.user._id });
+
+        res.status(200).json({
+            success: true,
+            message: 'Order placed successfully',
+            orderId: newOrder._id
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).send("Internal Server Error");
-    }
-};
-
-const addToCart = async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.status(401).json({ 
-                status: 'unauthorized', 
-                message: 'Please log in to add items to cart' 
-            });
-        }
-
-        const productId = req.params.id;
-        const userId = req.session.user._id;
-        const { quantity = 1, size, color, variantId } = req.body;
-
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ 
-                status: 'error',
-                message: "Product not found" 
-            });
-        }
-
-        // Validate quantity
-        if (quantity > 5) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: "Cannot add more than 5 of this product" 
-            });
-        }
-
-        // Find the specific variant
-        const selectedVariant = product.variants.find(v => 
-            v._id && variantId && v._id.toString() === variantId.toString()
-        );
-
-        if (!selectedVariant) {
-            return res.status(404).json({ 
-                status: 'error',
-                message: "Selected variant not found" 
-            });
-        }
-
-        // Check available quantity for specific size
-        const sizeObj = selectedVariant.sizes.find(s => s.size === parseInt(size));
-        if (!sizeObj || sizeObj.quantity < quantity) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: `Only ${sizeObj ? sizeObj.quantity : 0} items available in stock` 
-            });
-        }
-
-        // Find or create cart
-        let cart = await Cart.findOne({ userId });
-        if (!cart) {
-            cart = new Cart({ userId, items: [] });
-        }
-
-        // Check if item already exists in cart with same product, variant, and size
-        const existingItemIndex = cart.items.findIndex(item => 
-            item.productId && productId && 
-            item.productId.toString() === productId.toString() &&
-            item.variantId && variantId && 
-            item.variantId.toString() === variantId.toString() &&
-            item.size === parseInt(size)
-        );
-
-        if (existingItemIndex !== -1) {
-            return res.status(400).json({ 
-                status: 'error',
-                message: "Product with this variant and size already in the cart" 
-            });
-        }
-
-        // Add new item to cart
-        cart.items.push({
-            productId,
-            variantId: selectedVariant._id,
-            size: parseInt(size),
-            color: selectedVariant.color, // Use the color from the variant
-            quantity,
-            price: product.salesPrice,
-            totalPrice: product.salesPrice * quantity,
-            availableQuantity: sizeObj.quantity
-        });
-
-        await cart.save();
-        return res.status(200).json({ 
-            status: 'success', 
-            message: "Product added to cart successfully" 
-        });
-    } catch (error) {
-        console.error('Add to cart error:', error);
-        res.status(500).json({ 
-            status: 'error', 
-            message: "Server error" 
+        console.error('Error creating order:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error creating order',
+            error: error.message
         });
     }
 };
 
-const updateCart = async (req, res) => {
+const getOrderSummary = async (req, res) => {
     try {
-        if (!req.session.user) {
-            return res.status(401).json({ message: 'Unauthorized' });
+        const { orderId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).render('page-404', { message: 'Invalid order ID format' });
         }
 
-        const { productId } = req.params;
-        const { quantity, color, size, variantId } = req.body;
-        const userId = req.session.user._id;
-
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: "Product not found" });
-        }
-
-        // Find the specific variant
-        const variant = product.variants.find(v => 
-            v._id.toString() === variantId && v.color === color
-        );
-        if (!variant) {
-            return res.status(404).json({ message: "Variant not found" });
-        }
-
-        // Check stock availability for specific size
-        const sizeObj = variant.sizes.find(s => s.size === parseInt(size));
-        if (!sizeObj || sizeObj.quantity < quantity) {
-            return res.status(400).json({ 
-                message: `Only ${sizeObj ? sizeObj.quantity : 0} items available in stock for this size` 
-            });
-        }
-
-        // Quantity limit check
-        if (quantity > 5) {
-            return res.status(400).json({ 
-                message: "Cannot add more than 5 items of this product" 
-            });
-        }
-
-        // Find the cart
-        const userCart = await Cart.findOne({ userId });
-        if (!userCart) {
-            return res.status(404).json({ message: "Cart not found" });
-        }
-
-        // Find the specific cart item with matching product, variant, and size
-        const itemIndex = userCart.items.findIndex(
-            item => item.productId.toString() === productId &&
-                    item.variantId.toString() === variantId &&
-                    item.color === color &&
-                    item.size === parseInt(size)
-        );
-        
-        if (itemIndex !== -1) {
-            // Update quantity and total price for the specific item
-            userCart.items[itemIndex].quantity = quantity;
-            userCart.items[itemIndex].totalPrice = product.salesPrice * quantity;
-            userCart.items[itemIndex].availableQuantity = sizeObj.quantity;
-            
-            await userCart.save();
-            
-            // Recalculate subtotal
-            const subtotal = userCart.items.reduce((sum, item) => sum + item.totalPrice, 0);
-            
-            return res.status(200).json({
-                cart: userCart,
-                subtotal: subtotal
-            });
-        }
-
-        return res.status(404).json({ message: "Item not found in cart" });
-    } catch (error) {
-        console.error('Error updating cart:', error);
-        res.status(500).json({ message: "Server error" });
-    }
-};
-
-
-
-const removeFromCart = async (req, res) => {
-    try {
-        if (!req.session.user) {
-            return res.status(401).json({ message: 'Unauthorized' });
-        }
-
-        const { productId } = req.params; 
-        const { color, size } = req.query; // Add color and size to query
-        const userId = req.session.user._id; 
-
-        const result = await Cart.updateOne(
-            { 
-                userId: userId,
-                items: {
-                    $elemMatch: {
-                        productId: productId,
-                        color: color,
-                        size: parseInt(size)
-                    }
+        const order = await Order.findById(orderId)
+            .populate({
+                path: 'items.productId',
+                populate: {
+                    path: 'variants',
+                    model: 'Product'
                 }
-            },
-            { 
-                $pull: { 
-                    items: { 
-                        productId: productId,
-                        color: color,
-                        size: parseInt(size)
-                    } 
-                } 
-            }
-        );
+            });
 
-        if (result.modifiedCount === 0) {
-            return res.status(404).json({ message: 'Item not found in cart' });
+        if (!order) {
+            return res.status(404).render('page-404', { message: 'Order not found' });
         }
 
-        res.status(200).json({ message: 'Item removed from cart' });
-    } catch (error) {
-        console.error('Error removing item from cart:', error);
-        res.status(500).json({ message: 'Error removing item from cart' });
-    }
-};
+        // Prepare items with variant images
+        const orderItems = order.items.map(item => {
+            const product = item.productId;
+            const variant = product.variants.find(v => 
+                v._id.toString() === item.variantId.toString()
+            );
 
+            return {
+                ...item.toObject(),
+                product: {
+                    ...product.toObject(),
+                    productImages: variant ? 
+                        variant.images.map(img => img.filename) 
+                        : [],
+                    variantImages: variant ? 
+                        variant.images.map(img => img.filename) 
+                        : [],
+                    variantImage: variant ? 
+                        (variant.images.find(img => img.mainImage) || variant.images[0])?.filename 
+                        : null,
+                    color: item.color,
+                    size: item.size
+                }
+            };
+        });
 
-
-
-const checkStockAvailability = async (req, res) => {
-    try {
-        const { productId } = req.params;
-        const { color, size, variantId } = req.query;
-
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        const variant = product.variants.find(v => 
-            v._id.toString() === variantId && v.color === color
-        );
-
-        if (!variant) {
-            return res.status(404).json({ message: 'Variant not found' });
-        }
-
-        const sizeObj = variant.sizes.find(s => s.size === parseInt(size));
-
-        return res.json({ 
-            availableQuantity: sizeObj ? sizeObj.quantity : 0,
-            variantId: variant._id
+        res.render('userOrderSummary', {
+            order,
+            orderItems,
+            user: req.user
         });
     } catch (error) {
-        console.error('Error checking stock:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error('Error loading order summary:', error);
+        res.status(500).render('page-404', { message: 'Error loading order summary' });
     }
 };
 
-module.exports = {
-    getCartPage,
-    addToCart,
-    removeFromCart,
-    updateCart,
-    checkStockAvailability,
+
+
+
+This is my userProfileController.js code:- 
+
+const getOrderDetails = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+  
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).render('page-404', { message: 'Invalid order ID' });
+        }
+  
+        const order = await Order.findOne({ _id: orderId, userId: req.user._id }).populate({
+            path: 'items.productId',
+            populate: [
+                { path: 'category', select: 'name' },
+                { path: 'variants' }
+            ]
+        });
+  
+        if (!order) {
+            return res.status(404).render('page-404', { message: 'Order not found' });
+        }
+  
+        const orderItems = order.items.map((item) => ({
+            ...item.toObject(),
+            product: {
+                ...item.productId.toObject(),
+                productImages: item.productId.productImages || [],
+                variantImages: item.productId.variants?.[0]?.images || [],
+                category: item.productId.category
+            },
+        }));
+  
+        res.render('orderSummary', { order, orderItems, user: req.user });
+    } catch (error) {
+        console.error('Error fetching order details:', error);
+        res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
+    }
 };
 
 
 
 
-This is my userProfile.ejs code :--
+const cancelOrderItem = async (req, res) => {
+    try {
+        const { orderId, itemId } = req.params;
+        
+        // Find the order and ensure it belongs to the current user
+        const order = await Order.findOne({ 
+            _id: orderId, 
+            userId: req.user._id 
+        }).populate('items.productId');
+
+        if (!order) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found' 
+            });
+        }
+
+        // Find the specific item
+        const orderItem = order.items.id(itemId);
+        
+        if (!orderItem) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order item not found' 
+            });
+        }
+
+        // Check if item can be cancelled
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Update order item status
+        orderItem.status = 'cancelled';
+        
+        // If all items are cancelled, update order status
+        const allItemsCancelled = order.items.every(item => item.status === 'cancelled');
+        if (allItemsCancelled) {
+            order.status = 'cancelled';
+        }
+
+        await order.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Item cancelled successfully',
+            orderStatus: order.status,
+            itemStatus: orderItem.status
+        });
+    } catch (error) {
+        console.error('Cancel Order Item Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to cancel order item' 
+        });
+    }
+};
+
+// Add a new function to cancel entire order
+const cancelEntireOrder = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        const order = await Order.findOne({ 
+            _id: orderId, 
+            userId: req.user._id 
+        });
+
+        if (!order) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found' 
+            });
+        }
+
+        // Check if order can be cancelled
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Cancel all items
+        order.items.forEach(item => {
+            item.status = 'cancelled';
+        });
+        
+        // Update order status
+        order.status = 'cancelled';
+
+        await order.save();
+
+        res.json({ 
+            success: true, 
+            message: 'Order cancelled successfully',
+            orderStatus: order.status
+        });
+    } catch (error) {
+        console.error('Cancel Entire Order Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to cancel order' 
+        });
+    }
+};
 
 
-   <!-- Orders Section -->
-                <!-- Orders Section -->
-                <% if (activeSection === 'orders') { %>
-                    <h2>Your Orders</h2>
-                    <% if (orders && orders.length > 0) { %>
-                        <div class="orders-container">
-                            <% orders.forEach(order => { %>
-                                <div class="order-card mb-3">
-                                    <div class="card">
-                                        <div class="card-header d-flex justify-content-between align-items-center">
-                                            <h5 class="mb-0">Order #<%= order._id %></h5>
-                                            <span class="badge bg-<%= order.status === 'pending' ? 'warning' : 
-                                                        order.status === 'processing' ? 'info' :
-                                                        order.status === 'shipped' ? 'primary' :
-                                                        order.status === 'delivered' ? 'success' : 'danger' %>">
-                                                <%= order.status %>
-                                            </span>
-                                        </div>
-                                        <div class="card-body">
-                                            <p>Date: <%= new Date(order.createdAt).toLocaleDateString() %></p>
-                                            <p>Total Amount: ₹<%= order.total %></p>
-                                            <p>Items: <%= order.items.length %></p>
-                                            <a href="/order/<%= order._id %>" class="btn btn-primary">View Details</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            <% }); %>
-                        </div>
-                    <% } else { %>
-                        <div class="text-center py-5">
-                            <h4>No orders found</h4>
-                            <p>You haven't placed any orders yet.</p>
-                            <a href="/shop" class="btn btn-primary">Start Shopping</a>
-                        </div>
-                    <% } %>
-                <% } %>
+This is my adminRouter.js code:- 
+router.get('/productVariants/:id',adminAuth,productController.productVariants);
+router.get('/editVariant/:id', adminAuth, productController.editVariantForm);
+router.post('/colorVariant/edit/:id', adminAuth, upload, productController.updateVariant);  
 
-    
-                
 
-                This is my orderSummary.ejs page code:- 
+This is adminSide
 
-                <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Summary - <%= order._id %></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-        <link rel="stylesheet" href="/css/main.css">
-</head>
-<body>
-    <div class="container my-5">
-        <div class="row">
-            <div class="col-12">
-                <h1>Order Summary</h1>
-                <div class="card">
-                    <div class="card-header">
-                        <h5>Order #<%= order._id %></h5>
-                        <span class="badge bg-<%= order.status === 'pending' ? 'warning' : 
-                                        order.status === 'processing' ? 'info' :
-                                        order.status === 'shipped' ? 'primary' :
-                                        order.status === 'delivered' ? 'success' : 'danger' %>">
-                            <%= order.status %>
-                        </span>
-                    </div>
-                    <div class="card-body">
-                        <p>Order Date: <%= new Date(order.createdAt).toLocaleString() %></p>
-                        <p>Shipping Address:</p>
-                        <address>
-                            <%= order.shippingAddress.name %><br>
-                            <%= order.shippingAddress.addressType %><br>
-                            <%= order.shippingAddress.phone %><br>
-                            <%= order.shippingAddress.landmark %><br>
-                            <%= order.shippingAddress.city %>, <%= order.shippingAddress.state %> - <%= order.shippingAddress.pincode %>
-                        </address>
-                        <h5>Items</h5>
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Product</th>
-                                    <th>Quantity</th>
-                                    <th>Price</th>
-                                    <th>Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <% orderItems.forEach(item => { %>
-                                <tr>
-                                  <td>
-                                    <div class="d-flex align-items-center">
-                                      <img
-                                        src="<%= item.product.productImages[0] || '/images/placeholder.jpg' %>"
-                                        alt="<%= item.product.productName %>"
-                                        class="img-thumbnail me-2"
-                                        style="width: 50px; height: 50px;"
-                                      />
-                                      <span><%= item.product.productName %></span>
-                                    </div>
-                                  </td>
-                                  <td><%= item.quantity %></td>
-                                  <td>₹<%= item.price %></td>
-                                  <td>₹<%= item.totalPrice %></td>
-                                </tr>
-                                <% }); %>
-                              </tbody>
-                            
-                        </table>
-                        <div class="d-flex justify-content-end">
-                            <div class="card w-50">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between">
-                                        <span>Subtotal:</span>
-                                        <span>₹<%= order.subtotal %></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Shipping:</span>
-                                        <span>₹<%= order.shippingCost %></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between">
-                                        <span>Total:</span>
-                                        <span>₹<%= order.total %></span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <a href="/profile/orders" class="btn btn-secondary mt-3">Back to Orders</a>
-            </div>
-        </div>
-    </div>
-</body>
-</html>
+
+This is my userProfile.ejs code :-

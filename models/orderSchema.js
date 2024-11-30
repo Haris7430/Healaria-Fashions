@@ -42,6 +42,11 @@ const orderSchema = new Schema({
         totalPrice: {
             type: Number,
             required: true
+        },
+        status: {
+            type: String,
+            enum: ['placed', 'cancelled'],
+            default: 'placed'
         }
     }],
     shippingAddress: {
