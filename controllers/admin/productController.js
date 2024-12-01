@@ -262,8 +262,8 @@ const deleteProduct = async (req, res) => {
 const getEditProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const product = await Product.findOne({_id: id});
-        const category = await Category.find({});
+        const product = await Product.findOne({_id: id}).populate('category');
+        const categories = await Category.find({}); // Change 'cat' to 'categories'
         
         // Create initial size-quantity pair from main product fields
         const mainSizeQuantity = {
@@ -281,7 +281,7 @@ const getEditProduct = async (req, res) => {
         
         res.render('editProduct', {
             product: product,
-            cat: category,
+            categories: categories, // Changed from 'cat' to 'categories'
             sizesArray: sizesArray
         });
     } catch (error) {
@@ -289,7 +289,6 @@ const getEditProduct = async (req, res) => {
         res.redirect('/admin/pageerror');
     }
 }
-
 
 
 const editProduct = async (req, res) => {
@@ -312,10 +311,10 @@ const editProduct = async (req, res) => {
         })).filter(pair => pair.size && !isNaN(pair.quantity));
 
         // Get category
-        const category = await Category.findOne({ name: data.category });
-        if (!category) {
-            return res.status(400).json({ error: 'Invalid category' });
-        }
+const category = await Category.findById(data.category);
+if (!category) {
+    return res.status(400).json({ error: 'Invalid category' });
+}
 
         // Create update fields
         const updateFields = {
@@ -378,28 +377,28 @@ const editProduct = async (req, res) => {
 
 
 
-const deleteSingleImage = async (req, res) => {
-    try {
-        const { imageNameToServer, productIdToServer } = req.body;
+// const deleteSingleImage = async (req, res) => {
+//     try {
+//         const { imageNameToServer, productIdToServer } = req.body;
 
-        // Update product document to remove the image
-        await Product.findByIdAndUpdate(productIdToServer, { $pull: { productImages: imageNameToServer } });
+//         // Update product document to remove the image
+//         await Product.findByIdAndUpdate(productIdToServer, { $pull: { productImages: imageNameToServer } });
 
-        const imagePath = path.join('public', 'uploads', 'product-images', imageNameToServer);
-        if (fs.existsSync(imagePath)) {
-            await fs.unlinkSync(imagePath);
-            console.log(`Image ${imageNameToServer} deleted successfully.`);
-        } else {
-            console.log(`Image ${imageNameToServer} not found.`);
-        }
+//         const imagePath = path.join('public', 'uploads', 'product-images', imageNameToServer);
+//         if (fs.existsSync(imagePath)) {
+//             await fs.unlinkSync(imagePath);
+//             console.log(`Image ${imageNameToServer} deleted successfully.`);
+//         } else {
+//             console.log(`Image ${imageNameToServer} not found.`);
+//         }
         
-        res.send({ status: true });
+//         res.send({ status: true });
         
-    } catch (error) {
-        console.error(error);
-        res.redirect('/pageerror');
-    }
-};
+//     } catch (error) {
+//         console.error(error);
+//         res.redirect('/pageerror');
+//     }
+// };
 
 
 
@@ -781,7 +780,7 @@ module.exports = {
     unblockProduct,
     getEditProduct,
     editProduct,
-    deleteSingleImage,
+    // deleteSingleImage,
     deleteProduct,
     productVariants,
     colorVarients,

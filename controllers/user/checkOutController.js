@@ -66,6 +66,36 @@ const getCheckoutPage = async (req, res) => {
     }
 };
 
+
+
+
+
+const updateProductVariantQuantities = async (order, isCancel = false) => {
+    try {
+        for (const item of order.items) {
+            const product = await Product.findById(item.productId);
+            if (!product) continue;
+
+            const variant = product.variants.id(item.variantId);
+            if (!variant) continue;
+
+            // Find the specific size in the variant
+            const sizeVariant = variant.sizes.find(s => s.size === item.size);
+            if (!sizeVariant) continue;
+
+            // Adjust quantity based on order or cancellation
+            const quantityChange = isCancel ? item.quantity : -item.quantity;
+            sizeVariant.quantity += quantityChange;
+
+            await product.save();
+        }
+    } catch (error) {
+        console.error('Error updating product variant quantities:', error);
+        res.redirect('/admin/pageNotFound')
+    }
+};
+
+
 const createOrder = async (req, res) => {
     try {
         const { addressId, paymentMethod } = req.body;
@@ -124,7 +154,10 @@ const createOrder = async (req, res) => {
             status: paymentMethod === 'COD' ? 'pending' : 'processing'
         });
 
+        
         await newOrder.save();
+        await updateProductVariantQuantities(newOrder);
+
 
         // Clear cart after order creation
         await Cart.deleteOne({ userId: req.user._id });

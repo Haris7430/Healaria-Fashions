@@ -2,6 +2,8 @@ const User = require('../../models/userSchema'); // User schema
 const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
 const mongoose = require('mongoose');
+const Product = require('../../models/productSchema');
+
 
 const bcrypt = require('bcrypt'); 
 
@@ -482,11 +484,14 @@ const getOrderDetails = async (req, res) => {
 
 
 
+
+
+
+
 const cancelOrderItem = async (req, res) => {
     try {
         const { orderId, itemId } = req.params;
         
-        // Find the order and ensure it belongs to the current user
         const order = await Order.findOne({ 
             _id: orderId, 
             userId: req.user._id 
@@ -499,7 +504,6 @@ const cancelOrderItem = async (req, res) => {
             });
         }
 
-        // Find the specific item
         const orderItem = order.items.id(itemId);
         
         if (!orderItem) {
@@ -526,6 +530,36 @@ const cancelOrderItem = async (req, res) => {
             order.status = 'cancelled';
         }
 
+        // Find the specific product
+        const product = await Product.findById(orderItem.productId);
+        if (!product) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Product not found' 
+            });
+        }
+
+        // Find the specific variant
+        const variant = product.variants.find(v => 
+            v.color === orderItem.color
+        );
+
+        if (!variant) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Variant not found' 
+            });
+        }
+
+        // Find and update the specific size variant
+        const sizeVariant = variant.sizes.find(s => s.size === orderItem.size);
+        
+        if (sizeVariant) {
+            sizeVariant.quantity += orderItem.quantity;
+        }
+
+        // Save changes
+        await product.save();
         await order.save();
 
         res.json({ 
@@ -538,12 +572,11 @@ const cancelOrderItem = async (req, res) => {
         console.error('Cancel Order Item Error:', error);
         res.status(500).json({ 
             success: false, 
-            message: 'Failed to cancel order item' 
+            message: error.message || 'Failed to cancel order item' 
         });
     }
 };
 
-// Add a new function to cancel entire order
 const cancelEntireOrder = async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -566,6 +599,26 @@ const cancelEntireOrder = async (req, res) => {
                 success: false, 
                 message: 'Cannot cancel this order' 
             });
+        }
+
+        // Process each item for quantity restoration
+        for (const item of order.items) {
+            // Find the product
+            const product = await Product.findById(item.productId);
+            if (!product) continue;
+
+            // Find the specific variant
+            const variant = product.variants.find(v => v.color === item.color);
+            if (!variant) continue;
+
+            // Find and update the specific size variant
+            const sizeVariant = variant.sizes.find(s => s.size === item.size);
+            if (sizeVariant) {
+                sizeVariant.quantity += item.quantity;
+            }
+
+            // Save the product with updated quantities
+            await product.save();
         }
 
         // Cancel all items

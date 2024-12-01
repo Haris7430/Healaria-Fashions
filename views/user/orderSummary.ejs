@@ -91,7 +91,12 @@
                                             <td>
                                                 <a href="/productDetails?id=<%= item.productId %>">
                                                     <img
-                                                        src="/uploads/product-images/<%= item.product.variants[0]?.images[0]?.filename || 'placeholder.jpg' %>"
+                                                        src="/uploads/product-images/<%= 
+                                                            item.product.variants.find(v => 
+                                                                v.color === item.color && 
+                                                                v.images && v.images.length > 0
+                                                            )?.images[0]?.filename || 'placeholder.jpg' 
+                                                        %>"
                                                         alt="<%= item.product.productName %>"
                                                         class="img-thumbnail"
                                                         style="width: 50px; height: 50px; object-fit: cover;"
@@ -164,52 +169,54 @@
     </div>
 </body>
 
+
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const cancelButtons = document.querySelectorAll('.cancel-order-item');
-        const cancelEntireOrderButton = document.getElementById('cancel-entire-order');
-        
-        cancelButtons.forEach(button => {
-            button.addEventListener('click', async () => {
-                const orderId = button.getAttribute('data-order-id');
-                const itemId = button.getAttribute('data-item-id');
+   document.addEventListener('DOMContentLoaded', () => {
+    const cancelButtons = document.querySelectorAll('.cancel-order-item');
+    const cancelEntireOrderButton = document.getElementById('cancel-entire-order');
+    
+    cancelButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const orderId = button.getAttribute('data-order-id');
+            const itemId = button.getAttribute('data-item-id');
+            
+            try {
+                const response = await fetch(`/order/${orderId}/cancel-item/${itemId}`, {
+                    method: 'POST'
+                });
                 
-                try {
-                    const response = await fetch(`/order/${orderId}/cancel-item/${itemId}`, {
-                        method: 'POST'
+                const result = await response.json();
+                
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Order Item Cancelled',
+                        text: 'The order item has been successfully cancelled and product quantity restored.',
+                        showConfirmButton: false,
+                        timer: 2000
+                    }).then(() => {
+                        // Reload the page to reflect changes
+                        window.location.reload();
                     });
-                    
-                    const result = await response.json();
-                    
-                    if (result.success) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Order Item Cancelled',
-                            text: 'The order item has been successfully cancelled.'
-                        }).then(() => {
-                            // Reload the page to reflect changes
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error',
-                            text: result.message
-                        });
-                    }
-                } catch (error) {
-                    console.error('Cancel Order Error:', error);
+                } else {
                     Swal.fire({
                         icon: 'error',
                         title: 'Error',
-                        text: 'Failed to cancel order item'
+                        text: result.message || 'Unable to cancel the order item. Please try again.'
                     });
                 }
-            });
+            } catch (error) {
+                console.error('Cancel Order Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Network Error',
+                    text: 'Unable to connect to the server. Please check your internet connection.'
+                });
+            }
         });
+    });
     
         // Add event listener for cancelling entire order
         if (cancelEntireOrderButton) {

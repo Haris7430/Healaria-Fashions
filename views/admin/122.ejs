@@ -137,319 +137,387 @@ module.exports = Order;
 
 
 
-This is my userRouter.js code:- 
 
-router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
-router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
-router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
+This is my categorySchema.js code:- 
 
-router.get('/order/:orderId', userAuth,userProfileController.getOrderDetails);
-router.post('/order/:orderId/cancel-item/:itemId', userAuth, userProfileController.cancelOrderItem);
-router.post('/order/:orderId/cancel-order', userAuth, userProfileController.cancelEntireOrder);
+const mongoose= require('mongoose');
+const {Schema}= mongoose;
 
+const categorySchema= new mongoose.Schema({
+    name:{
+    type: String,
+    required:true,
+    unique:true
+    },
+    description: {
+        type:String,
+        required:true
+    },
+    isListed: {
+        type:Boolean,
+        default:true
+    },
+    categoryOffer:{
+        type:Number,
+        default:0
+    },
+    createdAt: {
+        type: Date,
+        default:Date.now
+    },
+})
 
+const Category= mongoose.model('Category',categorySchema);
 
-This is my checkOutController.js code for your reference it will be correctly work:- active
+module.exports= Category
 
-const createOrder = async (req, res) => {
-    try {
-        const { addressId, paymentMethod } = req.body;
-
-        // Validate address
-        const userAddress = await Address.findOne({ userId: req.user._id });
-        const selectedAddress = userAddress.address.find(addr => addr._id.toString() === addressId);
-
-        if (!selectedAddress) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid address selected'
-            });
-        }
-
-        // Get cart items with full product details
-        const cart = await Cart.findOne({ userId: req.user._id })
-            .populate({
-                path: 'items.productId',
-                model: 'Product',
-                populate: {
-                    path: 'variants',
-                    model: 'Product'
-                }
-            });
-
-        if (!cart || !cart.items.length) {
-            return res.status(400).json({
-                success: false,
-                message: 'Cart is empty'
-            });
-        }
-
-        // Calculate totals
-        const subtotal = cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const shippingCost = 0;
-        const total = subtotal + shippingCost;
-
-        // Create new order with detailed item information
-        const newOrder = new Order({
-            userId: req.user._id,
-            items: cart.items.map(item => ({
-                productId: item.productId._id,
-                quantity: item.quantity,
-                price: item.price,
-                totalPrice: item.price * item.quantity,
-                color: item.color,
-                size: item.size,
-                variantId: item.variantId
-            })),
-            shippingAddress: selectedAddress,
-            paymentMethod,
-            subtotal,
-            shippingCost,
-            total,
-            status: paymentMethod === 'COD' ? 'pending' : 'processing'
-        });
-
-        await newOrder.save();
-
-        // Clear cart after order creation
-        await Cart.deleteOne({ userId: req.user._id });
-
-        res.status(200).json({
-            success: true,
-            message: 'Order placed successfully',
-            orderId: newOrder._id
-        });
-    } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error creating order',
-            error: error.message
-        });
-    }
-};
-
-const getOrderSummary = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(orderId)) {
-            return res.status(400).render('page-404', { message: 'Invalid order ID format' });
-        }
-
-        const order = await Order.findById(orderId)
-            .populate({
-                path: 'items.productId',
-                populate: {
-                    path: 'variants',
-                    model: 'Product'
-                }
-            });
-
-        if (!order) {
-            return res.status(404).render('page-404', { message: 'Order not found' });
-        }
-
-        // Prepare items with variant images
-        const orderItems = order.items.map(item => {
-            const product = item.productId;
-            const variant = product.variants.find(v => 
-                v._id.toString() === item.variantId.toString()
-            );
-
-            return {
-                ...item.toObject(),
-                product: {
-                    ...product.toObject(),
-                    productImages: variant ? 
-                        variant.images.map(img => img.filename) 
-                        : [],
-                    variantImages: variant ? 
-                        variant.images.map(img => img.filename) 
-                        : [],
-                    variantImage: variant ? 
-                        (variant.images.find(img => img.mainImage) || variant.images[0])?.filename 
-                        : null,
-                    color: item.color,
-                    size: item.size
-                }
-            };
-        });
-
-        res.render('userOrderSummary', {
-            order,
-            orderItems,
-            user: req.user
-        });
-    } catch (error) {
-        console.error('Error loading order summary:', error);
-        res.status(500).render('page-404', { message: 'Error loading order summary' });
-    }
-};
-
-
-
-
-This is my userProfileController.js code:- 
-
-const getOrderDetails = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-  
-        if (!mongoose.Types.ObjectId.isValid(orderId)) {
-            return res.status(400).render('page-404', { message: 'Invalid order ID' });
-        }
-  
-        const order = await Order.findOne({ _id: orderId, userId: req.user._id }).populate({
-            path: 'items.productId',
-            populate: [
-                { path: 'category', select: 'name' },
-                { path: 'variants' }
-            ]
-        });
-  
-        if (!order) {
-            return res.status(404).render('page-404', { message: 'Order not found' });
-        }
-  
-        const orderItems = order.items.map((item) => ({
-            ...item.toObject(),
-            product: {
-                ...item.productId.toObject(),
-                productImages: item.productId.productImages || [],
-                variantImages: item.productId.variants?.[0]?.images || [],
-                category: item.productId.category
-            },
-        }));
-  
-        res.render('orderSummary', { order, orderItems, user: req.user });
-    } catch (error) {
-        console.error('Error fetching order details:', error);
-        res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
-    }
-};
-
-
-
-
-const cancelOrderItem = async (req, res) => {
-    try {
-        const { orderId, itemId } = req.params;
-        
-        // Find the order and ensure it belongs to the current user
-        const order = await Order.findOne({ 
-            _id: orderId, 
-            userId: req.user._id 
-        }).populate('items.productId');
-
-        if (!order) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Order not found' 
-            });
-        }
-
-        // Find the specific item
-        const orderItem = order.items.id(itemId);
-        
-        if (!orderItem) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Order item not found' 
-            });
-        }
-
-        // Check if item can be cancelled
-        if (order.status === 'delivered' || order.status === 'cancelled') {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Cannot cancel this order' 
-            });
-        }
-
-        // Update order item status
-        orderItem.status = 'cancelled';
-        
-        // If all items are cancelled, update order status
-        const allItemsCancelled = order.items.every(item => item.status === 'cancelled');
-        if (allItemsCancelled) {
-            order.status = 'cancelled';
-        }
-
-        await order.save();
-
-        res.json({ 
-            success: true, 
-            message: 'Item cancelled successfully',
-            orderStatus: order.status,
-            itemStatus: orderItem.status
-        });
-    } catch (error) {
-        console.error('Cancel Order Item Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to cancel order item' 
-        });
-    }
-};
-
-// Add a new function to cancel entire order
-const cancelEntireOrder = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        
-        const order = await Order.findOne({ 
-            _id: orderId, 
-            userId: req.user._id 
-        });
-
-        if (!order) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Order not found' 
-            });
-        }
-
-        // Check if order can be cancelled
-        if (order.status === 'delivered' || order.status === 'cancelled') {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Cannot cancel this order' 
-            });
-        }
-
-        // Cancel all items
-        order.items.forEach(item => {
-            item.status = 'cancelled';
-        });
-        
-        // Update order status
-        order.status = 'cancelled';
-
-        await order.save();
-
-        res.json({ 
-            success: true, 
-            message: 'Order cancelled successfully',
-            orderStatus: order.status
-        });
-    } catch (error) {
-        console.error('Cancel Entire Order Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to cancel order' 
-        });
-    }
-};
 
 
 This is my adminRouter.js code:- 
-router.get('/productVariants/:id',adminAuth,productController.productVariants);
-router.get('/editVariant/:id', adminAuth, productController.editVariantForm);
-router.post('/colorVariant/edit/:id', adminAuth, upload, productController.updateVariant);  
+
+router.get('/editProduct/:id',adminAuth,productController.getEditProduct)
+router.post('/editProduct/:id', adminAuth, upload,productController.editProduct);
 
 
-This is adminSide
+This is my productController.js code for your reference it will be correctly work:- active
+
+const getEditProduct = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const product = await Product.findOne({_id: id});
+        const category = await Category.find({});
+        
+        // Create initial size-quantity pair from main product fields
+        const mainSizeQuantity = {
+            size: product.size,
+            quantity: product.quantity
+        };
+        
+        // Prepare the sizes array for the template
+        let sizesArray = [mainSizeQuantity];
+        
+        // Add variant sizes if they exist
+        if (product.variants && product.variants.length > 0) {
+            sizesArray = [...sizesArray, ...product.variants[0].sizes];
+        }
+        
+        res.render('editProduct', {
+            product: product,
+            cat: category,
+            sizesArray: sizesArray
+        });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/pageerror');
+    }
+}
 
 
-This is my userProfile.ejs code :-
+
+const editProduct = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const data = req.body;
+        
+        // Convert sizes and quantities to arrays if they're not already
+        const sizes = Array.isArray(data.sizes) ? data.sizes : [data.sizes];
+        const quantities = Array.isArray(data.quantities) ? data.quantities : [data.quantities];
+
+        // The first size-quantity pair will be the main product size/quantity
+        const mainSize = Number(sizes[0]);
+        const mainQuantity = Number(quantities[0]);
+
+        // Create size-quantity pairs for variants (excluding the first pair)
+        const variantSizePairs = sizes.slice(1).map((size, index) => ({
+            size: Number(size),
+            quantity: Number(quantities[index + 1] || 0)
+        })).filter(pair => pair.size && !isNaN(pair.quantity));
+
+        // Get category
+        const category = await Category.findOne({ name: data.category });
+        if (!category) {
+            return res.status(400).json({ error: 'Invalid category' });
+        }
+
+        // Create update fields
+        const updateFields = {
+            productName: data.productName,
+            description: data.description,
+            category: category._id,
+            regularPrice: data.regularPrice,
+            salesPrice: data.salePrice,
+            color: data.color,
+            size: mainSize,
+            quantity: mainQuantity
+        };
+
+        // Only add variants if there are additional sizes
+        if (variantSizePairs.length > 0) {
+            updateFields.variants = [{
+                color: data.color,
+                sizes: variantSizePairs,
+                isListed: true
+            }];
+        }
+
+        // Handle image uploads
+        if (req.files && req.files.length > 0) {
+            const newImages = await Promise.all(req.files.map(async file => {
+                const filename = `${Date.now()}-${file.originalname}`;
+                const outputPath = path.join('public', 'uploads', 'product-images', filename);
+                
+                await sharp(file.buffer)
+                    .jpeg({ quality: 90 })
+                    .toFile(outputPath);
+
+                return filename;
+            }));
+
+            // Combine new images with existing ones
+            const existingProduct = await Product.findById(id);
+            updateFields.productImages = [...(existingProduct.productImages || []), ...newImages];
+        }
+
+        // Update the product
+        const updatedProduct = await Product.findByIdAndUpdate(
+            id,
+            updateFields,
+            { new: true }
+        );
+
+        if (!updatedProduct) {
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        res.json({ success: true, message: 'Product updated successfully' });
+
+    } catch (error) {
+        console.error('Error updating product:', error);
+        res.status(500).json({ error: 'Internal server error', details: error.message });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+This is my editProduct.ejs code :-
+
+// editProduct.ejs
+<%- include("../../views/partials/admin/header/") %>
+
+<!-- Content wrapper -->
+<div class="content-wrapper">
+    <!-- Content -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="card mb-4">
+            <h5 class="card-header">Edit Product</h5>
+            <div class="card-body">
+                <form id="editProductForm" action="/admin/editProduct/<%= product._id %>" method="POST">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">Product Name</label>
+                        <input type="text" class="form-control" id="productName" name="productName" 
+                            value="<%= product.productName %>"
+                            >
+                        <% if (locals.errors && errors.productName) { %>
+                            <div class="text-danger"><%= errors.productName %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="3"><%= product.description %></textarea>
+                        <% if (locals.errors && errors.description) { %>
+                            <div class="text-danger"><%= errors.description %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="category" class="form-label">Category</label>
+                        <select class="form-select" id="category" name="category" >
+                            <% categories.forEach(category => { %>
+                                <option value="<%= category._id %>" 
+                                    <%= product.category._id.toString() === category._id.toString() ? 'selected' : '' %>>
+                                    <%= category.name %>
+                                </option>
+                            <% }); %>
+                        </select>
+                        <% if (locals.errors && errors.category) { %>
+                            <div class="text-danger"><%= errors.category %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="regularPrice" class="form-label">Regular Price</label>
+                        <input type="number" class="form-control" id="regularPrice" name="regularPrice" 
+                            value="<%= product.regularPrice %>"
+                            >
+                        <% if (locals.errors && errors.regularPrice) { %>
+                            <div class="text-danger"><%= errors.regularPrice %></div>
+                        <% } %>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="salesPrice" class="form-label">Sales Price</label>
+                        <input type="number" class="form-control" id="salesPrice" name="salesPrice" 
+                            value="<%= product.salesPrice %>"
+                            >
+                        <% if (locals.errors && errors.salesPrice) { %>
+                            <div class="text-danger"><%= errors.salesPrice %></div>
+                        <% } %>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Update Product</button>
+                    <a href="/admin/products" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include footer -->
+<%- include("../../views/partials/admin/footer/") %>
+
+<!-- Client-side validation script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editProductForm');
+    
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // Reset previous error messages
+        document.querySelectorAll('.error-message').forEach(el => el.remove());
+        
+        let isValid = true;
+        const errors = {};
+
+        // Product Name validation
+        const productName = document.getElementById('productName').value.trim();
+        if (!productName) {
+            errors.productName = 'Product name is ';
+            isValid = false;
+        }
+
+        // Description validation (optional but with max length)
+        const description = document.getElementById('description').value.trim();
+        if (description.length > 500) {
+            errors.description = 'Description cannot exceed 500 characters';
+            isValid = false;
+        }
+
+        // Regular Price validation
+        const regularPrice = parseFloat(document.getElementById('regularPrice').value);
+        if (isNaN(regularPrice) || regularPrice <= 0) {
+            errors.regularPrice = 'Please enter a valid regular price';
+            isValid = false;
+        }
+
+        // Sales Price validation
+        const salesPrice = parseFloat(document.getElementById('salesPrice').value);
+        if (isNaN(salesPrice) || salesPrice <= 0) {
+            errors.salesPrice = 'Please enter a valid sales price';
+            isValid = false;
+        }
+
+        if (salesPrice >= regularPrice) {
+            errors.salesPrice = 'Sales price must be less than regular price';
+            isValid = false;
+        }
+
+        // Category validation
+        const category = document.getElementById('category').value;
+        if (!category) {
+            errors.category = 'Please select a category';
+            isValid = false;
+        }
+
+        // Display errors if any
+        if (!isValid) {
+            Object.keys(errors).forEach(key => {
+                const input = document.getElementById(key);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message text-danger mt-1';
+                errorDiv.textContent = errors[key];
+                input.parentNode.appendChild(errorDiv);
+            });
+            return;
+        }
+
+        // If validation passes, submit the form
+        form.submit();
+    });
+});
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+
+const getEditProduct = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const product = await Product.findOne({_id: id}).populate('category');
+        const categories = await Category.find({}); // Change 'cat' to 'categories'
+        
+        // Create initial size-quantity pair from main product fields
+        const mainSizeQuantity = {
+            size: product.size,
+            quantity: product.quantity
+        };
+        
+        // Prepare the sizes array for the template
+        let sizesArray = [mainSizeQuantity];
+        
+        // Add variant sizes if they exist
+        if (product.variants && product.variants.length > 0) {
+            sizesArray = [...sizesArray, ...product.variants[0].sizes];
+        }
+        
+        res.render('editProduct', {
+            product: product,
+            categories: categories, // Changed from 'cat' to 'categories'
+            sizesArray: sizesArray
+        });
+    } catch (error) {
+        console.log(error);
+        res.redirect('/admin/pageerror');
+    }
+}
+
+
+
+
+
+
+
+</script>

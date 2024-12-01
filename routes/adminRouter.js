@@ -47,7 +47,7 @@ router.post('/unblock-product/:id',adminAuth, productController.unblockProduct);
 router.delete('/delete-product/:id',adminAuth,productController.deleteProduct);
 router.get('/editProduct/:id',adminAuth,productController.getEditProduct)
 router.post('/editProduct/:id', adminAuth, upload,productController.editProduct);
-router.post('/deleteImage',adminAuth,productController.deleteSingleImage) //// now currently not using
+// router.post('/deleteImage',adminAuth,productController.deleteSingleImage) //// now currently not using
 
 
 
