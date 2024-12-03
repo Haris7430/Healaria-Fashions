@@ -102,6 +102,11 @@ const orderSchema = new Schema({
         totalPrice: {
             type: Number,
             required: true
+        },
+        status: {
+            type: String,
+            enum: ['placed', 'cancelled'],
+            default: 'placed'
         }
     }],
     shippingAddress: {
@@ -124,6 +129,11 @@ const orderSchema = new Schema({
     total: {
         type: Number,
         required: true
+    },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed'],
+        default: 'pending'
     },
     status: {
         type: String,
@@ -172,128 +182,263 @@ const Category= mongoose.model('Category',categorySchema);
 module.exports= Category
 
 
+This is my addressSchema.js code:- 
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-This is my adminRouter.js code:- 
-
-router.get('/editProduct/:id',adminAuth,productController.getEditProduct)
-router.post('/editProduct/:id', adminAuth, upload,productController.editProduct);
-
-
-This is my productController.js code for your reference it will be correctly work:- active
-
-const getEditProduct = async (req, res) => {
-    try {
-        const id = req.params.id;
-        const product = await Product.findOne({_id: id});
-        const category = await Category.find({});
-        
-        // Create initial size-quantity pair from main product fields
-        const mainSizeQuantity = {
-            size: product.size,
-            quantity: product.quantity
-        };
-        
-        // Prepare the sizes array for the template
-        let sizesArray = [mainSizeQuantity];
-        
-        // Add variant sizes if they exist
-        if (product.variants && product.variants.length > 0) {
-            sizesArray = [...sizesArray, ...product.variants[0].sizes];
+const addressSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true
+    },
+    address: [{
+        addressType: {
+            type: String,
+            required: true,
+            enum: ['Home', 'Work', 'Other']
+        },
+        name: {
+            type: String,
+            required: [true, 'Name is required'],
+            trim: true
+        },
+        city: { 
+            type: String,
+            required: [true, 'City is required'],
+            trim: true
+        },
+        landmark: {
+            type: String,
+            required: [true, 'Landmark is required'],
+            trim: true
+        },
+        state: {
+            type: String,
+            required: [true, 'State is required'],
+            trim: true
+        },
+        pincode: {
+            type: String,
+            required: [true, 'Pincode is required'],
+            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
+        },
+        phone: {
+            type: String,
+            required: [true, 'Phone number is required'],
+            validate: {
+                validator: function(v) {
+                    return /^[1-9][0-9]{9}$/.test(v);
+                },
+                message: props => `${props.value} is not a valid phone number!`
+            }
+        },
+        altPhone: {
+            type: String,
+            validate: {
+                validator: function(v) {
+                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
+                },
+                message: props => `${props.value} is not a valid phone number!`
+            }
         }
-        
-        res.render('editProduct', {
-            product: product,
-            cat: category,
-            sizesArray: sizesArray
+    }]
+});
+
+const Address = mongoose.model("Address", addressSchema);
+
+module.exports = Address;
+
+
+
+This is my userSchema.js code :- 
+
+
+
+
+const mongoose= require("mongoose");
+const {Schema}= mongoose;
+
+const userSchema= new Schema ({
+    name:{
+        type: String,
+        required: true
+    },
+    email: {
+        type: String,
+        required: true,
+        unique:true
+    },
+    phone: {
+        type:String,
+        required: false,
+        unique: true,
+        sparse:true,
+        default:undefined
+    },
+    googleId:{
+        type:String,
+        unique:true,
+        sparse:true
+    },
+    password: {
+        type:String,
+        required: false
+    },
+    isBlocked: {
+        type: Boolean,
+        default:false
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
+    cart: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Cart'
+    }],
+    
+    wallet: {
+        type: Number,
+        default:0,
+    },
+    wishlist: [{
+        type: Schema.Types.ObjectId,
+        ref: "wishlist"
+    }],
+    orderHistory: [{
+        type: Schema.Types.ObjectId,
+        ref: "Order"
+    }],
+    createdOn : {
+        type:Date,
+        default:Date.now,
+    },
+    referralCode: {
+        type: String,
+        // required:true
+    },
+    redeemed: {
+        type: Boolean,
+        // defaulte:false
+ 
+    },
+    redeemedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        // required:true
+    }],
+    searchHistory: [{
+        category: {
+            type: Schema.Types.ObjectId,
+            ref: "Category"
+        },
+        Brand: {
+            type: String,
+
+        },
+        searchOn: {
+            type: Date,
+            default: Date.now
+        }
+    }]
+},{timestamps:true})
+
+
+
+
+
+const user= mongoose.model("User",userSchema);
+
+
+module.exports= user
+
+
+This is my userRouter.js code:- 
+router.get('/change-password', userAuth, userProfileController.getChangePasswordPage);
+router.post('/change-password', userAuth, userProfileController.changePassword);
+
+This is my userProfileController.js code:- 
+const getChangePasswordPage = async (req, res) => {
+    try {
+        // Render the profile page with the change password section active
+        res.render('userProfile', { 
+            user: req.user, 
+            activeSection: 'forgot-password' // This matches the condition in your EJS template
         });
     } catch (error) {
-        console.log(error);
-        res.redirect('/admin/pageerror');
+        console.error('Error loading change password page:', error);
+        res.status(500).render('error', {
+            message: 'Error loading change password page'
+        });
     }
-}
+};
 
 
 
-const editProduct = async (req, res) => {
+const changePassword = async (req, res) => {
     try {
-        const id = req.params.id;
-        const data = req.body;
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+
+        // Validate passwords
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'All fields are required'
+            });
+        }
+
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'New passwords do not match'
+            });
+        }
+
+        // Get user and verify current password
+        const user = await User.findById(req.user._id);
         
-        // Convert sizes and quantities to arrays if they're not already
-        const sizes = Array.isArray(data.sizes) ? data.sizes : [data.sizes];
-        const quantities = Array.isArray(data.quantities) ? data.quantities : [data.quantities];
-
-        // The first size-quantity pair will be the main product size/quantity
-        const mainSize = Number(sizes[0]);
-        const mainQuantity = Number(quantities[0]);
-
-        // Create size-quantity pairs for variants (excluding the first pair)
-        const variantSizePairs = sizes.slice(1).map((size, index) => ({
-            size: Number(size),
-            quantity: Number(quantities[index + 1] || 0)
-        })).filter(pair => pair.size && !isNaN(pair.quantity));
-
-        // Get category
-        const category = await Category.findOne({ name: data.category });
-        if (!category) {
-            return res.status(400).json({ error: 'Invalid category' });
+        // Add a check in case user is not found
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
         }
 
-        // Create update fields
-        const updateFields = {
-            productName: data.productName,
-            description: data.description,
-            category: category._id,
-            regularPrice: data.regularPrice,
-            salesPrice: data.salePrice,
-            color: data.color,
-            size: mainSize,
-            quantity: mainQuantity
-        };
-
-        // Only add variants if there are additional sizes
-        if (variantSizePairs.length > 0) {
-            updateFields.variants = [{
-                color: data.color,
-                sizes: variantSizePairs,
-                isListed: true
-            }];
+        // Check if the user has a password (for social login users)
+        if (!user.password) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot change password for this account'
+            });
         }
 
-        // Handle image uploads
-        if (req.files && req.files.length > 0) {
-            const newImages = await Promise.all(req.files.map(async file => {
-                const filename = `${Date.now()}-${file.originalname}`;
-                const outputPath = path.join('public', 'uploads', 'product-images', filename);
-                
-                await sharp(file.buffer)
-                    .jpeg({ quality: 90 })
-                    .toFile(outputPath);
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
 
-                return filename;
-            }));
-
-            // Combine new images with existing ones
-            const existingProduct = await Product.findById(id);
-            updateFields.productImages = [...(existingProduct.productImages || []), ...newImages];
+        if (!isMatch) {
+            return res.status(400).json({
+                success: false,
+                message: 'Current password is incorrect'
+            });
         }
 
-        // Update the product
-        const updatedProduct = await Product.findByIdAndUpdate(
-            id,
-            updateFields,
-            { new: true }
-        );
+        // Hash new password and update
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        await user.save();
 
-        if (!updatedProduct) {
-            return res.status(404).json({ error: 'Product not found' });
-        }
-
-        res.json({ success: true, message: 'Product updated successfully' });
-
+        res.status(200).json({
+            success: true,
+            message: 'Password changed successfully'
+        });
     } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
+        console.error('Error changing password:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error changing password',
+            error: error.message
+        });
     }
 };
 
@@ -301,223 +446,435 @@ const editProduct = async (req, res) => {
 
 
 
+This is my userProfile.ejs page code:- 
 
-
-
-
-
-
-This is my editProduct.ejs code :-
-
-// editProduct.ejs
-<%- include("../../views/partials/admin/header/") %>
-
-<!-- Content wrapper -->
-<div class="content-wrapper">
-    <!-- Content -->
-    <div class="container-xxl flex-grow-1 container-p-y">
-        <div class="card mb-4">
-            <h5 class="card-header">Edit Product</h5>
-            <div class="card-body">
-                <form id="editProductForm" action="/admin/editProduct/<%= product._id %>" method="POST">
-                    <div class="mb-3">
-                        <label for="productName" class="form-label">Product Name</label>
-                        <input type="text" class="form-control" id="productName" name="productName" 
-                            value="<%= product.productName %>"
-                            >
-                        <% if (locals.errors && errors.productName) { %>
-                            <div class="text-danger"><%= errors.productName %></div>
-                        <% } %>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="description" class="form-label">Description</label>
-                        <textarea class="form-control" id="description" name="description" rows="3"><%= product.description %></textarea>
-                        <% if (locals.errors && errors.description) { %>
-                            <div class="text-danger"><%= errors.description %></div>
-                        <% } %>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="category" class="form-label">Category</label>
-                        <select class="form-select" id="category" name="category" >
-                            <% categories.forEach(category => { %>
-                                <option value="<%= category._id %>" 
-                                    <%= product.category._id.toString() === category._id.toString() ? 'selected' : '' %>>
-                                    <%= category.name %>
-                                </option>
-                            <% }); %>
-                        </select>
-                        <% if (locals.errors && errors.category) { %>
-                            <div class="text-danger"><%= errors.category %></div>
-                        <% } %>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="regularPrice" class="form-label">Regular Price</label>
-                        <input type="number" class="form-control" id="regularPrice" name="regularPrice" 
-                            value="<%= product.regularPrice %>"
-                            >
-                        <% if (locals.errors && errors.regularPrice) { %>
-                            <div class="text-danger"><%= errors.regularPrice %></div>
-                        <% } %>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="salesPrice" class="form-label">Sales Price</label>
-                        <input type="number" class="form-control" id="salesPrice" name="salesPrice" 
-                            value="<%= product.salesPrice %>"
-                            >
-                        <% if (locals.errors && errors.salesPrice) { %>
-                            <div class="text-danger"><%= errors.salesPrice %></div>
-                        <% } %>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">Update Product</button>
-                    <a href="/admin/products" class="btn btn-secondary">Cancel</a>
-                </form>
+  <!-- Profile Section -->
+<% if (activeSection === 'profile') { %>
+    <div class="profile-section">
+        <h2>Profile Dashboard</h2>
+        <div class="profile-info">
+            <div class="info-group">
+                <label>Name:</label>
+                <span><%= user.name %></span>
+            </div>
+            <div class="info-group">
+                <label>Email:</label>
+                <span><%= user.email %></span>
+            </div>
+            <div class="info-group">
+                <label>Phone:</label>
+                <span><%= user.phone || 'Not provided' %></span>
+            </div>
+            <div class="info-group">
+                <label>Member Since:</label>
+                <span><%= new Date(user.createdOn).toLocaleDateString() %></span>
             </div>
         </div>
+        <div class="profile-actions">
+            <button onclick="window.location.href='/edit-profile'" class="btn btn-primary">
+                Edit Profile
+            </button>
+            <button onclick="window.location.href='/change-password'" class="btn btn-secondary">
+                Change Password
+            </button>
+        </div>
     </div>
-</div>
+    <% } %>
 
-<!-- Include footer -->
-<%- include("../../views/partials/admin/footer/") %>
+<!-- Change Password Section -->
+<% if (activeSection === 'forgot-password') { %>
+    <div class="change-password-section">
+        <h2>Change Password</h2>
+        <form id="changePasswordForm" class="password-form">
+            <div class="form-group position-relative">
+                <label for="currentPassword">Current Password</label>
+                <div class="input-group">
+                    <input type="password" id="currentPassword" name="currentPassword" class="form-control" required>
+                    <span class="input-group-text toggle-password" data-target="currentPassword">
+                        <i class="fas fa-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
+            <div class="form-group position-relative">
+                <label for="newPassword">New Password</label>
+                <div class="input-group">
+                    <input type="password" id="newPassword" name="newPassword" class="form-control" required>
+                    <span class="input-group-text toggle-password" data-target="newPassword">
+                        <i class="fas fa-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
+            <div class="form-group position-relative">
+                <label for="confirmPassword">Confirm New Password</label>
+                <div class="input-group">
+                    <input type="password" id="confirmPassword" name="confirmPassword" class="form-control" required>
+                    <span class="input-group-text toggle-password" data-target="confirmPassword">
+                        <i class="fas fa-eye-slash"></i>
+                    </span>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">Change Password</button>
+        </form>
+    </div>
+<% } %>
 
-<!-- Client-side validation script -->
+
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('editProductForm');
     
-    form.addEventListener('submit', function(event) {
-        event.preventDefault();
-        
-        // Reset previous error messages
-        document.querySelectorAll('.error-message').forEach(el => el.remove());
-        
-        let isValid = true;
-        const errors = {};
+    
+    // Wait for the DOM content to be loaded
+    document.addEventListener('DOMContentLoaded', () => {
+    const addAddressForm = document.querySelector('.address-form');
+    
+    if (addAddressForm) {
+        addAddressForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
 
-        // Product Name validation
-        const productName = document.getElementById('productName').value.trim();
-        if (!productName) {
-            errors.productName = 'Product name is ';
-            isValid = false;
-        }
+            // Create FormData object
+            const formData = new FormData(addAddressForm);
+            const data = Object.fromEntries(formData);
 
-        // Description validation (optional but with max length)
-        const description = document.getElementById('description').value.trim();
-        if (description.length > 500) {
-            errors.description = 'Description cannot exceed 500 characters';
-            isValid = false;
-        }
+            try {
+                const response = await fetch('/profile/add-address', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
 
-        // Regular Price validation
-        const regularPrice = parseFloat(document.getElementById('regularPrice').value);
-        if (isNaN(regularPrice) || regularPrice <= 0) {
-            errors.regularPrice = 'Please enter a valid regular price';
-            isValid = false;
-        }
+                const result = await response.json();
 
-        // Sales Price validation
-        const salesPrice = parseFloat(document.getElementById('salesPrice').value);
-        if (isNaN(salesPrice) || salesPrice <= 0) {
-            errors.salesPrice = 'Please enter a valid sales price';
-            isValid = false;
-        }
+                if (result.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Address added successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        window.location.href = '/profile/addresses';
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: result.message || 'Failed to add address'
+                    });
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Something went wrong while adding the address'
+                });
+            }
+        });
+    }
+});
 
-        if (salesPrice >= regularPrice) {
-            errors.salesPrice = 'Sales price must be less than regular price';
-            isValid = false;
-        }
 
-        // Category validation
-        const category = document.getElementById('category').value;
-        if (!category) {
-            errors.category = 'Please select a category';
-            isValid = false;
-        }
 
-        // Display errors if any
-        if (!isValid) {
-            Object.keys(errors).forEach(key => {
-                const input = document.getElementById(key);
-                const errorDiv = document.createElement('div');
-                errorDiv.className = 'error-message text-danger mt-1';
-                errorDiv.textContent = errors[key];
-                input.parentNode.appendChild(errorDiv);
+
+   // Updated delete address functionality with SweetAlert2
+document.addEventListener('DOMContentLoaded', function () {
+    const deleteButtons = document.querySelectorAll('.delete-address-btn');
+
+    deleteButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            const addressId = this.getAttribute('data-id');
+            
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Send delete request
+                    fetch(`/profile/delete-address/${addressId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Remove the address card from UI
+                            this.closest('.address-card').remove();
+                            
+                            Swal.fire(
+                                'Deleted!',
+                                'Your address has been deleted.',
+                                'success'
+                            );
+                        } else {
+                            Swal.fire(
+                                'Error!',
+                                data.message || 'Failed to delete address',
+                                'error'
+                            );
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        Swal.fire(
+                            'Error!',
+                            'Something went wrong while deleting the address.',
+                            'error'
+                        );
+                    });
+                }
             });
-            return;
-        }
-
-        // If validation passes, submit the form
-        form.submit();
+        });
     });
 });
-</script>
+
+    
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<script>
-
-
-const getEditProduct = async (req, res) => {
+/// Function to handle edit button click
+async function handleEditAddress(addressId) {
     try {
-        const id = req.params.id;
-        const product = await Product.findOne({_id: id}).populate('category');
-        const categories = await Category.find({}); // Change 'cat' to 'categories'
-        
-        // Create initial size-quantity pair from main product fields
-        const mainSizeQuantity = {
-            size: product.size,
-            quantity: product.quantity
-        };
-        
-        // Prepare the sizes array for the template
-        let sizesArray = [mainSizeQuantity];
-        
-        // Add variant sizes if they exist
-        if (product.variants && product.variants.length > 0) {
-            sizesArray = [...sizesArray, ...product.variants[0].sizes];
+        if (!addressId) {
+            throw new Error('Invalid address ID');
         }
-        
-        res.render('editProduct', {
-            product: product,
-            categories: categories, // Changed from 'cat' to 'categories'
-            sizesArray: sizesArray
+
+        const addressCard = document.querySelector(`.address-card[data-id="${addressId}"]`);
+        if (!addressCard) {
+            throw new Error('Address card not found');
+        }
+
+        const response = await fetch(`/profile/get-address/${addressId}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            credentials: 'same-origin'
         });
+
+        if (!response.ok) {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Error fetching address');
+            } else {
+                throw new Error('Server returned an invalid response');
+            }
+        }
+
+        const data = await response.json();
+        
+        if (!data.success || !data.address) {
+            throw new Error(data.message || 'Address data not found');
+        }
+
+        // Populate the edit form with address data
+        const address = data.address;
+        document.getElementById('edit-name').value = address.name || '';
+        document.getElementById('edit-phone').value = address.phone || '';
+        document.getElementById('edit-alt-phone').value = address.altPhone || '';
+        document.getElementById('edit-landmark').value = address.landmark || '';
+        document.getElementById('edit-city').value = address.city || '';
+        document.getElementById('edit-state').value = address.state || '';
+        document.getElementById('edit-pincode').value = address.pincode || '';
+        
+        // Set address type radio button - Note the capitalized value
+        const addressTypeRadio = document.querySelector(`input[name="edit-addressType"][value="${address.addressType}"]`);
+        if (addressTypeRadio) {
+            addressTypeRadio.checked = true;
+        }
+
+        // Store addressId for update
+        document.getElementById('edit-form').setAttribute('data-address-id', addressId);
+        
+        // Show modal using Bootstrap 5
+        const editModal = new bootstrap.Modal(document.getElementById('editAddressModal'));
+        editModal.show();
+
     } catch (error) {
-        console.log(error);
-        res.redirect('/admin/pageerror');
+        console.error('Error in handleEditAddress:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to fetch address details',
+            confirmButtonColor: '#3085d6'
+        });
     }
 }
 
+// edit Form submission handler
+document.addEventListener('DOMContentLoaded', function() {
+    const editForm = document.getElementById('edit-form');
+    
+    if (editForm) {
+        editForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const addressId = this.getAttribute('data-address-id');
+            if (!addressId) {
+                Swal.fire('Error', 'Address ID not found', 'error');
+                return;
+            }
+
+            // Gather form data - Note we're getting the value directly from the checked radio button
+            const formData = {
+                name: document.getElementById('edit-name').value,
+                addressType: document.querySelector('input[name="edit-addressType"]:checked').value,
+                phone: document.getElementById('edit-phone').value,
+                altPhone: document.getElementById('edit-alt-phone').value,
+                landmark: document.getElementById('edit-landmark').value,
+                city: document.getElementById('edit-city').value,
+                state: document.getElementById('edit-state').value,
+                pincode: document.getElementById('edit-pincode').value
+            };
+
+            try {
+                const response = await fetch(`/profile/edit-address/${addressId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Close modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editAddressModal'));
+                    modal.hide();
+
+                    // Show success message
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Address updated successfully',
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Reload page to show updated address
+                        window.location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message || 'Failed to update address'
+                    });
+                }
+            } catch (error) {
+                console.error('Error updating address:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: 'Something went wrong while updating the address'
+                });
+            }
+        });
+    }
+});
 
 
 
 
 
+// Edit Profile Form Handler with SweetAlert2
+document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(formData)),
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Profile updated successfully',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/dashboard';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: data.message || 'Failed to update profile'
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Something went wrong while updating profile'
+        });
+    }
+});
+
+
+
+// Change Password Form Handler with SweetAlert2
+document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(formData)),
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Password changed successfully',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/dashboard';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: data.message || 'Failed to change password'
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Something went wrong while changing password'
+        });
+    }
+});
 
 </script>
+
+
+
+
+

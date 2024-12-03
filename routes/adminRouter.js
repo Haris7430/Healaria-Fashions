@@ -11,6 +11,7 @@ const { userAuth, adminAuth } = require('../middleware/auth');
 const customerController = require('../controllers/admin/customerController');
 const categoryController = require('../controllers/admin/categoryController');
 const productController = require('../controllers/admin/productController');
+const orderController = require('../controllers/admin/orderController')
 const multer = require('multer'); 
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage }).array('images', 10);
@@ -60,6 +61,15 @@ router.delete('/variant/delete/:productId/:variantId', productController.deleteV
 router.get('/editVariant/:id', adminAuth, productController.editVariantForm);
 
 router.post('/colorVariant/edit/:id', adminAuth, upload, productController.updateVariant);  
+
+
+router.get('/orders',adminAuth, orderController.listOrders);
+router.get('/order-details/:id',adminAuth, orderController.orderDetails);
+router.post('/update-order-status/:id',adminAuth, orderController.updateOrderStatus);
+router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
+router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
+
+
 
  
 module.exports = router; 

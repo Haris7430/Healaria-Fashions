@@ -1,0 +1,146 @@
+<!-- views/admin/order-list.ejs -->
+<%- include("../../views/partials/admin/header/") %>
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Order Management</h5>
+        
+        <!-- Search and Filter Section -->
+        <div class="row my-3">
+          <div class="col-md-12">
+            <form action="/admin/orders" method="GET" class="row g-3">
+              <div class="col-md-4">
+                <input 
+                  type="text" 
+                  name="search" 
+                  class="form-control" 
+                  placeholder="Search by Order ID or Customer Name" 
+                  value="<%= search || '' %>"
+                >
+              </div>
+              <div class="col-md-3">
+                <select name="status" class="form-select">
+                  <option value="">All Order Status</option>
+                  <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="processing" <%= status === 'processing' ? 'selected' : '' %>>Processing</option>
+                  <option value="shipped" <%= status === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                  <option value="delivered" <%= status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                  <option value="cancelled" <%= status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="paymentStatus" class="form-select">
+                  <option value="">All Payment Status</option>
+                  <option value="paid" <%= paymentStatus === 'paid' ? 'selected' : '' %>>Paid</option>
+                  <option value="pending" <%= paymentStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="failed" <%= paymentStatus === 'failed' ? 'selected' : '' %>>Failed</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+              </div>
+            </form>
+            <% if (noResultsMessage) { %>
+              <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <%= noResultsMessage %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="card-datatable table-responsive">
+          <% if (orders.length > 0) { %>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Order Date</th>
+                <th>Customer Name</th>
+                <th>Total Price</th>
+                <th>Payment Method</th>
+                <th>Payment Status</th>
+                <th>Order Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% orders.forEach(order => { %>
+                <tr>
+                  <td><%= order.orderId %></td>
+                  <td><%= order.createdAt.toLocaleDateString() %></td>
+                  <td><%= order.userId.name %></td>
+                  <td>$<%= order.total.toFixed(2) %></td>
+                  <td><%= order.paymentMethod.toUpperCase() %></td>
+                  <td>
+                    <span class="badge 
+                      <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
+                          order.paymentStatus === 'pending' ? 'bg-label-warning' : 
+                          'bg-label-danger' %>">
+                      <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge 
+                      <%= order.status === 'pending' ? 'bg-label-warning' : 
+                          order.status === 'processing' ? 'bg-label-info' : 
+                          order.status === 'shipped' ? 'bg-label-primary' : 
+                          order.status === 'delivered' ? 'bg-label-success' : 
+                          'bg-label-danger' %>">
+                      <%= order.status.toUpperCase() %>
+                    </span>
+                  </td>
+                  <td>
+                    <a href="/admin/order-details/<%= order._id %>" class="btn btn-sm btn-info">
+                      View Details
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+          <% } else if (!noResultsMessage) { %>
+            <div class="alert alert-info text-center">
+              No orders found. Try adjusting your search criteria.
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="container mt-3">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          <% if (currentPage > 1) { %>
+            <li class="page-item">
+              <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                Previous
+              </a>
+            </li>
+          <% } %>
+
+          <% for(let i=1; i<=totalPages; i++) { %>
+            <li class="page-item <%= (i === currentPage) ? 'active' : '' %>">
+              <a class="page-link" href="?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                <%= i %>
+              </a>
+            </li>
+          <% } %>
+
+          <% if (currentPage < totalPages) { %>
+            <li class="page-item">
+              <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                Next
+              </a>
+            </li>
+          <% } %>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<%- include("../../views/partials/admin/footer/") %>

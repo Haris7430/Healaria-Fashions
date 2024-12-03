@@ -192,15 +192,37 @@
 							</ul>
 						</form>
 					</div>
+
+					<div class="head">Filter by Category</div>
+<div class="common-filter">
+    <form action="/shop-page" method="GET" id="categoryForm">
+        <ul class="filter-options">
+            <li class="filter-list">
+                <div class="filter-box">
+                    <input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
+                        <%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
+                    <label for="all-categories">All Categories</label>
+                </div>
+            </li>
+            <% categories.forEach(function(category) { %>
+                <li class="filter-list">
+                    <div class="filter-box">
+                        <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
+                            <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
+                        <label for="<%= category.name %>"><%= category.name %></label>
+                    </div>
+                </li>
+            <% }) %>
+        </ul>
+    </form>
+</div>
 				</div>
 			</div>
 
 
 
 			<div class="col-xl-9 col-lg-8 col-md-7">
-				<!-- Start Filter Bar -->
 				
-				<!-- End Filter Bar -->
 				<!-- Start Best Seller -->
 				<section class="lattest-product-area pb-40 category-list">
 					
@@ -642,34 +664,46 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 
 <script>
 
-
-	// Add this to your main.js or create a new JavaScript file
-document.addEventListener('DOMContentLoaded', function() {
-    // Handle sorting form submission
-    const sortForm = document.getElementById('sortForm');
-    if (sortForm) {
-        sortForm.addEventListener('change', function(e) {
-            const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
-            const sortValue = e.target.value;
-            
-            window.location.href = `/shop-page?page=${currentPage}&sort=${sortValue}`;
-        });
-    }
-
-    // Update URL when changing page without losing sort parameter
-    const paginationLinks = document.querySelectorAll('.pagination a');
-    paginationLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            if (!this.classList.contains('dot-dot')) {
-                e.preventDefault();
-                const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
-                const page = this.getAttribute('href').split('page=')[1].split('&')[0];
-                
-                window.location.href = `/shop-page?page=${page}&sort=${currentSort}`;
-            }
-        });
-    });
-});
-</script>
+	document.addEventListener('DOMContentLoaded', function() {
+		// Handle sorting and category form submission
+		const sortForm = document.getElementById('sortForm');
+		const categoryForm = document.getElementById('categoryForm');
+	
+		function updatePageURL(sort, category, page) {
+			// Construct URL with all parameters
+			const params = new URLSearchParams();
+			if (page) params.append('page', page);
+			if (sort && sort !== 'default') params.append('sort', sort);
+			if (category) params.append('category', category);
+	
+			window.location.href = `/shop-page?${params.toString()}`;
+		}
+	
+		if (sortForm) {
+			sortForm.addEventListener('change', function(e) {
+				const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
+				const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+				const sortValue = e.target.value;
+				
+				updatePageURL(sortValue, currentCategory, currentPage);
+			});
+		}
+	
+		// Update URL for pagination while preserving sort and category
+		const paginationLinks = document.querySelectorAll('.pagination a');
+		paginationLinks.forEach(link => {
+			link.addEventListener('click', function(e) {
+				if (!this.classList.contains('dot-dot')) {
+					e.preventDefault();
+					const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
+					const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+					const page = this.getAttribute('href').split('page=')[1].split('&')[0];
+					
+					updatePageURL(currentSort, currentCategory, page);
+				}
+			});
+		});
+	});
+	</script>
 
 </html>

@@ -275,8 +275,7 @@ const resendOtp = async (req, res) => {
 
 const getForgotPassword = async (req, res) => {
     try {
-       
-      res.render('forgot-password', { 
+       res.render('forgot-password', { 
         error: req.flash('error'),
         success: req.flash('success')
       });
@@ -284,7 +283,7 @@ const getForgotPassword = async (req, res) => {
         console.log(error)
       res.redirect('/pageNotFound');
     }
-  };
+};
 
 
 
@@ -320,36 +319,41 @@ const getForgotPassword = async (req, res) => {
 }
 
 
-const forgotEmailValid= async(req,res)=>{
+const forgotEmailValid = async (req, res) => {
     try {
-
-        const {email}= req.body;
-        const findUser= await User.findOne({email:email});
-        if(findUser) {
-            const otp= generateOtp();
-            const emailSent= await verificationEmail(email,otp);
+        const { email } = req.body;
+        const findUser = await User.findOne({ email: email });
+        
+        if (findUser) {
+            const otp = generateOtp();
+            const emailSent = await verificationEmail(email, otp);
        
-
-        if(emailSent) {
-            req.session.userOtp = otp;
-            req.session.email = email;
-            res.render("forgot-pass-otp");
-            console.log('Forgot password OTP: ',otp);
+            if (emailSent) {
+                req.session.userOtp = otp;
+                req.session.email = email;
+                res.render("forgot-pass-otp");
+                console.log('Forgot password OTP: ', otp);
+            } else {
+               
+                res.render('forgot-password', {
+                    error: 'Failed to send OTP. Please try again',
+                    success: null  // Add this to ensure success is defined
+                });
+            }
+        } else {
+            
+            res.render('forgot-password', {
+                error: 'User with this email does not exist',
+                success: null  // Add this to ensure success is defined
+            });
         }
-        else {
-            res.json({success:false, message:'Failed to send OTP. Please try again'})
-        }
-        
-    } else {
-        res.render('forgot-password', {
-            message: 'User with this email does not exist'
-        })
-    }
     } catch (error) {
-
-        res.redirect('/pageNotFound');
-        console.log(error)
-        
+       
+        res.render('forgot-password', {
+            error: 'An unexpected error occurred',
+            success: null
+        });
+        console.log(error);
     }
 }
 
@@ -422,11 +426,20 @@ const passwordSecure = async (password) => {
 const postNewPassword = async (req, res) => {
     try {
         const { newPass1, newPass2 } = req.body;
-        const email = req.session.email; // Assuming email is stored in the session
+        const email = req.session.email;
 
         // Check if passwords match
         if (newPass1 !== newPass2) {
-            return res.render('reset-password', { message: 'Passwords do not match.' });
+            return res.status(400).json({ 
+                message: 'Passwords do not match.' 
+            });
+        }
+
+        // Validate password length
+        if (newPass1.length < 8) {
+            return res.status(400).json({ 
+                message: 'Password must be at least 8 characters long.' 
+            });
         }
 
         // Hash the new password
@@ -434,54 +447,35 @@ const postNewPassword = async (req, res) => {
 
         // Update the password in the database
         const updatedUser = await User.updateOne(
-            { email: email }, // Match user by email
-            { $set: { password: passwordHash } } // Update the password
+            { email: email },
+            { $set: { password: passwordHash } }
         );
 
         if (updatedUser.matchedCount === 0) {
-            return res.render('reset-password', { message: 'User not found. Please try again.' });
+            return res.status(404).json({ 
+                message: 'User not found. Please try again.' 
+            });
         }
 
-        // Redirect to login after successful password reset
-        req.flash('success', 'Password reset successfully. Please log in.');
-        res.redirect('/login');
+        // Clear the session
+        req.session.email = null;
+
+        // Send a success response with redirect URL
+        res.json({ 
+            success: true, 
+            redirectUrl: '/login' 
+        });
     } catch (error) {
         console.error("Error during password reset:", error);
-        res.render('reset-password', { message: 'An error occurred. Please try again.' });
+        res.status(500).json({ 
+            message: 'An error occurred. Please try again.' 
+        });
     }
 };
 
 
 
 
-
-// const shopingPage= async (req, res) => {
-//     try {
-//         const user= req.session.user;
-//         const categories= await Category.find({isListed:true});
-//         let productData= await Product.find({
-//             isBlocked:false,
-//             category:{$in:categories.map(category=>category._id)},
-//             quantity:{$gt:0}
-//         })
-
-//         productData.sort((a,b) => new Date(b.createdOn)-new Date(a.createdOn));
-//         productData = productData.slice(0,12); 
-
-
-
-//         if(user){
-//          const userData= await User.findOne({_id:user._id});
-//          res.render("shop-page",{user:userData,products:productData})
-//         } else {
-//             return res.render('shop-page',{products:productData});
-//         }
-        
-//     } catch (error) {
-//         console.log('Home Page Not Found', error);
-//         res.status(500).send('Server Error Home Page Not Found');
-//     }
-// }
 
 
 
@@ -555,24 +549,31 @@ const searchProducts = async (req, res) => {
 const shopingPage = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 9; // Changed to show 9 products per page
+        const limit = 9; 
         const sort = req.query.sort || 'default';
+        const categoryFilter = req.query.category; // New category filter
         const user = req.session.user;
         
         // Get all listed categories
         const categories = await Category.find({ isListed: true });
         
-        // Base query - modified to include products with zero or more quantity
+        // Base query 
         let query = {
             isBlocked: false,
             category: { $in: categories.map(category => category._id) },
-            
         };
 
-       
+        // Add category filter to query if specified
+        if (categoryFilter) {
+            const selectedCategory = await Category.findOne({ name: categoryFilter });
+            if (selectedCategory) {
+                query.category = selectedCategory._id;
+            }
+        }
+
         const skip = (page - 1) * limit;
 
-        // Determine sort criteria
+        // Sort criteria logic remains the same as before
         let sortCriteria = {};
         switch(sort) {
             case 'price-low':
@@ -600,7 +601,7 @@ const shopingPage = async (req, res) => {
 
         // Validate page number
         if (page > totalPages) {
-            return res.redirect(`/shop-page?page=1&sort=${sort}`);
+            return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
         }
 
         // Get products with pagination and sorting
@@ -609,11 +610,10 @@ const shopingPage = async (req, res) => {
             .sort(sortCriteria)
             .skip(skip)
             .limit(limit)
-            .lean(); // Using lean() for better performance
+            .lean(); 
 
-        // Process products to get first image and prepare for display
+        // Process products to get first image
         products = products.map(product => {
-            // Find the first image across all variants
             const firstImage = product.variants.reduce((img, variant) => {
                 if (!img && variant.images && variant.images.length > 0) {
                     return variant.images[0].filename;
@@ -627,7 +627,7 @@ const shopingPage = async (req, res) => {
             };
         });
 
-        // Prepare pagination data with improved logic
+        // Pagination logic remains the same
         const pagination = {
             currentPage: page,
             totalPages: totalPages,
@@ -638,11 +638,13 @@ const shopingPage = async (req, res) => {
             endPage: Math.min(totalPages, page + 2)
         };
 
-        // Updated render logic
+        // Render data
         const renderData = {
             products: products,
             pagination: pagination,
             currentSort: sort,
+            currentCategory: categoryFilter || '',
+            categories: categories, // Pass all categories for filter dropdown
             itemsPerPage: limit,
             totalItems: totalProducts
         };

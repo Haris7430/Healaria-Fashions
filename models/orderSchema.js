@@ -70,6 +70,11 @@ const orderSchema = new Schema({
         type: Number,
         required: true
     },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed'],
+        default: 'pending'
+    },
     status: {
         type: String,
         required: true,

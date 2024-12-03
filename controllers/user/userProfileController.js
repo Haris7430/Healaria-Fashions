@@ -348,6 +348,21 @@ const updateProfile = async (req, res) => {
 
 
 
+const getChangePasswordPage = async (req, res) => {
+    try {
+        // Render the profile page with the change password section active
+        res.render('userProfile', { 
+            user: req.user, 
+            activeSection: 'forgot-password' // This matches the condition in your EJS template
+        });
+    } catch (error) {
+        console.error('Error loading change password page:', error);
+        res.status(500).render('error', {
+            message: 'Error loading change password page'
+        });
+    }
+};
+
 
 
 const changePassword = async (req, res) => {
@@ -371,6 +386,23 @@ const changePassword = async (req, res) => {
 
         // Get user and verify current password
         const user = await User.findById(req.user._id);
+        
+        // Add a check in case user is not found
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Check if the user has a password (for social login users)
+        if (!user.password) {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot change password for this account'
+            });
+        }
+
         const isMatch = await bcrypt.compare(currentPassword, user.password);
 
         if (!isMatch) {
@@ -661,7 +693,7 @@ module.exports = {
     getDashboard,
     getEditProfile,
     updateProfile,
-    
+    getChangePasswordPage,
     changePassword,
     getUserOrders,
     getOrderDetails,

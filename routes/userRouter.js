@@ -76,7 +76,8 @@ router.delete('/profile/delete-address/:id', userAuth, userProfileController.del
 router.get('/dashboard', userAuth, userProfileController.getDashboard);
 router.get('/edit-profile', userAuth, userProfileController.getEditProfile);
 router.post('/update-profile', userAuth, userProfileController.updateProfile);
-//
+
+router.get('/change-password', userAuth, userProfileController.getChangePasswordPage);
 router.post('/change-password', userAuth, userProfileController.changePassword);
 router.get('/profile/orders', userAuth,userProfileController.getUserOrders);
 

@@ -1,0 +1,535 @@
+<!-- views/admin/order-details.ejs -->
+<%- include("../../views/partials/admin/header/") %>
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+      <!-- Order Summary and Shipping Address in a 12/2 layout -->
+      <div class="col-lg-8 col-md-12">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order Summary</h5>
+            <div>
+              <a href="/admin/orders" class="btn btn-secondary me-2">Back to Orders</a>
+              <% if (order.status !== 'delivered' && order.status !== 'cancelled') { %>
+                <button id="cancelEntireOrder" class="btn btn-danger">Cancel Entire Order</button>
+              <% } %>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Order ID</strong>
+                  <p class="text-dark"><%= order.orderId %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Order Date</strong>
+                  <p class="text-dark"><%= order.createdAt.toLocaleString() %></p>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Total Amount</strong>
+                  <p class="text-dark">$<%= order.total.toFixed(2) %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Payment Status</strong>
+                  <span class="badge 
+                    <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
+                        order.paymentStatus === 'pending' ? 'bg-label-warning' : 
+                        'bg-label-danger' %>">
+                    <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Customer Name</strong>
+                  <p class="text-dark"><%= order.userId.name %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Order Status</strong>
+                  <form id="orderStatusForm" method="POST" action="/admin/update-order-status/<%= order._id %>">
+                    <select name="status" class="form-select form-select-sm" id="orderStatusSelect">
+                      <% 
+                      const STATUS_FLOW = {
+                        'pending': ['processing'],
+                        'processing': ['shipped'],
+                        'shipped': ['delivered'],
+                        'delivered': [],
+                        'cancelled': []
+                      };
+                    
+                      const currentStatus = order.status;
+                      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+                      const allStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+                      %>
+                    
+                      <% allStatuses.forEach(status => { 
+                        const isCurrentStatus = status === currentStatus;
+                        const isAllowedTransition = allowedNextStatuses.includes(status);
+                      %>
+                        <option value="<%= status %>" 
+                                <%= isCurrentStatus ? 'selected' : '' %>>
+                          <%= status.charAt(0).toUpperCase() + status.slice(1) %>
+                        </option>
+                      <% }); %>
+                    </select>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-12">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Shipping Address</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Name</strong>
+                  <p class="text-dark"><%= order.shippingAddress.name %></p>
+                </div>
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Contact</strong>
+                  <p class="text-dark">
+                    <%= order.shippingAddress.phone %>
+                    <% if (order.shippingAddress.altPhone) { %>
+                      | Alt: <%= order.shippingAddress.altPhone %>
+                    <% } %>
+                  </p>
+                </div>
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Full Address</strong>
+                  <p class="text-dark">
+                    <%= order.shippingAddress.address %>, 
+                    <%= order.shippingAddress.landmark %><br>
+                    <%= order.shippingAddress.city %>, 
+                    <%= order.shippingAddress.state %> - 
+                    <%= order.shippingAddress.pincode %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Order Items</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Product Details</th>
+                <th>Color</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total Price</th>
+                <th>Item Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% order.items.forEach((item, index) => { 
+                const variant = item.productId.variants.find(v => v.color === item.color);
+                const isItemCancellable = order.status !== 'delivered' && order.status !== 'cancelled' && item.status !== 'cancelled';
+              %>
+                <tr>
+                  <td class="d-flex align-items-center">
+                    <img 
+                      src="/uploads/product-images/<%= 
+                          variant?.images && variant.images.length > 0 
+                              ? variant.images[0].filename 
+                              : 'placeholder.jpg' 
+                      %>" 
+                      alt="<%= item.productId.productName %>" 
+                      style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;"
+                    >
+                    <div>
+                      <strong><%= item.productId.productName %></strong><br>
+                      <small class="text-muted">
+                        Category: <%= item.productId.category ? item.productId.category.name : 'N/A' %>
+                      </small>
+                    </div>
+                  </td>
+                  <td><%= item.color %></td>
+                  <td><%= item.size %></td>
+                  <td><%= item.quantity %></td>
+                  <td>$<%= item.price.toFixed(2) %></td>
+                  <td>$<%= item.totalPrice.toFixed(2) %></td>
+                  <td>
+                    <span class="badge 
+                      <%= item.status === 'cancelled' ? 'bg-label-danger' : 'bg-label-success' %>">
+                      <%= item.status === 'cancelled' ? 'Cancelled' : 'Placed' %>
+                    </span>
+                  </td>
+                  <td>
+                    <% if (isItemCancellable) { %>
+                      <button class="btn btn-sm btn-danger cancel-item" 
+                              data-order-id="<%= order._id %>" 
+                              data-item-index="<%= index %>">
+                        Cancel Item
+                      </button>
+                    <% } else { %>
+                      <span class="text-muted">Not Cancellable</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="text-end"><strong>Subtotal</strong></td>
+                <td colspan="4">$<%= order.subtotal.toFixed(2) %></td>
+              </tr>
+              <tr>
+                <td colspan="4" class="text-end"><strong>Shipping Cost</strong></td>
+                <td colspan="4">$<%= order.shippingCost.toFixed(2) %></td>
+              </tr>
+              <tr>
+                <td colspan="4" class="text-end"><strong>Total</strong></td>
+                <td colspan="4" class="text-danger">$<%= order.total.toFixed(2) %></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const STATUS_FLOW = {
+    'pending': ['processing', 'shipped'],
+    'processing': ['shipped'],
+    'shipped': ['delivered']
+};
+  
+    const orderStatusSelect = document.getElementById('orderStatusSelect');
+    const currentStatus = '<%= order.status %>';
+  
+    // Function to validate and control status dropdown
+    function setupStatusDropdown() {
+    const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+    
+    // Disable/enable options based on current status
+    Array.from(orderStatusSelect.options).forEach(option => {
+        const optionValue = option.value;
+        
+        // Remove 'Cancelled' option entirely
+        if (optionValue === 'cancelled') {
+            option.remove();
+        }
+        
+        // Disable all options except current status and allowed next statuses
+        if (optionValue !== currentStatus && !allowedNextStatuses.includes(optionValue)) {
+            option.disabled = true;
+        } else {
+            option.disabled = false;
+        }
+    });
+
+    // Always keep the current status selected
+    orderStatusSelect.value = currentStatus;
+}
+  
+    // Initial setup of dropdown
+    setupStatusDropdown();
+  
+    orderStatusSelect.addEventListener('change', function() {
+      const newStatus = this.value;
+      
+      // Validate status transition
+      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+      if (newStatus !== currentStatus && !allowedNextStatuses.includes(newStatus)) {
+        Swal.fire({
+          title: 'Invalid Status Transition',
+          text: `You cannot change the order status from ${currentStatus} to ${newStatus}. 
+                 Allowed transitions are: ${allowedNextStatuses.join(', ')}`,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+        
+        // Reset to current status
+        setupStatusDropdown();
+        return;
+      }
+  
+      // Confirmation and update logic
+      Swal.fire({
+        title: 'Update Order Status',
+        text: `Are you sure you want to update the order status from ${currentStatus} to ${newStatus}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, update it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Special handling for delivered status to update payment status
+          // In the fetch call for updating order status
+const updateData = newStatus === 'delivered' 
+  ? { status: newStatus, paymentStatus: 'paid' }
+  : { status: newStatus };
+
+fetch('/admin/update-order-status/<%= order._id %>', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify(updateData)
+})
+          .then(response => {
+            if (!response.ok) {
+              return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Failed to update order status');
+              });
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success) {
+              Swal.fire(
+                'Updated!', 
+                'Order status has been updated.', 
+                'success'
+              ).then(() => {
+                window.location.reload();
+              });
+            } else {
+              throw new Error(data.message || 'Failed to update order status');
+            }
+          })
+          .catch(error => {
+            console.error('Comprehensive Error:', error);
+  
+            Swal.fire(
+              'Error!', 
+              `Status Update Failed: ${error.message}`, 
+              'error'
+            );
+  
+            // Reset to current status
+            setupStatusDropdown();
+          });
+        } else {
+          // Reset to current status if cancelled
+          setupStatusDropdown();
+        }
+      });
+    });
+  
+    // Cancel Individual Item
+    document.querySelectorAll('.cancel-item').forEach(button => {
+      button.addEventListener('click', function() {
+        const orderId = this.getAttribute('data-order-id');
+        const itemIndex = this.getAttribute('data-item-index');
+  
+        // Cancel Reason Options
+        const cancelReasonOptions = [
+          'Changed my mind',
+          'Ordered wrong product',
+          'Shipping time too long',
+          'Ordered by mistake',
+          'Payment issues',
+          'Other'
+        ];
+  
+        Swal.fire({
+          title: 'Cancel Item',
+          text: 'Please select a reason for cancellation:',
+          input: 'select',
+          inputOptions: cancelReasonOptions.reduce((acc, reason) => {
+            acc[reason] = reason;
+            return acc;
+          }, {}),
+          inputPlaceholder: 'Select a reason',
+          showCancelButton: true,
+          confirmButtonText: 'Confirm Cancellation',
+          cancelButtonText: 'Cancel',
+          inputValidator: (value) => {
+            if (!value) {
+              return 'You need to select a reason';
+            }
+            
+            // If 'Other' is selected, show another prompt for custom reason
+            if (value === 'Other') {
+              return Swal.fire({
+                title: 'Enter Your Reason',
+                input: 'text',
+                inputPlaceholder: 'Please specify your reason',
+                showCancelButton: true,
+                inputValidator: (customReason) => {
+                  if (!customReason) {
+                    return 'You need to enter a reason';
+                  }
+                }
+              }).then((customReasonResult) => {
+                if (customReasonResult.isConfirmed) {
+                  return cancelItem(orderId, itemIndex, customReasonResult.value);
+                }
+              });
+            }
+            
+            return cancelItem(orderId, itemIndex, value);
+          }
+        });
+  
+        // Function to handle item cancellation
+        function cancelItem(orderId, itemIndex, cancelReason) {
+          return fetch(`/admin/cancel-order-item/${orderId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ 
+              itemIndex, 
+              cancelReason 
+            })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire(
+                'Cancelled!', 
+                'Item has been cancelled successfully.', 
+                'success'
+              ).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire(
+                'Error!', 
+                data.message || 'Failed to cancel item', 
+                'error'
+              );
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire(
+              'Error!', 
+              'An error occurred while cancelling the item', 
+              'error'
+            );
+          });
+        }
+      });
+    });
+  
+    // Cancel Entire Order
+    const cancelEntireOrderBtn = document.getElementById('cancelEntireOrder');
+    if (cancelEntireOrderBtn) {
+      cancelEntireOrderBtn.addEventListener('click', function() {
+        // Cancel Reason Options
+        const cancelReasonOptions = [
+          'Changed my mind',
+          'Ordered wrong items',
+          'Shipping time too long',
+          'Ordered by mistake',
+          'Payment issues',
+          'Other'
+        ];
+  
+        Swal.fire({
+          title: 'Cancel Entire Order',
+          text: 'Please select a reason for cancellation:',
+          input: 'select',
+          inputOptions: cancelReasonOptions.reduce((acc, reason) => {
+            acc[reason] = reason;
+            return acc;
+          }, {}),
+          inputPlaceholder: 'Select a reason',
+          showCancelButton: true,
+          confirmButtonText: 'Confirm Cancellation',
+          cancelButtonText: 'Cancel',
+          inputValidator: (value) => {
+            if (!value) {
+              return 'You need to select a reason';
+            }
+            
+            // If 'Other' is selected, show another prompt for custom reason
+            if (value === 'Other') {
+              return Swal.fire({
+                title: 'Enter Your Reason',
+                input: 'text',
+                inputPlaceholder: 'Please specify your reason',
+                showCancelButton: true,
+                inputValidator: (customReason) => {
+                  if (!customReason) {
+                    return 'You need to enter a reason';
+                  }
+                }
+              }).then((customReasonResult) => {
+                if (customReasonResult.isConfirmed) {
+                  return cancelOrder(customReasonResult.value);
+                }
+              });
+            }
+            
+            return cancelOrder(value);
+          }
+        });
+  
+        // Function to handle order cancellation
+        function cancelOrder(cancelReason) {
+          fetch(`/admin/cancel-order/<%= order._id %>`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            },
+            body: JSON.stringify({ cancelReason })
+          })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire(
+                'Cancelled!', 
+                'Order has been cancelled successfully.', 
+                'success'
+              ).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire(
+                'Error!', 
+                data.message || 'Failed to cancel order', 
+                'error'
+              );
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            Swal.fire(
+              'Error!', 
+              'An error occurred while cancelling the order', 
+              'error'
+            );
+          });
+        }
+      });
+    }
+  });
+  </script>
+
+<%- include("../../views/partials/admin/footer/") %>
