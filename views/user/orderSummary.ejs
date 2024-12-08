@@ -48,7 +48,7 @@
                                 <h5>Order Details</h5>
                             </div>
                             <div class="card-body">
-                                <p><strong>Order Number:</strong> #<%= order._id %></p>
+                                <p><strong>Order Number:</strong> #<%= order.orderId %></p>
                                 <p><strong>Order Date:</strong> <%= new Date(order.createdAt).toLocaleString() %></p>
                                 <p><strong>Order Status:</strong> 
                                     <span class="badge bg-<%= 

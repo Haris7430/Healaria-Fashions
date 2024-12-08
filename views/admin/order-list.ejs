@@ -72,7 +72,7 @@
                   <td><%= order.orderId %></td>
                   <td><%= order.createdAt.toLocaleDateString() %></td>
                   <td><%= order.userId.name %></td>
-                  <td>$<%= order.total.toFixed(2) %></td>
+                  <td>₹<%= order.total.toFixed(2) %></td>
                   <td><%= order.paymentMethod.toUpperCase() %></td>
                   <td>
                     <span class="badge 
@@ -93,7 +93,7 @@
                     </span>
                   </td>
                   <td>
-                    <a href="/admin/order-details/<%= order._id %>" class="btn btn-sm btn-info">
+                    <a href="/admin/order-details/<%= order.orderId %>" class="btn btn-sm btn-info">
                       View Details
                     </a>
                   </td>

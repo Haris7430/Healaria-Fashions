@@ -198,12 +198,17 @@
     <form action="/shop-page" method="GET" id="categoryForm">
         <ul class="filter-options">
             <li class="filter-list">
-                <div class="filter-box">
-                    <input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
-                        <%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
-                    <label for="all-categories">All Categories</label>
-                </div>
-            </li>
+				<div class="filter-box">
+					<input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
+						<%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
+					<label for="all-categories">
+						All Categories 
+						<% if (locals.globalSearch) { %>
+							<span class="text-primary">(Global Search Enabled)</span>
+						<% } %>
+					</label>
+				</div>
+			</li>
             <% categories.forEach(function(category) { %>
                 <li class="filter-list">
                     <div class="filter-box">
@@ -274,19 +279,29 @@
 						<div class="search-results-header">
 							<h3>Search Results for "<%= searchTerm %>"</h3>
 							<% if (products.length === 0) { %>
-								<p>No products found matching your search.</p>
+								<% if (locals.noProductsInCategory) { %>
+									<div class="alert alert-warning">
+										<p>No products found in the "<%= currentCategory %>" category. 
+										   <% if (locals.suggestGlobalSearch) { %>
+											   Please check the global search option to search across all categories.
+										   <% } %>
+										</p>
+									</div>
+								<% } else { %>
+									<p>No products found matching your search.</p>
+								<% } %>
 							<% } %>
+						</div>
+					<% } %>
+
+					<% if (locals.noProductsMessage) { %>
+						<div class="alert alert-warning text-center">
+							<%= noProductsMessage %>
 						</div>
 					<% } %>
 				</section>
 
-                
-
-				<!-- End Best Seller -->
-
-
-
-				
+            
 				<!-- Start Filter Bar -->
 				<div class="filter-bar d-flex flex-wrap align-items-center">
 
@@ -643,7 +658,9 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 
 
 
-	<script src="js/vendor/jquery-2.2.4.min.js"></script>
+	
+</body>
+<script src="js/vendor/jquery-2.2.4.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4"
 	 crossorigin="anonymous"></script>
 	<script src="js/vendor/bootstrap.min.js"></script>
@@ -657,53 +674,118 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCjCGmQ0Uq4exrzdcL6rvxywDDOvfAu6eE"></script>
 	<script src="js/gmaps.min.js"></script>
 	<script src="js/main.js"></script>
-</body>
 
 
 
-
-<script>
-
-	document.addEventListener('DOMContentLoaded', function() {
-		// Handle sorting and category form submission
-		const sortForm = document.getElementById('sortForm');
-		const categoryForm = document.getElementById('categoryForm');
-	
-		function updatePageURL(sort, category, page) {
-			// Construct URL with all parameters
-			const params = new URLSearchParams();
-			if (page) params.append('page', page);
-			if (sort && sort !== 'default') params.append('sort', sort);
-			if (category) params.append('category', category);
-	
-			window.location.href = `/shop-page?${params.toString()}`;
-		}
-	
-		if (sortForm) {
-			sortForm.addEventListener('change', function(e) {
-				const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
-				const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
-				const sortValue = e.target.value;
-				
-				updatePageURL(sortValue, currentCategory, currentPage);
-			});
-		}
-	
-		// Update URL for pagination while preserving sort and category
-		const paginationLinks = document.querySelectorAll('.pagination a');
-		paginationLinks.forEach(link => {
-			link.addEventListener('click', function(e) {
-				if (!this.classList.contains('dot-dot')) {
+	<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			const globalSearchToggle = document.getElementById('globalSearchToggle');
+			const searchForm = document.querySelector('#search_input_box form');
+			const searchInput = document.getElementById('search_input');
+			const sortForm = document.getElementById('sortForm');
+			
+			if (globalSearchToggle && searchForm) {
+				// Set initial state based on URL parameter
+				const urlParams = new URLSearchParams(window.location.search);
+				const isGlobalSearch = urlParams.get('globalSearch') === 'true';
+				globalSearchToggle.checked = isGlobalSearch;
+		
+				// Prevent form submission and use fetch for smoother handling
+				searchForm.addEventListener('submit', function(e) {
 					e.preventDefault();
-					const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
-					const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
-					const page = this.getAttribute('href').split('page=')[1].split('&')[0];
 					
-					updatePageURL(currentSort, currentCategory, page);
-				}
+					const searchTerm = searchInput.value;
+					const currentCategory = urlParams.get('category') || '';
+					const isGlobalSearch = globalSearchToggle.checked;
+					
+					// Construct URL with parameters
+					const searchUrl = new URL('/search', window.location.origin);
+					searchUrl.searchParams.set('q', searchTerm);
+					if (currentCategory) searchUrl.searchParams.set('category', currentCategory);
+					if (isGlobalSearch) searchUrl.searchParams.set('globalSearch', 'true');
+					
+					// Use fetch to load results dynamically
+					fetch(searchUrl)
+						.then(response => response.text())
+						.then(html => {
+							// Update main content area with search results
+							const parser = new DOMParser();
+							const doc = parser.parseFromString(html, 'text/html');
+							const newContent = doc.querySelector('.category-list');
+							const currentContent = document.querySelector('.category-list');
+							
+							if (newContent && currentContent) {
+								currentContent.innerHTML = newContent.innerHTML;
+							}
+							
+							// Update URL without page reload
+							window.history.pushState({}, '', searchUrl);
+						})
+						.catch(error => {
+							console.error('Search error:', error);
+							// Fallback to traditional form submission if fetch fails
+							searchForm.submit();
+						});
+				});
+		
+				// Add event listener to update URL when global search toggled
+				globalSearchToggle.addEventListener('change', function() {
+					const currentPage = urlParams.get('page') || 1;
+					const currentSort = urlParams.get('sort') || 'default';
+					const currentCategory = urlParams.get('category') || '';
+					const currentSearchTerm = urlParams.get('q') || '';
+					
+					const params = new URLSearchParams();
+					if (currentPage) params.append('page', currentPage);
+					if (currentSort && currentSort !== 'default') params.append('sort', currentSort);
+					if (currentCategory) params.append('category', currentCategory);
+					if (currentSearchTerm) params.append('q', currentSearchTerm);
+					
+					// Add global search parameter
+					if (this.checked) {
+						params.append('globalSearch', 'true');
+					}
+					
+					window.location.href = `/search?${params.toString()}`;
+				});
+			}
+		
+			// Sorting form handler to maintain category
+			if (sortForm) {
+				sortForm.addEventListener('change', function(e) {
+					const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
+					const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+					const sortValue = e.target.value;
+					
+					const params = new URLSearchParams(window.location.search);
+					params.set('sort', sortValue);
+					params.set('page', currentPage);
+					if (currentCategory) params.set('category', currentCategory);
+					
+					window.location.href = `/shop-page?${params.toString()}`;
+				});
+			}
+		
+			// Pagination links handler
+			const paginationLinks = document.querySelectorAll('.pagination a');
+			paginationLinks.forEach(link => {
+				link.addEventListener('click', function(e) {
+					if (!this.classList.contains('dot-dot')) {
+						e.preventDefault();
+						const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
+						const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
+						const page = this.getAttribute('href').split('page=')[1].split('&')[0];
+						
+						const params = new URLSearchParams(window.location.search);
+						params.set('page', page);
+						if (currentSort && currentSort !== 'default') params.set('sort', currentSort);
+						if (currentCategory) params.set('category', currentCategory);
+						
+						window.location.href = `/shop-page?${params.toString()}`;
+					}
+				});
 			});
 		});
-	});
-	</script>
+		</script>
 
 </html>

@@ -476,21 +476,35 @@ const postNewPassword = async (req, res) => {
 
 
 
-
-
-
 const searchProducts = async (req, res) => {
     try {
-        const searchTerm = req.query.q; // Get search query
+        const searchTerm = req.query.q ? req.query.q.toString() : '';
         const page = parseInt(req.query.page) || 1;
         const limit = 9;
         const skip = (page - 1) * limit;
+        const categoryFilter = req.query.category; // Get category filter
+        const globalSearch = req.query.globalSearch === 'true'; // Check if global search is enabled
 
-        // Create a search query that matches product name partially (case-insensitive)
+        // Create a base query
         const query = {
             isBlocked: false,
             productName: { $regex: searchTerm, $options: 'i' }
         };
+
+        // If a specific category is selected
+        if (categoryFilter) {
+            const selectedCategory = await Category.findOne({ name: categoryFilter });
+            if (selectedCategory) {
+                // If not global search, strictly match the selected category
+                if (!globalSearch) {
+                    query.category = selectedCategory._id;
+                } else {
+                    // If global search, include all categories
+                    const categories = await Category.find({ isListed: true });
+                    query.category = { $in: categories.map(cat => cat._id) };
+                }
+            }
+        }
 
         // Get total count of matching products
         const totalProducts = await Product.countDocuments(query);
@@ -498,6 +512,7 @@ const searchProducts = async (req, res) => {
 
         // Find products matching the search term
         let products = await Product.find(query)
+            .populate('category')
             .skip(skip)
             .limit(limit)
             .lean();
@@ -517,6 +532,9 @@ const searchProducts = async (req, res) => {
             };
         });
 
+        // Get all categories for the filter
+        const categories = await Category.find({ isListed: true });
+
         // Prepare pagination data
         const pagination = {
             currentPage: page,
@@ -526,12 +544,27 @@ const searchProducts = async (req, res) => {
             pages: Array.from({ length: totalPages }, (_, i) => i + 1)
         };
 
+        // Determine no products message
+        let noProductsMessage = '';
+        if (products.length === 0) {
+            if (categoryFilter && !globalSearch) {
+                noProductsMessage = `No products found for "${searchTerm}" in the "${categoryFilter}" category. 
+                Check the global search option to search across all categories.`;
+            } else {
+                noProductsMessage = `No products found for "${searchTerm}".`;
+            }
+        }
+
         // Render search results
         res.render('shop-page', {
             products: products,
             pagination: pagination,
             currentSort: 'default',
-            searchTerm: searchTerm
+            searchTerm: searchTerm,
+            currentCategory: categoryFilter || '',
+            categories: categories,
+            globalSearch: globalSearch,
+            noProductsMessage: noProductsMessage
         });
 
     } catch (error) {
@@ -539,11 +572,6 @@ const searchProducts = async (req, res) => {
         res.status(500).send('Server Error during search');
     }
 };
-
-
-
-
-
 
 
 const shopingPage = async (req, res) => {
@@ -644,7 +672,7 @@ const shopingPage = async (req, res) => {
             pagination: pagination,
             currentSort: sort,
             currentCategory: categoryFilter || '',
-            categories: categories, // Pass all categories for filter dropdown
+            categories: categories, 
             itemsPerPage: limit,
             totalItems: totalProducts
         };
@@ -661,9 +689,6 @@ const shopingPage = async (req, res) => {
         res.status(500).send('Server Error: Shop Page Not Found');
     }
 };
-
-
-
  
 
 // userController.js - Updated getProductDetails function

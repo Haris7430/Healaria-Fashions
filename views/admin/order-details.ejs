@@ -31,7 +31,7 @@
               <div class="col-md-4">
                 <div class="mb-3">
                   <strong class="d-block text-muted mb-1">Total Amount</strong>
-                  <p class="text-dark">$<%= order.total.toFixed(2) %></p>
+                  <p class="text-dark">₹<%= order.total.toFixed(2) %></p>
                 </div>
                 <div>
                   <strong class="d-block text-muted mb-1">Payment Status</strong>
@@ -168,8 +168,8 @@
                   <td><%= item.color %></td>
                   <td><%= item.size %></td>
                   <td><%= item.quantity %></td>
-                  <td>$<%= item.price.toFixed(2) %></td>
-                  <td>$<%= item.totalPrice.toFixed(2) %></td>
+                  <td>₹<%= item.price.toFixed(2) %></td>
+                  <td>₹<%= item.totalPrice.toFixed(2) %></td>
                   <td>
                     <span class="badge 
                       <%= item.status === 'cancelled' ? 'bg-label-danger' : 'bg-label-success' %>">
@@ -193,15 +193,15 @@
             <tfoot>
               <tr>
                 <td colspan="4" class="text-end"><strong>Subtotal</strong></td>
-                <td colspan="4">$<%= order.subtotal.toFixed(2) %></td>
+                <td colspan="4">₹<%= order.subtotal.toFixed(2) %></td>
               </tr>
               <tr>
                 <td colspan="4" class="text-end"><strong>Shipping Cost</strong></td>
-                <td colspan="4">$<%= order.shippingCost.toFixed(2) %></td>
+                <td colspan="4">₹<%= order.shippingCost.toFixed(2) %></td>
               </tr>
               <tr>
                 <td colspan="4" class="text-end"><strong>Total</strong></td>
-                <td colspan="4" class="text-danger">$<%= order.total.toFixed(2) %></td>
+                <td colspan="4" class="text-danger">₹<%= order.total.toFixed(2) %></td>
               </tr>
             </tfoot>
           </table>

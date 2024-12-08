@@ -25,7 +25,7 @@
                        id="color" 
                        class="form-control" 
                        value="<%= variant.color %>" 
-                       required>
+                       >
                 <div class="error-message" id="color-error" style="display:none; color:red;"></div>
             </div>
 
@@ -66,7 +66,7 @@
             <div class="row mb-3 size-row">
                 <div class="col-md-5">
                     <label for="size<%= index %>" class="form-label">Size</label>
-                    <select name="sizes[]" id="size<%= index %>" class="form-control size-select" required>
+                    <select name="sizes[]" id="size<%= index %>" class="form-control size-select" >
                         <% [6, 7, 8, 9, 10].forEach(size => { %>
                             <option value="<%= size %>" 
                                     <%= sizeObj.size === size ? 'selected' : '' %>>
@@ -83,7 +83,7 @@
                            class="form-control" 
                            value="<%= sizeObj.quantity %>" 
                            min="0" 
-                           required>
+                           >
                 </div>
                 <div class="col-md-2">
                     <% if (index === 0) { %>
@@ -452,6 +452,9 @@ document.getElementById('colorVariantForm').addEventListener('submit', async fun
             handleImageUpload(this, index + 1);
         });
     });
+
+
+    
 </script>
 
 <%- include("../../views/partials/admin/footer/") %>

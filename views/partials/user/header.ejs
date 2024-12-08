@@ -61,6 +61,17 @@
             align-items: center; /* Center the search input vertically */
         }
     </style>
+
+<style>
+    .input-group-text {
+        background: none;
+        border: none;
+    }
+    #globalSearchToggle {
+        margin-right: 5px;
+    }
+</style>
+
 </head>
 
 <body>
@@ -135,7 +146,17 @@
         <div class="search_input" id="search_input_box">
             <div class="container">
                 <form class="d-flex justify-content-between" action="/search" method="GET">
-                    <input type="text" class="form-control" name="q" id="search_input" placeholder="Search Here">
+                    <div class="input-group">
+                        <input type="text" class="form-control" name="q" id="search_input" placeholder="Search Here">
+                        <div class="input-group-append">
+                            <span class="input-group-text">
+                                <input type="checkbox" name="globalSearch" id="globalSearchToggle" value="true">
+                                <label for="globalSearchToggle" class="ml-2">
+                                    <i class="fa fa-globe" title="Global Search"></i>
+                                </label>
+                            </span>
+                        </div>
+                    </div>
                     <button type="submit" class="btn"></button>
                     <span class="lnr lnr-cross" id="close_search" title="Close Search"></span>
                 </form>

@@ -1,12 +1,16 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const { v4: uuidv4 } = require('uuid');
 
 const orderSchema = new Schema({
     orderId: {
         type: String,
-        default: () => uuidv4(),
-        unique: true
+        unique: true,
+        default: function() {
+           
+            const timestamp = Date.now().toString().slice(-10);
+            const randomStr = Math.random().toString(36).substr(2, 6).toUpperCase();
+            return `ORD-${timestamp}-${randomStr}`;
+        }
     },
     userId: {
         type: Schema.Types.ObjectId,
@@ -49,9 +53,57 @@ const orderSchema = new Schema({
             default: 'placed'
         }
     }],
+    // Embedded shipping address details
     shippingAddress: {
-        type: Schema.Types.Mixed,
-        required: true
+        name: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        addressType: {
+            type: String,
+            enum: ['Home', 'Work', 'Other'],
+            required: true
+        },
+        city: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        landmark: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        state: {
+            type: String,
+            required: true,
+            trim: true
+        },
+        pincode: {
+            type: String,
+            required: true,
+            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
+        },
+        phone: {
+            type: String,
+            required: true,
+            validate: {
+                validator: function(v) {
+                    return /^[1-9][0-9]{9}$/.test(v);
+                },
+                message: props => `${props.value} is not a valid phone number!`
+            }
+        },
+        altPhone: {
+            type: String,
+            validate: {
+                validator: function(v) {
+                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
+                },
+                message: props => `${props.value} is not a valid phone number!`
+            }
+        }
     },
     paymentMethod: {
         type: String,

@@ -146,18 +146,26 @@ const createOrder = async (req, res) => {
                 size: item.size,
                 variantId: item.variantId
             })),
-            shippingAddress: selectedAddress,
+            shippingAddress: {
+                name: selectedAddress.name,
+                addressType: selectedAddress.addressType,
+                city: selectedAddress.city,
+                landmark: selectedAddress.landmark,
+                state: selectedAddress.state,
+                pincode: selectedAddress.pincode,
+                phone: selectedAddress.phone,
+                altPhone: selectedAddress.altPhone || ''
+            },
             paymentMethod,
             subtotal,
             shippingCost,
             total,
-            status: paymentMethod === 'COD' ? 'pending' : 'processing'
+            status: paymentMethod === 'COD' ? 'pending' : 'processing',
+            paymentStatus: 'pending'
         });
 
-        
         await newOrder.save();
         await updateProductVariantQuantities(newOrder);
-
 
         // Clear cart after order creation
         await Cart.deleteOne({ userId: req.user._id });

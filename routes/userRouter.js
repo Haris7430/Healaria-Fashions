@@ -44,7 +44,6 @@ router.post('/reset-password', userController.postNewPassword);
 
 router.get('/search', userController.searchProducts);
 
-
 router.get('/shop-page', userController.shopingPage);
 router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);

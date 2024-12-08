@@ -133,7 +133,7 @@ async function getUserIdsByName(searchTerm) {
 const orderDetails = async (req, res) => {
     try {
         const orderId = req.params.id;
-        const order = await Order.findById(orderId)
+        const order = await Order.findOne({ orderId: orderId })
             .populate({
                 path: 'userId',
                 model: 'User'
@@ -147,7 +147,7 @@ const orderDetails = async (req, res) => {
             });
 
         if (!order) {
-            return res.status(404).render('error', { 
+            return res.status(404).render('pageerror', { 
                 message: 'Order not found' 
             });
         }

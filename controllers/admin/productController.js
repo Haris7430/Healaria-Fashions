@@ -377,35 +377,6 @@ if (!category) {
 
 
 
-// const deleteSingleImage = async (req, res) => {
-//     try {
-//         const { imageNameToServer, productIdToServer } = req.body;
-
-//         // Update product document to remove the image
-//         await Product.findByIdAndUpdate(productIdToServer, { $pull: { productImages: imageNameToServer } });
-
-//         const imagePath = path.join('public', 'uploads', 'product-images', imageNameToServer);
-//         if (fs.existsSync(imagePath)) {
-//             await fs.unlinkSync(imagePath);
-//             console.log(`Image ${imageNameToServer} deleted successfully.`);
-//         } else {
-//             console.log(`Image ${imageNameToServer} not found.`);
-//         }
-        
-//         res.send({ status: true });
-        
-//     } catch (error) {
-//         console.error(error);
-//         res.redirect('/pageerror');
-//     }
-// };
-
-
-
-
-
-
-
 const productVariants = async (req, res) => {
     try {
         const productId = req.params.id;
@@ -494,7 +465,10 @@ const addColorVariant = async (req, res) => {
         const { color, sizes, quantities } = req.body;
 
         if (!Array.isArray(sizes) || !Array.isArray(quantities) || sizes.length !== quantities.length) {
-            return res.status(400).send("Invalid sizes or quantities format.");
+            return res.status(400).json({ 
+                message: "Invalid sizes or quantities format",
+                productId: productId 
+            });
         }
 
         const variantSizes = sizes.map((size, index) => ({
@@ -533,7 +507,11 @@ const addColorVariant = async (req, res) => {
         product.variants.push(newVariant);
         await product.save();
         
-        res.redirect(`/admin/productVariants/${productId}`);
+        res.json({
+            success: true,
+            productId: productId
+        });
+        // res.redirect(`/admin/productVariants/${productId}`);
     } catch (error) {
         console.error('Error adding color variant:', error);
         res.status(500).send('Internal server error');
@@ -769,8 +747,7 @@ const updateVariant = async (req, res) => {
         });
     }
 };
- 
- 
+
 
 module.exports = {
     getProductAddPage, 
@@ -780,7 +757,7 @@ module.exports = {
     unblockProduct,
     getEditProduct,
     editProduct,
-    // deleteSingleImage,
+   
     deleteProduct,
     productVariants,
     colorVarients,

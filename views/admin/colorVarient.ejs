@@ -1,91 +1,5 @@
 <%- include("../../views/partials/admin/header/") %>
 
-<div class="container mt-4">
-    <!-- Product Header -->
-    <h4><%= product.productName %></h4>
-    
-    <!-- Add Variant Form -->
-    <div class="card p-4 mb-4">
-        <form id="colorVariantForm" action="/admin/colorVariant/<%= product._id %>" method="POST" enctype="multipart/form-data">
-            <!-- Color Input -->
-            <div class="mb-3">
-                <label for="color" class="form-label">Color</label>
-                <input type="text" name="color" id="color" class="form-control" required>
-                <div class="error-message" id="color-error" style="display:none; color:red;"></div>
-            </div>
-
-            <!-- Image Uploads -->
-            <div class="mb-3">
-                <label class="form-label">Product Images</label>
-                <div class="row">
-                    <% for(let i = 1; i <= 3; i++) { %>
-                        <div class="col-md-4 mb-2">
-                            <div class="image-upload-container">
-                                <input class="form-control d-none" type="file" id="productImage<%= i %>" name="images" multiple accept="image/*" onchange="handleImageUpload(this, '<%= i %>')">
-                                <div id="imagePreview<%= i %>" class="image-preview" onclick="document.getElementById('productImage<%= i %>').click()">
-                                    <div class="preview-text">Upload Image <%= i %></div>
-                                </div>
-                            </div>
-                        </div>
-                    <% } %>
-                </div>
-                <small class="text-muted">Max: 2MB. Formats: jpg, png, gif.</small>
-            </div>
-            
-            <!-- Size and Quantity Inputs -->
-            <div id="sizesContainer">
-                <div class="row mb-3">
-                    <div class="col-md-5">
-                        <label for="size1" class="form-label">Size</label>
-                        <select name="sizes[]" id="size1" class="form-control" required>
-                            <option value="6">UK 6</option>
-                            <option value="7">UK 7</option>
-                            <option value="8">UK 8</option>
-                            <option value="9">UK 9</option>
-                            <option value="10">UK 10</option>
-                        </select>
-                    </div>
-                    <div class="col-md-5">
-                        <label for="quantity1" class="form-label">Quantity</label>
-                        <input type="number" name="quantities[]" id="quantity1" class="form-control" required>
-                    </div>
-                    <div class="col-md-2">
-                        <button type="button" class="btn btn-success mt-4" id="addSizeBtn">Add Size</button>
-                    </div>
-                </div>
-            </div>
-            
-            
-            <button type="submit" class="btn btn-primary">Add Variant</button>
-        </form>
-    </div>
-
-    
-
-    <!-- Crop Modal -->
-    <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="img-container">
-                        <img id="cropImage" src="" alt="Image to crop">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="cropButton">Crop & Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Required CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
 <style>
     .image-upload-container {
         width: 100%;
@@ -126,49 +40,375 @@
     }
 </style>
 
+<div class="container mt-4">
+    <!-- Product Header -->
+    <h4><%= product.productName %></h4>
+    
+    <!-- Add Variant Form -->
+    <div class="card p-4 mb-4">
+        <form id="colorVariantForm" action="/admin/colorVariant/<%= product._id %>" method="POST" enctype="multipart/form-data">
+            <!-- Color Input -->
+            <div class="mb-3">
+                <label for="color" class="form-label">Color</label>
+                <input type="text" name="color" id="color" class="form-control" >
+                <div class="error-message" id="color-error" style="display:none; color:red;"></div>
+            </div>
+
+            <!-- Image Uploads -->
+            <div class="mb-3">
+                <label class="form-label">Product Images</label>
+                <div class="row">
+                    <% for(let i = 1; i <= 3; i++) { %>
+                        <div class="col-md-4 mb-2">
+                            <div class="image-upload-container">
+                                <input class="form-control d-none image-input" type="file" id="productImage<%= i %>" name="images" accept="image/*" onchange="handleImageUpload(this, '<%= i %>')">
+                                <div id="imagePreview<%= i %>" class="image-preview" onclick="document.getElementById('productImage<%= i %>').click()">
+                                    <div class="preview-text">Upload Image <%= i %></div>
+                                </div>
+                            </div>
+                        </div>
+                    <% } %>
+                </div>
+                <small class="text-muted">Max: 2MB. Formats: jpg, png, gif. Upload 3 images.</small>
+                <div id="image-error" class="text-danger"></div>
+            </div>
+            
+            <!-- Size and Quantity Inputs -->
+            <div id="sizesContainer">
+                <div class="row mb-3 size-row" data-size-index="1">
+                    <div class="col-md-5">
+                        <label for="size1" class="form-label">Size</label>
+                        <select name="sizes[]" id="size1" class="form-control size-select" >
+                            <option value="">Select Size</option>
+                            <option value="6">UK 6</option>
+                            <option value="7">UK 7</option>
+                            <option value="8">UK 8</option>
+                            <option value="9">UK 9</option>
+                            <option value="10">UK 10</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5">
+                        <label for="quantity1" class="form-label">Quantity</label>
+                        <input type="number" name="quantities[]" id="quantity1" class="form-control quantity-input" min="1" >
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-success mt-4" id="addSizeBtn">Add Size</button>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="submitVariantBtn">Add Variant</button>
+        </form>
+    </div>
+
+    
+
+    <!-- Crop Modal -->
+    <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="img-container">
+                        <img id="cropImage" src="" alt="Image to crop">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="cropButton">Crop & Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
 <!-- Essential Scripts -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
 <script>
-    let cropper;
-    let currentInput;
-    let currentPreviewId;
+   let cropper;
+let currentInput;
+let currentPreviewId;
+let sizeCounter = 1;
+let uploadedImagesCount = 0;
 
-    // Size and Quantity Addition
-    const sizesContainer = document.getElementById('sizesContainer');
-    const addSizeBtn = document.getElementById('addSizeBtn');
-    let sizeCounter = 1;
+// Validation Functions
+function validateColor(color) {
+    // Remove leading and trailing whitespace
+    color = color.trim();
+    
+    // Check if color is empty after trimming
+    if (color === '') {
+        return {
+            isValid: false,
+            message: 'Color cannot be empty or just whitespace'
+        };
+    }
+    
+    // Allow special characters for color codes like Z.BLK/OLD-YLW
+    const colorRegex = /^[A-Za-z0-9\s\.\/-]+$/;
+    if (!colorRegex.test(color)) {
+        return {
+            isValid: false,
+            message: 'Color contains invalid characters'
+        };
+    }
+    
+    return {
+        isValid: true,
+        value: color
+    };
+}
 
-    addSizeBtn.addEventListener('click', () => {
-        sizeCounter++;
-        
-        const newRow = document.createElement('div');
-        newRow.className = 'row mb-3';
-        newRow.innerHTML = `
-               <div class="col-md-5">
-                   <label for="size${sizeCounter}" class="form-label">Size</label>
-                   <select name="sizes[]" id="size${sizeCounter}" class="form-control" required>
-                       <option value="6">UK 6</option>
-                       <option value="7">UK 7</option>
-                       <option value="8">UK 8</option>
-                       <option value="9">UK 9</option>
-                       <option value="10">UK 10</option>
-                   </select>
-               </div>
-               <div class="col-md-5">
-                   <label for="quantity${sizeCounter}" class="form-label">Quantity</label>
-                   <input type="number" name="quantities[]" id="quantity${sizeCounter}" class="form-control" required>
-               </div>
-           `;
+function validateQuantity(quantity) {
+    // Remove leading and trailing whitespace
+    quantity = quantity.trim();
+    
+    // Convert to number
+    const parsedQuantity = parseInt(quantity);
+    
+    // Check if it's a valid positive number
+    if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return {
+            isValid: false,
+            message: 'Quantity must be a positive number'
+        };
+    }
+    
+    return {
+        isValid: true,
+        value: parsedQuantity
+    };
+}
 
-        sizesContainer.appendChild(newRow);
+// Image Upload Validation
+function validateImageUploads() {
+    const imageInputs = document.querySelectorAll('.image-input');
+    const imageErrorDiv = document.getElementById('image-error');
+    let validImagesCount = 0;
+    
+    imageInputs.forEach(input => {
+        if (input.files.length > 0) {
+            validImagesCount++;
+        }
+    });
+    
+    if (validImagesCount !== 3) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Image Upload Error',
+            text: 'Please upload exactly 3 images'
+        });
+        return false;
+    }
+    
+    imageErrorDiv.textContent = '';
+    return true;
+}
 
-        newRow.querySelector('.remove-size-btn').addEventListener('click', () => {
-            sizesContainer.removeChild(newRow);
+// Size Uniqueness Validation
+function setupSizeValidation() {
+    const sizeSelects = document.querySelectorAll('.size-select');
+    
+    sizeSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            const selectedValue = this.value;
+            
+            // Disable the selected option in other dropdowns
+            sizeSelects.forEach(otherSelect => {
+                if (otherSelect !== this) {
+                    const optionToDisable = otherSelect.querySelector(`option[value="${selectedValue}"]`);
+                    if (optionToDisable) {
+                        if (selectedValue === '') {
+                            // Reset all options if 'Select Size' is chosen
+                            Array.from(otherSelect.options).forEach(option => {
+                                option.disabled = false;
+                            });
+                        } else {
+                            // Disable the selected size in other dropdowns
+                            optionToDisable.disabled = true;
+                        }
+                    }
+                }
+            });
         });
     });
+}
+
+// Add Size Button Handler
+document.getElementById('addSizeBtn').addEventListener('click', () => {
+    sizeCounter++;
+    
+    const newRow = document.createElement('div');
+    newRow.className = 'row mb-3 size-row';
+    newRow.setAttribute('data-size-index', sizeCounter);
+    newRow.innerHTML = `
+        <div class="col-md-5">
+            <label for="size${sizeCounter}" class="form-label">Size</label>
+            <select name="sizes[]" id="size${sizeCounter}" class="form-control size-select" required>
+                <option value="">Select Size</option>
+                <option value="6">UK 6</option>
+                <option value="7">UK 7</option>
+                <option value="8">UK 8</option>
+                <option value="9">UK 9</option>
+                <option value="10">UK 10</option>
+            </select>
+        </div>
+        <div class="col-md-5">
+            <label for="quantity${sizeCounter}" class="form-label">Quantity</label>
+            <input type="number" name="quantities[]" id="quantity${sizeCounter}" class="form-control quantity-input" min="1" required>
+        </div>
+        <div class="col-md-2">
+            <button type="button" class="btn btn-danger mt-4 remove-size-btn">Remove</button>
+        </div>
+    `;
+
+    document.getElementById('sizesContainer').appendChild(newRow);
+    
+    // Setup size validation for new rows
+    setupSizeValidation();
+    
+    // Remove Size Button Handler
+    newRow.querySelector('.remove-size-btn').addEventListener('click', () => {
+        const sizeToRemove = newRow.querySelector('.size-select').value;
+        
+        // Re-enable the size in other dropdowns if it was disabled
+        if (sizeToRemove) {
+            document.querySelectorAll('.size-select').forEach(select => {
+                const optionToEnable = select.querySelector(`option[value="${sizeToRemove}"]`);
+                if (optionToEnable) {
+                    optionToEnable.disabled = false;
+                }
+            });
+        }
+        
+        document.getElementById('sizesContainer').removeChild(newRow);
+    });
+});
+
+// Form Submission Validation
+document.getElementById('colorVariantForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Color Validation
+    const colorInput = document.getElementById('color');
+    const colorValidation = validateColor(colorInput.value);
+    if (!colorValidation.isValid) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Color',
+            text: colorValidation.message
+        });
+        return;
+    }
+    
+    // Image Validation
+    if (!validateImageUploads()) {
+        return;
+    }
+    
+    // Size and Quantity Validation
+    const sizeRows = document.querySelectorAll('.size-row');
+    const uniqueSizes = new Set();
+    const sizeData = [];
+    
+    for (let row of sizeRows) {
+        const sizeSelect = row.querySelector('.size-select');
+        const quantityInput = row.querySelector('.quantity-input');
+        
+        const size = sizeSelect.value;
+        const quantityValidation = validateQuantity(quantityInput.value);
+        
+        if (size === '') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Size Selection Error',
+                text: 'Please select a size for all rows'
+            });
+            return;
+        }
+        
+        if (!quantityValidation.isValid) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Quantity Error',
+                text: quantityValidation.message
+            });
+            return;
+        }
+        
+        if (uniqueSizes.has(size)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Duplicate Size',
+                text: 'You cannot add the same size multiple times'
+            });
+            return;
+        }
+        
+        uniqueSizes.add(size);
+        sizeData.push({
+            size: size,
+            quantity: quantityValidation.value
+        });
+    }
+    
+    // If all validations pass, manually prepare and submit form data
+    const formData = new FormData(this);
+    
+    // Clear existing sizes and quantities
+    const sizesInput = formData.getAll('sizes[]');
+    const quantitiesInput = formData.getAll('quantities[]');
+    formData.delete('sizes[]');
+    formData.delete('quantities[]');
+    
+    // Re-add validated sizes and quantities
+    sizeData.forEach(item => {
+        formData.append('sizes[]', item.size);
+        formData.append('quantities[]', item.quantity);
+    });
+    
+    // Submit form via AJAX to ensure proper data transmission
+    $.ajax({
+        url: this.action,
+        method: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(response) {
+    Swal.fire({
+        icon: 'success',
+        title: 'Variant Added',
+        text: 'Product variant added successfully!'
+    }).then(() => {
+        // Use the original product ID from the form's action URL
+        const productId = $('#colorVariantForm').attr('action').split('/').pop();
+        window.location.href = `/admin/productVariants/${productId}`;
+    });
+},
+error: function(xhr) {
+    Swal.fire({
+        icon: 'error',
+        title: 'Submission Error',
+        text: xhr.responseJSON?.message || 'Failed to add variant'
+    });
+}
+    });
+});
+
+// Initialize size validation on page load
+setupSizeValidation();
 
     // Image Upload and Cropping Logic
     function handleImageUpload(input, previewId) {

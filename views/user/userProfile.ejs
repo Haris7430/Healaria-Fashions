@@ -125,6 +125,20 @@
             text-decoration: none;
             margin-top: 15px;
         }
+
+
+
+
+        .error-message {
+    color: red;
+    font-size: 0.8rem;
+    margin-top: 5px;
+}
+
+.is-invalid {
+    border-color: red !important;
+    box-shadow: 0 0 0 0.2rem rgba(255, 0, 0, 0.25) !important;
+}
     
         /* Address Form Container */
         .address-form {
@@ -306,6 +320,7 @@
 
 
 <style>
+    
 
     /* order Table Styles */
 .custom-table {
@@ -523,6 +538,19 @@
 }
 
 </style>
+
+
+
+
+
+<style>
+    .order-id-column {
+        width: 250px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
     
 </head>
 
@@ -552,7 +580,6 @@
 
             <!-- Main Content Area -->
             <div class="main-content">
-                <!-- Dynamic Content based on active section -->
 
                 <!-- Profile Section -->
 <% if (activeSection === 'profile') { %>
@@ -656,7 +683,7 @@
                             <table class="custom-table">
                                 <thead>
                                     <tr>
-                                        <th>Order Number</th>
+                                        <th class="order-id-column">Order Number</th>
                                         <th>Date</th>
                                         <th>Total Amount</th>
                                         <th>Payment Method</th>
@@ -667,7 +694,14 @@
                                 <tbody>
                                     <% orders.forEach(order => { %>
                                         <tr>
-                                            <td>#<%= order._id %></td>
+                                            <td>
+                                                <span 
+                                                    title="<%= order.orderId %>" 
+                                                    style="cursor: help;"
+                                                >
+                                                    <%= order.orderId %>
+                                                </span>
+                                            </td>
                                             <td><%= new Date(order.createdAt).toLocaleDateString() %></td>
                                             <td>₹<%= order.total.toFixed(2) %></td>
                                             <td><%= order.paymentMethod.toUpperCase() %></td>
@@ -791,12 +825,12 @@
                     <form action="/profile/add-address" method="POST" class="address-form">
                         <div class="form-group">
                             <label for="name">Full Name *</label>
-                            <input type="text" name="name" id="name" class="form-input" required>
+                            <input type="text" name="name" id="name" class="form-input" >
                         </div>
                         
                         <div class="form-group">
                             <label for="phone">Phone Number *</label>
-                            <input type="tel" name="phone" id="phone" class="form-input" pattern="[0-9]{10}" required>
+                            <input type="tel" name="phone" id="phone" class="form-input" pattern="[0-9]{10}" >
                         </div>
                         
                         <div class="form-group">
@@ -806,7 +840,7 @@
                         
                         <div class="form-group">
                             <label for="addressType">Address Type *</label>
-                            <select name="addressType" id="addressType" class="form-input" required>
+                            <select name="addressType" id="addressType" class="form-input" >
                                 <option value="">Select Type</option>
                                 <option value="Home">Home</option>
                                 <option value="Work">Work</option>
@@ -816,22 +850,22 @@
                         
                         <div class="form-group">
                             <label for="landmark">Landmark *</label>
-                            <input type="text" name="landmark" id="landmark" class="form-input" required>
+                            <input type="text" name="landmark" id="landmark" class="form-input" >
                         </div>
                         
                         <div class="form-group">
                             <label for="city">City *</label>
-                            <input type="text" name="city" id="city" class="form-input" required>
+                            <input type="text" name="city" id="city" class="form-input" >
                         </div>
                         
                         <div class="form-group">
                             <label for="state">State *</label>
-                            <input type="text" name="state" id="state" class="form-input" required>
+                            <input type="text" name="state" id="state" class="form-input" >
                         </div>
                         
                         <div class="form-group">
                             <label for="pincode">Pincode *</label>
-                            <input type="text" name="pincode" id="pincode" class="form-input" pattern="[0-9]{6}" required>
+                            <input type="text" name="pincode" id="pincode" class="form-input" pattern="[0-9]{6}" >
                         </div>
                         
                         <button type="submit" class="submit-btn">Add Address</button>
@@ -843,7 +877,6 @@
                 <% if (activeSection === 'account-details') { %>
                     <h2>Account Details</h2>
                     <p>Change your personal information here.</p>
-                    <!-- Include form for updating user details -->
                 <% } %>
 
                 
@@ -869,28 +902,28 @@
                 <form id="edit-form">
                     <div class="mb-3">
                         <label for="edit-name" class="form-label">Name*</label>
-                        <input type="text" class="form-control" id="edit-name" required>
+                        <input type="text" class="form-control" id="edit-name" >
                     </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Address Type*</label>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="edit-addressType" value="Home" required>
+                            <input class="form-check-input" type="radio" name="edit-addressType" value="Home" >
                             <label class="form-check-label">Home</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="edit-addressType" value="Work" required>
+                            <input class="form-check-input" type="radio" name="edit-addressType" value="Work" >
                             <label class="form-check-label">Work</label>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="edit-addressType" value="Other" required>
+                            <input class="form-check-input" type="radio" name="edit-addressType" value="Other" >
                             <label class="form-check-label">Other</label>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit-phone" class="form-label">Phone*</label>
-                        <input type="tel" class="form-control" id="edit-phone" required>
+                        <input type="tel" class="form-control" id="edit-phone" >
                     </div>
 
                     <div class="mb-3">
@@ -900,22 +933,22 @@
 
                     <div class="mb-3">
                         <label for="edit-landmark" class="form-label">Landmark*</label>
-                        <input type="text" class="form-control" id="edit-landmark" required>
+                        <input type="text" class="form-control" id="edit-landmark" >
                     </div>
 
                     <div class="mb-3">
                         <label for="edit-city" class="form-label">City*</label>
-                        <input type="text" class="form-control" id="edit-city" required>
+                        <input type="text" class="form-control" id="edit-city" >
                     </div>
 
                     <div class="mb-3">
                         <label for="edit-state" class="form-label">State*</label>
-                        <input type="text" class="form-control" id="edit-state" required>
+                        <input type="text" class="form-control" id="edit-state" >
                     </div>
 
                     <div class="mb-3">
                         <label for="edit-pincode" class="form-label">Pincode*</label>
-                        <input type="text" class="form-control" id="edit-pincode" required>
+                        <input type="text" class="form-control" id="edit-pincode" >
                     </div>
 
                     <div class="modal-footer">
@@ -944,20 +977,359 @@
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"></script>
 
+
 <script>
+
+document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nameInput = document.getElementById('name');
+    const phoneInput = document.getElementById('phone');
+    
+    // Client-side validation
+    const nameRegex = /^[A-Za-z\s]{2,50}$/;
+    const phoneRegex = /^[6-9]\d{9}$/;
+
+    let isValid = true;
+    
+    // Name validation
+    if (!nameRegex.test(nameInput.value.trim())) {
+        isValid = false;
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Name',
+            text: 'Name must be 2-50 characters and contain only letters'
+        });
+        nameInput.classList.add('is-invalid');
+        return;
+    } else {
+        nameInput.classList.remove('is-invalid');
+    }
+
+    // Phone validation (optional)
+    if (phoneInput.value.trim() && !phoneRegex.test(phoneInput.value.trim())) {
+        isValid = false;
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Phone Number',
+            text: 'Phone number must be 10 digits and start with 6-9'
+        });
+        phoneInput.classList.add('is-invalid');
+        return;
+    } else {
+        phoneInput.classList.remove('is-invalid');
+    }
+
+    // Proceed with form submission
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(formData)),
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Profile updated successfully',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/dashboard';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: data.message || 'Failed to update profile'
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Something went wrong while updating profile'
+        });
+    }
+});
+
+
+
+document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const currentPasswordInput = document.getElementById('currentPassword');
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+
+    // Password validation regex
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+
+    // Validate current password
+    if (!currentPasswordInput.value.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Current password is required'
+        });
+        currentPasswordInput.classList.add('is-invalid');
+        return;
+    }
+
+    // Validate new password
+    if (!passwordRegex.test(newPasswordInput.value)) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Invalid Password',
+            text: 'Password must be at least 8 characters, include letters, numbers, and special characters'
+        });
+        newPasswordInput.classList.add('is-invalid');
+        return;
+    }
+
+    // Confirm password match
+    if (newPasswordInput.value !== confirmPasswordInput.value) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Password Mismatch',
+            text: 'New passwords do not match'
+        });
+        confirmPasswordInput.classList.add('is-invalid');
+        return;
+    }
+
+    // Prevent reusing current password
+    if (currentPasswordInput.value === newPasswordInput.value) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'New password cannot be the same as current password'
+        });
+        newPasswordInput.classList.add('is-invalid');
+        return;
+    }
+
+    // Proceed with form submission
+    const formData = new FormData(e.target);
+    
+    try {
+        const response = await fetch('/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(Object.fromEntries(formData)),
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: 'Password changed successfully',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/dashboard';
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: data.message || 'Failed to change password'
+            });
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error!',
+            text: 'Something went wrong while changing password'
+        });
+    }
+});
+
     
     
-    // Wait for the DOM content to be loaded
+    // addAddressForm
     document.addEventListener('DOMContentLoaded', () => {
     const addAddressForm = document.querySelector('.address-form');
     
     if (addAddressForm) {
+        // Validation functions
+        const validators = {
+            name: (value) => {
+                const nameRegex = /^[A-Za-z\s]{2,50}$/;
+                return nameRegex.test(value.trim());
+            },
+            phone: (value) => {
+                const phoneRegex = /^[6-9]\d{9}$/;
+                return phoneRegex.test(value);
+            },
+            altPhone: (value) => {
+                // Optional field, but if filled, must be valid
+                return !value || /^[6-9]\d{9}$/.test(value);
+            },
+            landmark: (value) => {
+                return value.trim().length >= 3 && value.trim().length <= 100;
+            },
+            city: (value) => {
+                const cityRegex = /^[A-Za-z\s]{2,50}$/;
+                return cityRegex.test(value.trim());
+            },
+            state: (value) => {
+                const stateRegex = /^[A-Za-z\s]{2,50}$/;
+                return stateRegex.test(value.trim());
+            },
+            pincode: (value) => {
+                const pincodeRegex = /^\d{6}$/;
+                return pincodeRegex.test(value);
+            }
+        };
+
+        // Error messages for each field
+        const errorMessages = {
+            name: 'Name must be 2-50 letters and contain only alphabets',
+            phone: 'Phone number must be 10 digits starting with 6-9',
+            altPhone: 'Alternative phone number must be 10 digits starting with 6-9',
+            landmark: 'Landmark must be 3-100 characters',
+            city: 'City must be 2-50 letters and contain only alphabets',
+            state: 'State must be 2-50 letters and contain only alphabets',
+            pincode: 'Pincode must be 6 digits'
+        };
+
+        // Function to create or update error message
+        const createErrorMessage = (input, message) => {
+            // Remove existing error message if any
+            const existingError = input.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // Create error message element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message text-danger small mt-1';
+            errorDiv.textContent = message;
+
+            // Insert error message after the input
+            input.parentNode.insertBefore(errorDiv, input.nextSibling);
+        };
+
+        // Real-time validation
+        const validateField = (input, validator) => {
+            const value = input.value.trim();
+            const isValid = validator(value);
+            const fieldId = input.id;
+            
+            if (!isValid) {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+                
+                // Add error message
+                if (errorMessages[fieldId]) {
+                    createErrorMessage(input, errorMessages[fieldId]);
+                }
+            } else {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                
+                // Remove error message
+                const existingError = input.parentNode.querySelector('.error-message');
+                if (existingError) {
+                    existingError.remove();
+                }
+            }
+            
+            return isValid;
+        };
+
+        // Add real-time validation listeners
+        const fields = [
+            { id: 'name', validator: validators.name },
+            { id: 'phone', validator: validators.phone },
+            { id: 'altPhone', validator: validators.altPhone },
+            { id: 'landmark', validator: validators.landmark },
+            { id: 'city', validator: validators.city },
+            { id: 'state', validator: validators.state },
+            { id: 'pincode', validator: validators.pincode }
+        ];
+
+        fields.forEach(field => {
+            const input = document.getElementById(field.id);
+            if (input) {
+                input.addEventListener('input', () => validateField(input, field.validator));
+                input.addEventListener('blur', () => {
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        createErrorMessage(input, `${input.labels[0].textContent} is required`);
+                    } else {
+                        validateField(input, field.validator);
+                    }
+                });
+            }
+        });
+
         addAddressForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Create FormData object
-            const formData = new FormData(addAddressForm);
-            const data = Object.fromEntries(formData);
+            // Validate all fields before submission
+            let isFormValid = true;
+            fields.forEach(field => {
+                const input = document.getElementById(field.id);
+                if (input) {
+                    // Check if field is empty
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        createErrorMessage(input, `${input.labels[0].textContent} is required`);
+                        isFormValid = false;
+                    } else {
+                        // If not empty, run normal validator
+                        if (!validateField(input, field.validator)) {
+                            isFormValid = false;
+                        }
+                    }
+                }
+            });
+
+            // Address type validation
+            const addressType = document.getElementById('addressType');
+            if (!addressType.value) {
+                addressType.classList.add('is-invalid');
+                createErrorMessage(addressType, 'Please select an address type');
+                isFormValid = false;
+            } else {
+                addressType.classList.remove('is-invalid');
+                const existingError = addressType.parentNode.querySelector('.error-message');
+                if (existingError) {
+                    existingError.remove();
+                }
+            }
+
+            if (!isFormValid) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please fill in all required fields correctly'
+                });
+                return;
+            }
+
+            // Gather form data
+            const formData = {
+                name: document.getElementById('name').value.trim(),
+                phone: document.getElementById('phone').value,
+                altPhone: document.getElementById('altPhone').value || '',
+                addressType: addressType.value,
+                landmark: document.getElementById('landmark').value.trim(),
+                city: document.getElementById('city').value.trim(),
+                state: document.getElementById('state').value.trim(),
+                pincode: document.getElementById('pincode').value
+            };
 
             try {
                 const response = await fetch('/profile/add-address', {
@@ -965,7 +1337,7 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(formData)
                 });
 
                 const result = await response.json();
@@ -1140,6 +1512,107 @@ document.addEventListener('DOMContentLoaded', function() {
     const editForm = document.getElementById('edit-form');
     
     if (editForm) {
+        // Function to create or update error message
+        const createErrorMessage = (input, message) => {
+            // Remove existing error message if any
+            const existingError = input.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // Create error message element
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message text-danger small mt-1';
+            errorDiv.textContent = message;
+
+            // Insert error message after the input
+            input.parentNode.insertBefore(errorDiv, input.nextSibling);
+        };
+
+        // Updated validators with more flexible landmark validation
+        const validators = {
+            name: (value) => {
+                const nameRegex = /^[A-Za-z\s]{2,50}$/;
+                return nameRegex.test(value.trim());
+            },
+            phone: (value) => /^[6-9]\d{9}$/.test(value),
+            altPhone: (value) => !value || /^[6-9]\d{9}$/.test(value),
+            landmark: (value) => {
+                // Allow letters, numbers, spaces, and commas
+                // Minimum length 3, maximum 150 characters
+                const landmarkRegex = /^[A-Za-z0-9\s,]{3,150}$/;
+                return landmarkRegex.test(value.trim());
+            },
+            city: (value) => /^[A-Za-z\s]{2,50}$/.test(value.trim()),
+            state: (value) => /^[A-Za-z\s]{2,50}$/.test(value.trim()),
+            pincode: (value) => /^\d{6}$/.test(value)
+        };
+
+        // Error messages for each field
+        const errorMessages = {
+            name: 'Name must be 2-50 letters and contain only alphabets',
+            phone: 'Phone number must be 10 digits starting with 6-9',
+            altPhone: 'Alternative phone number must be 10 digits starting with 6-9',
+            landmark: 'Landmark must be 3-150 characters, using letters, numbers, spaces, and commas',
+            city: 'City must be 2-50 letters and contain only alphabets',
+            state: 'State must be 2-50 letters and contain only alphabets',
+            pincode: 'Pincode must be 6 digits'
+        };
+
+        // Enhanced validation function
+        const validateField = (input, validator) => {
+            const value = input.value.trim();
+            const fieldId = input.id.replace('edit-', '');
+            const isValid = validator(value);
+            
+            if (!isValid) {
+                input.classList.add('is-invalid');
+                input.classList.remove('is-valid');
+                
+                // Add error message
+                if (errorMessages[fieldId]) {
+                    createErrorMessage(input, errorMessages[fieldId]);
+                }
+            } else {
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                
+                // Remove error message
+                const existingError = input.parentNode.querySelector('.error-message');
+                if (existingError) {
+                    existingError.remove();
+                }
+            }
+            
+            return isValid;
+        };
+
+        // Add validation listeners to edit form fields
+        const editFields = [
+            { id: 'edit-name', validator: validators.name },
+            { id: 'edit-phone', validator: validators.phone },
+            { id: 'edit-alt-phone', validator: validators.altPhone },
+            { id: 'edit-landmark', validator: validators.landmark },
+            { id: 'edit-city', validator: validators.city },
+            { id: 'edit-state', validator: validators.state },
+            { id: 'edit-pincode', validator: validators.pincode }
+        ];
+
+        editFields.forEach(field => {
+            const input = document.getElementById(field.id);
+            if (input) {
+                input.addEventListener('input', () => validateField(input, field.validator));
+                input.addEventListener('blur', () => {
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        createErrorMessage(input, `${input.labels[0].textContent} is required`);
+                    } else {
+                        validateField(input, field.validator);
+                    }
+                });
+            }
+        });
+
         editForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -1149,15 +1622,67 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Gather form data - Note we're getting the value directly from the checked radio button
+            // Validate all fields
+            let isFormValid = true;
+            editFields.forEach(field => {
+                const input = document.getElementById(field.id);
+                if (input) {
+                    // Check if field is empty
+                    if (!input.value.trim()) {
+                        input.classList.add('is-invalid');
+                        createErrorMessage(input, `${input.labels[0].textContent} is required`);
+                        isFormValid = false;
+                    } else if (!validateField(input, field.validator)) {
+                        isFormValid = false;
+                    }
+                }
+            });
+
+            // Address type radio validation
+            const addressTypeRadios = document.querySelectorAll('input[name="edit-addressType"]');
+            const selectedAddressType = document.querySelector('input[name="edit-addressType"]:checked');
+            if (!selectedAddressType) {
+                addressTypeRadios.forEach(radio => {
+                    radio.classList.add('is-invalid');
+                    // Add error message to the parent div
+                    const parentDiv = radio.closest('.mb-3');
+                    if (parentDiv) {
+                        createErrorMessage(parentDiv, 'Please select an address type');
+                    }
+                });
+                isFormValid = false;
+            } else {
+                addressTypeRadios.forEach(radio => {
+                    radio.classList.remove('is-invalid');
+                    // Remove any existing error messages
+                    const parentDiv = radio.closest('.mb-3');
+                    if (parentDiv) {
+                        const existingError = parentDiv.querySelector('.error-message');
+                        if (existingError) {
+                            existingError.remove();
+                        }
+                    }
+                });
+            }
+
+            if (!isFormValid) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Validation Error',
+                    text: 'Please correct the highlighted fields'
+                });
+                return;
+            }
+
+            // Gather form data
             const formData = {
-                name: document.getElementById('edit-name').value,
-                addressType: document.querySelector('input[name="edit-addressType"]:checked').value,
+                name: document.getElementById('edit-name').value.trim(),
+                addressType: selectedAddressType.value,
                 phone: document.getElementById('edit-phone').value,
-                altPhone: document.getElementById('edit-alt-phone').value,
-                landmark: document.getElementById('edit-landmark').value,
-                city: document.getElementById('edit-city').value,
-                state: document.getElementById('edit-state').value,
+                altPhone: document.getElementById('edit-alt-phone').value || '',
+                landmark: document.getElementById('edit-landmark').value.trim(),
+                city: document.getElementById('edit-city').value.trim(),
+                state: document.getElementById('edit-state').value.trim(),
                 pincode: document.getElementById('edit-pincode').value
             };
 
@@ -1177,7 +1702,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     const modal = bootstrap.Modal.getInstance(document.getElementById('editAddressModal'));
                     modal.hide();
 
-                    // Show success message
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
@@ -1185,7 +1709,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
-                        // Reload page to show updated address
                         window.location.reload();
                     });
                 } else {
@@ -1208,94 +1731,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-
-
-
-// Edit Profile Form Handler with SweetAlert2
-document.getElementById('editProfileForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    
-    try {
-        const response = await fetch('/update-profile', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(Object.fromEntries(formData)),
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Profile updated successfully',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                window.location.href = '/dashboard';
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: data.message || 'Failed to update profile'
-            });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: 'Something went wrong while updating profile'
-        });
-    }
-});
-
-
-
-// Change Password Form Handler with SweetAlert2
-document.getElementById('changePasswordForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    
-    try {
-        const response = await fetch('/change-password', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(Object.fromEntries(formData)),
-        });
-        const data = await response.json();
-        
-        if (data.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: 'Password changed successfully',
-                showConfirmButton: false,
-                timer: 1500
-            }).then(() => {
-                window.location.href = '/dashboard';
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: data.message || 'Failed to change password'
-            });
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error!',
-            text: 'Something went wrong while changing password'
-        });
-    }
-});
 
 </script>
 
@@ -1325,6 +1760,9 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
         });
     });
 </script>
+
+
+
 
 
 
