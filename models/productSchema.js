@@ -19,10 +19,6 @@ const productSchema = new Schema({
         type: Number,
         required: true
     },
-    salesPrice: {
-        type: Number,
-        required: true
-    },
     
     variants: [{
         color: { type: String, required: true },

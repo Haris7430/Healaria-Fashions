@@ -12,6 +12,7 @@ const customerController = require('../controllers/admin/customerController');
 const categoryController = require('../controllers/admin/categoryController');
 const productController = require('../controllers/admin/productController');
 const orderController = require('../controllers/admin/orderController')
+const offerController = require('../controllers/admin/offerController');
 const multer = require('multer'); 
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage }).array('images', 10);
@@ -70,6 +71,17 @@ router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
 router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
 
 
+router.get('/offers',adminAuth, offerController.renderOffersPage);
+router.get('/offers/check-existing', adminAuth, offerController.checkExistingOffers);
+
+router.get('/offers/create',adminAuth, offerController.renderCreateOfferPage);
+router.post('/offers/create',adminAuth, offerController.createOffer);
+router.get('/offers/edit/:id',adminAuth, offerController.renderEditOfferPage);
+router.put('/offers/edit/:id',adminAuth, offerController.updateOffer);
+router.delete('/offers/delete/:id',adminAuth, offerController.deleteOffer);
+router.patch('/offers/toggle-status/:id', adminAuth, offerController.toggleOfferStatus);
+router.get('/offers/get-products',adminAuth, offerController.getProductsForOffer);
+router.get('/offers/get-categories',adminAuth, offerController.getCategoriesForOffer);
 
  
 module.exports = router; 

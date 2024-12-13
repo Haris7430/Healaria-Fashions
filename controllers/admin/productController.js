@@ -10,7 +10,6 @@ const getProductAddPage = async (req, res) => {
         const categories = await Category.find({ isListed: true });
         res.render('product-add', {
             cat: categories,
-            
         });
     } catch (error) {
         console.error('Error fetching categories:', error);
@@ -18,16 +17,24 @@ const getProductAddPage = async (req, res) => {
     }
 };
 
-
 const addProducts = async (req, res) => {
     try {
-        const { productName, description, regularPrice, salePrice, color, quantity, category, size } = req.body;
+        const { productName, description, regularPrice, color, quantity, category, size } = req.body;
 
         const errors = {};
 
         // Validation checks
         if (!productName || productName.trim().length === 0) {
             errors.productName = 'Product name is required';
+        }
+
+        // Check for existing product with the same name
+        const existingProduct = await Product.findOne({ 
+            productName: { $regex: new RegExp(`^${productName}$`, 'i') } 
+        });
+
+        if (existingProduct) {
+            errors.productName = 'A product with this name already exists';
         }
 
         // Optional description validation
@@ -37,10 +44,6 @@ const addProducts = async (req, res) => {
 
         if (!regularPrice || isNaN(regularPrice) || regularPrice <= 0) {
             errors.regularPrice = 'Valid regular price is required';
-        }
-
-        if (salePrice && (!isNaN(salePrice) && parseFloat(salePrice) >= parseFloat(regularPrice))) {
-            errors.salePrice = 'Sale price must be less than regular price';
         }
 
         if (!quantity || isNaN(quantity) || quantity < 0) {
@@ -64,13 +67,22 @@ const addProducts = async (req, res) => {
         }
 
         if (Object.keys(errors).length > 0) {
-            return res.status(400).render('product-add', { 
-                errors, 
-                cat: await Category.find({ isListed: true }),
-                formData: req.body 
+            // For traditional form submission
+            if (!req.headers['x-requested-with']) {
+                return res.status(400).render('product-add', { 
+                    errors, 
+                    cat: await Category.find({ isListed: true }),
+                    formData: req.body 
+                });
+            }
+            // For Axios request
+            return res.status(400).json({ 
+                message: 'Validation failed', 
+                errors 
             });
         }
 
+        // Rest of the existing code remains the same...
         const images = await Promise.all(req.files.map(async (file, index) => {
             const filename = `${Date.now()}-${index}-${file.originalname}`;
             const outputPath = path.join('public', 'uploads', 'product-images', filename);
@@ -96,7 +108,6 @@ const addProducts = async (req, res) => {
             productName,
             description,
             regularPrice,
-            salesPrice: salePrice,
             variants: [{
                 color,
                 sizes: [{ size, quantity }],
@@ -112,11 +123,17 @@ const addProducts = async (req, res) => {
         
     } catch (error) {
         console.error('Error saving product:', error);
-        res.status(500).render('product-add', { 
-            errors: { general: 'Error saving product' }, 
-            cat: await Category.find({ isListed: true }),
-            formData: req.body 
-        });
+        
+        // Handle different types of requests
+        if (!req.headers['x-requested-with']) {
+            return res.status(500).render('product-add', { 
+                errors: { general: 'Error saving product' }, 
+                cat: await Category.find({ isListed: true }),
+                formData: req.body 
+            });
+        }
+        
+        res.status(500).json({ message: 'Internal server error' });
     }
 };
 
@@ -145,7 +162,6 @@ const getAllProducts = async (req, res) => {
         // Modify to set first image as main image
         const productsWithMainImage = productData.map(product => {
             const updatedProduct = { ...product.toObject() };
-            // Find first image in first variant and mark as main
             if (updatedProduct.variants.length > 0 && updatedProduct.variants[0].images.length > 0) {
                 updatedProduct.variants[0].mainImage = true;
             }
@@ -158,13 +174,22 @@ const getAllProducts = async (req, res) => {
             ]
         });
 
-        const categories = await Category.find({ isListed: true });
+        // Check if it's an AJAX request
+        if (req.xhr || req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            // Send JSON response for AJAX requests
+            return res.json({
+                data: productsWithMainImage,
+                currentPage: page,
+                totalPages: Math.ceil(count / limit),
+                search: search
+            });
+        }
 
+        // For regular requests, render the full page
         res.render('products', {
             data: productsWithMainImage,
             currentPage: page,
             totalPages: Math.ceil(count / limit),
-            cat: categories,
             search: search
         });
     } catch (error) {

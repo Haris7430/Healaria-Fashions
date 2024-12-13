@@ -1,0 +1,321 @@
+<%- include("../partials/admin/header/") %>
+
+<div class="container-fluid px-4">
+    <div class="page-header d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-2 text-gray-800">
+                <i class="fas fa-tags me-2 text-primary"></i>Edit Category Offer
+            </h1>
+            
+        </div>
+        <div class="btn-group">
+            <a href="/admin/offers" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Offers
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-gradient-primary text-white py-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="m-0 font-weight-bold">
+                    <i class="fas fa-edit me-2"></i>Edit Category Offer Details
+                </h6>
+                <span class="badge bg-white text-primary">
+                    <i class="fas fa-info-circle me-1"></i>Offer Configuration
+                </span>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <form id="editCategoryOfferForm" class="needs-validation" novalidate>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="offerName">
+                            <i class="fas fa-tag text-primary me-2"></i>Offer Name
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group has-validation">
+                            <span class="input-group-text"><i class="fas fa-signature"></i></span>
+                            <input type="text" class="form-control" id="offerName" name="offerName" 
+                                   value="<%= offer.offerName %>" required minlength="3" maxlength="100"
+                                   placeholder="Enter descriptive offer name">
+                            <div class="invalid-feedback" id="offerNameError">
+                                Please provide a valid offer name (3-100 characters)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label" for="discount">
+                            <i class="fas fa-percent text-primary me-2"></i>Discount Percentage
+                            <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group has-validation">
+                            <span class="input-group-text">%</span>
+                            <input type="number" class="form-control" id="discount" name="discount" 
+                                   value="<%= offer.discount %>" min="0" max="50" required
+                                   placeholder="Enter discount (0-50)">
+                            <div class="invalid-feedback" id="discountError">
+                                Discount must be between 0 and 50
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-5">
+                        <div class="card border-primary">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-list-alt text-primary me-2"></i>Available Categories
+                                <span class="text-muted">(Click to select)</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <select multiple class="form-control" id="availableCategories" size="10">
+                                    <% categories.forEach(category => { 
+                                        if (!offer.categoryIds.includes(category._id)) { %>
+                                        <option value="<%= category._id %>" data-name="<%= category.name %>">
+                                            <%= category.name %>
+                                        </option>
+                                    <% } }); %>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                
+                    <div class="col-md-2 d-flex flex-column justify-content-center align-items-center">
+                        <button type="button" class="btn btn-outline-primary mb-2" id="moveToSelected">
+                            <i class="fas fa-angle-right me-1"></i>Add
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" id="moveToAvailable">
+                            <i class="fas fa-angle-left me-1"></i>Remove
+                        </button>
+                    </div>
+                
+                    <div class="col-md-5">
+                        <div class="card border-success">
+                            <div class="card-header bg-light">
+                                <i class="fas fa-check-square text-success me-2"></i>Selected Categories
+                                <span class="text-danger">*</span>
+                            </div>
+                            <div class="card-body p-0">
+                                <select multiple class="form-control" id="selectedCategories" name="categoryIds" size="10" required>
+                                    <% categories.forEach(category => { 
+                                        if (offer.categoryIds.includes(category._id)) { %>
+                                        <option value="<%= category._id %>" data-name="<%= category.name %>" selected>
+                                            <%= category.name %>
+                                        </option>
+                                    <% } }); %>
+                                </select>
+                                <div class="invalid-feedback" id="categoryIdsError">
+                                    Select at least one category
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="row align-items-center">
+                            <div class="col-md-6 offset-md-3">
+                                <label class="form-label text-center w-100" for="expireDate">
+                                    <i class="fas fa-calendar-alt text-primary me-2"></i>Expiry Date
+                                    <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group has-validation justify-content-center">
+                                    <span class="input-group-text"><i class="fas fa-calendar-check"></i></span>
+                                    <input type="date" class="form-control w-50" id="expireDate" name="expireDate" 
+                                           value="<%= offer.expireDate.toISOString().split('T')[0] %>" required>
+                                    <div class="invalid-feedback" id="expireDateError">
+                                        Please select a future expiry date
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-secondary" onclick="window.location.href='/admin/offers'">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Update Offer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<%- include("../partials/admin/footer/") %>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('editCategoryOfferForm');
+    const availableCategories = document.getElementById('availableCategories');
+    const selectedCategories = document.getElementById('selectedCategories');
+    const moveToSelectedBtn = document.getElementById('moveToSelected');
+    const moveToAvailableBtn = document.getElementById('moveToAvailable');
+
+    // Category Selection Transfer
+    moveToSelectedBtn.addEventListener('click', function() {
+        const selectedOptions = Array.from(availableCategories.selectedOptions);
+        selectedOptions.forEach(option => {
+            selectedCategories.appendChild(option);
+        });
+        validateCategories();
+    });
+
+    moveToAvailableBtn.addEventListener('click', function() {
+        const selectedOptions = Array.from(selectedCategories.selectedOptions);
+        selectedOptions.forEach(option => {
+            availableCategories.appendChild(option);
+        });
+        validateCategories();
+    });
+
+    // Validation Functions
+    function validateOfferName() {
+        const offerName = document.getElementById('offerName');
+        
+        if (!offerName.value.trim()) {
+            offerName.classList.add('is-invalid');
+            return false;
+        }
+        
+        if (offerName.value.length < 3 || offerName.value.length > 100) {
+            offerName.classList.add('is-invalid');
+            return false;
+        }
+        
+        offerName.classList.remove('is-invalid');
+        return true;
+    }
+
+    function validateDiscount() {
+        const discount = document.getElementById('discount');
+        
+        if (!discount.value) {
+            discount.classList.add('is-invalid');
+            return false;
+        }
+        
+        const discountValue = parseFloat(discount.value);
+        if (isNaN(discountValue) || discountValue < 0 || discountValue > 50) {
+            discount.classList.add('is-invalid');
+            return false;
+        }
+        
+        discount.classList.remove('is-invalid');
+        return true;
+    }
+
+    function validateExpireDate() {
+        const expireDate = document.getElementById('expireDate');
+        
+        if (!expireDate.value) {
+            expireDate.classList.add('is-invalid');
+            return false;
+        }
+        
+        const selectedDate = new Date(expireDate.value);
+        const today = new Date();
+        
+        if (selectedDate <= today) {
+            expireDate.classList.add('is-invalid');
+            return false;
+        }
+        
+        expireDate.classList.remove('is-invalid');
+        return true;
+    }
+
+    function validateCategories() {
+        const selectedCategories = document.getElementById('selectedCategories');
+        
+        if (selectedCategories.options.length === 0) {
+            selectedCategories.classList.add('is-invalid');
+            return false;
+        }
+        
+        selectedCategories.classList.remove('is-invalid');
+        return true;
+    }
+
+    // Real-time validation
+    document.getElementById('offerName').addEventListener('input', validateOfferName);
+    document.getElementById('discount').addEventListener('input', validateDiscount);
+    document.getElementById('expireDate').addEventListener('change', validateExpireDate);
+    document.getElementById('selectedCategories').addEventListener('change', validateCategories);
+
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Perform validations
+        const isOfferNameValid = validateOfferName();
+        const isDiscountValid = validateDiscount();
+        const isExpireDateValid = validateExpireDate();
+        const isCategoriesValid = validateCategories();
+
+        if (!(isOfferNameValid && isDiscountValid && isExpireDateValid && isCategoriesValid)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Validation Error',
+                text: 'Please check all fields and ensure they are correctly filled.'
+            });
+            return;
+        }
+
+        // Prepare form data
+        const formData = {
+            offerType: 'category',
+            offerName: document.getElementById('offerName').value,
+            discount: document.getElementById('discount').value,
+            expireDate: document.getElementById('expireDate').value,
+            categoryIds: Array.from(selectedCategories.options).map(option => option.value)
+        };
+
+        try {
+            const response = await axios.put(`/admin/offers/edit/<%= offer._id %>`, formData, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Offer Updated',
+                    text: response.data.message,
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    window.location.href = '/admin/offers';
+                });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Update Failed',
+                    text: response.data.message
+                });
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.response?.data?.message || 'An unexpected error occurred'
+            });
+        }
+    });
+});
+</script>

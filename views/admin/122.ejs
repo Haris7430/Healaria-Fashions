@@ -1,1059 +1,1077 @@
 
-
-
-This is my productSchema.js code:-
+This is my offerSchema.js code:- 
 const mongoose = require("mongoose");
-const { Schema } = mongoose;
 
-const productSchema = new Schema({
-    productName: {
-        type: String,
-        required: true
+const offerSchema = new mongoose.Schema(
+  {
+    offerType: {
+      type: String,
+      enum: ["product", "category"],
+      required: true,
     },
-    description: {
-        type: String,
-        default: ''
+    offerName: {
+      type: String,
+      required: true,
+      trim: true,
+      unique: true
     },
-    category: {
-        type: Schema.Types.ObjectId,
-        ref: "Category",
-        required: true
+    discount: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 50
     },
-    regularPrice: {
-        type: Number,
-        required: true
+    startDate: {
+      type: Date,
+      required: true
     },
-    salesPrice: {
-        type: Number,
-        required: true
+    expireDate: {
+      type: Date,
+      required: true
     },
-    
-    variants: [{
-        color: { type: String, required: true },
-        sizes: [{
-            size: { type: Number, required: true },
-            quantity: { type: Number, required: true }
-        }],
-        images: [{
-            filename: { type: String, required: true },
-            contentType: { type: String, default: 'image/jpeg' }
-        }],
-        isListed: { type: Boolean, default: true },
-        mainImage: { type: Boolean, default: false }  
+    productIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: function () {
+        return this.offerType === "product";
+      },
     }],
-    
-    isBlocked: {
-        type: Boolean,
-        default: false
-    },
-   
-}, { timestamps: true });
-
-
-
-const Product = mongoose.model("Product", productSchema);
-
-module.exports = Product;
-
-
-
-This is my orderSchema.js code:- 
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
-
-const orderSchema = new Schema({
-    orderId: {
-        type: String,
-        unique: true,
-        default: function() {
-           
-            const timestamp = Date.now().toString().slice(-10);
-            const randomStr = Math.random().toString(36).substr(2, 6).toUpperCase();
-            return `ORD-${timestamp}-${randomStr}`;
-        }
-    },
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    items: [{
-        productId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Product',
-            required: true
-        },
-        variantId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Product'
-        },
-        color: {
-            type: String,
-            required: true
-        },
-        size: {
-            type: Number,
-            required: true
-        },
-        quantity: {
-            type: Number,
-            required: true
-        },
-        price: {
-            type: Number,
-            required: true
-        },
-        totalPrice: {
-            type: Number,
-            required: true
-        },
-        status: {
-            type: String,
-            enum: ['placed', 'cancelled'],
-            default: 'placed'
-        }
+    categoryIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: function () {
+        return this.offerType === "category";
+      },
     }],
-    // Embedded shipping address details
-    shippingAddress: {
-        name: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        addressType: {
-            type: String,
-            enum: ['Home', 'Work', 'Other'],
-            required: true
-        },
-        city: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        landmark: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        state: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        pincode: {
-            type: String,
-            required: true,
-            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
-        },
-        phone: {
-            type: String,
-            required: true,
-            validate: {
-                validator: function(v) {
-                    return /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        },
-        altPhone: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        }
-    },
-    paymentMethod: {
-        type: String,
-        required: true,
-        enum: ['COD', 'paypal']
-    },
-    subtotal: {
-        type: Number,
-        required: true
-    },
-    shippingCost: {
-        type: Number,
-        required: true
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'paid', 'failed'],
-        default: 'pending'
+    referralCode: {
+      type: String,
+      required: function () {
+        return this.offerType === "referral";
+      },
+      unique: true,
+      sparse: true
     },
     status: {
-        type: String,
-        required: true,
-        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    isListed: {
+      type: Boolean,
+      default: true
     }
-}, { timestamps: true });
+  },
+  { timestamps: true }
+);
 
-const Order = mongoose.model('Order', orderSchema);
-module.exports = Order;
+const Offer = mongoose.model("Offer", offerSchema);
 
-This is my userSchema.js code :- 
-const mongoose= require("mongoose");
-const {Schema}= mongoose;
+module.exports = Offer;
 
-const userSchema= new Schema ({
-    name:{
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique:true
-    },
-    phone: {
-        type:String,
-        required: false,
-        unique: true,
-        sparse:true,
-        default:undefined
-    },
-    googleId:{
-        type:String,
-        unique:true,
-        sparse:true
-    },
-    password: {
-        type:String,
-        required: false
-    },
-    isBlocked: {
-        type: Boolean,
-        default:false
-    },
-    isAdmin: {
-        type: Boolean,
-        default: false
-    },
-    cart: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Cart'
-    }],
-    
-    wallet: {
-        type: Number,
-        default:0,
-    },
-    wishlist: [{
-        type: Schema.Types.ObjectId,
-        ref: "wishlist"
-    }],
-    orderHistory: [{
-        type: Schema.Types.ObjectId,
-        ref: "Order"
-    }],
-    createdOn : {
-        type:Date,
-        default:Date.now,
-    },
-    referralCode: {
-        type: String,
-        // required:true
-    },
-    redeemed: {
-        type: Boolean,
-        // defaulte:false
- 
-    },
-    redeemedUsers: [{
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        // required:true
-    }],
-    searchHistory: [{
-        category: {
-            type: Schema.Types.ObjectId,
-            ref: "Category"
-        },
-        Brand: {
-            type: String,
+This is my admingRouter.js code:- 
+router.get('/offers',adminAuth, offerController.renderOffersPage);
+router.get('/offers/check-existing', adminAuth, offerController.checkExistingOffers);
 
-        },
-        searchOn: {
-            type: Date,
-            default: Date.now
-        }
-    }]
-},{timestamps:true})
+router.get('/offers/create',adminAuth, offerController.renderCreateOfferPage);
+router.post('/offers/create',adminAuth, offerController.createOffer);
+router.get('/offers/edit/:id',adminAuth, offerController.renderEditOfferPage);
+router.put('/offers/edit/:id',adminAuth, offerController.updateOffer);
+router.delete('/offers/delete/:id',adminAuth, offerController.deleteOffer);
+router.patch('/offers/toggle-status/:id', adminAuth, offerController.toggleOfferStatus);
+router.get('/offers/get-products',adminAuth, offerController.getProductsForOffer);
+router.get('/offers/get-categories',adminAuth, offerController.getCategoriesForOffer);
 
-
-
-
-
-const user= mongoose.model("User",userSchema);
-
-
-module.exports= user
-
-
-
-
-This is my addressSchema.js code:- 
-
-const mongoose = require("mongoose");
-const { Schema } = mongoose;
-
-const addressSchema = new Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        required: true
-    },
-    address: [{
-        addressType: {
-            type: String,
-            required: true,
-            enum: ['Home', 'Work', 'Other']
-        },
-        name: {
-            type: String,
-            required: [true, 'Name is required'],
-            trim: true
-        },
-        city: { 
-            type: String,
-            required: [true, 'City is required'],
-            trim: true
-        },
-        landmark: {
-            type: String,
-            required: [true, 'Landmark is required'],
-            trim: true
-        },
-        state: {
-            type: String,
-            required: [true, 'State is required'],
-            trim: true
-        },
-        pincode: {
-            type: String,
-            required: [true, 'Pincode is required'],
-            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
-        },
-        phone: {
-            type: String,
-            required: [true, 'Phone number is required'],
-            validate: {
-                validator: function(v) {
-                    return /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        },
-        altPhone: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        }
-    }]
-});
-
-const Address = mongoose.model("Address", addressSchema);
-
-module.exports = Address;
-
-This is my adminRouter.js code:- 
-router.get('/editVariant/:id', adminAuth, productController.editVariantForm);
-router.post('/colorVariant/edit/:id', adminAuth, upload, productController.updateVariant);  
-
-
-
-This is my productController.js code:- 
-const editVariantForm = async (req, res) => {
+This is my offerController.js code:-
+const renderOffersPage = async (req, res) => {
     try {
-        const variantId = req.params.id;
-        
-        // Find the product that contains the variant
-        const product = await Product.findOne({ "variants._id": variantId });
-        
-        if (!product) {
-            return res.status(404).send('Product not found');
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        const searchQuery = req.query.search ? {
+            $or: [
+                { offerName: { $regex: req.query.search, $options: 'i' } },
+                { offerType: { $regex: req.query.search, $options: 'i' } }
+            ]
+        } : {}; 
+
+        const totalOffers = await Offer.countDocuments(searchQuery);
+        const totalPages = Math.ceil(totalOffers / limit);
+
+        const offers = await Offer.find(searchQuery)
+            .sort({ createdAt: -1 }) // Sort by creation date in descending order
+            .skip(skip)
+            .limit(limit)
+            .populate('productIds', 'productName')
+            .populate('categoryIds', 'name');
+
+        // Check if it's an AJAX request
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({
+                offers,
+                currentPage: page,
+                totalPages,
+                search: req.query.search || ''
+            });
         }
 
-        // Get the specific variant
-        const variant = product.variants.id(variantId);
-        console.log('Variant in edit form:', JSON.stringify(variant, null, 2));
-
-        
-        if (!variant) {
-            return res.status(404).send('Variant not found');
-        }
-
-        // Render the edit form with the product and variant data
-        res.render('editVariant', { 
-            product,
-            variant,
-            errorMessage: null
+        res.render('offerProduct', {
+            offers,
+            currentPage: page,
+            totalPages,
+            search: req.query.search || ''
         });
-
     } catch (error) {
-        console.error('Error in editVariantForm:', error);
-        res.status(500).send('Server Error');
+        console.error('Error rendering offers page:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to load offers',
+            error: error.message 
+        });
     }
 };
 
 
-
-// Update Color Variant
-const updateVariant = async (req, res) => {
+const checkExistingOffers = async (req, res) => {
     try {
-        const variantId = req.params.id;
-        const { color, sizes, quantities } = req.body;
-
-        // Find product containing the variant
-        const product = await Product.findOne({ "variants._id": variantId });
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
+        const { checkProducts, checkCategories } = req.query;
+        
+        let query;
+        if (checkProducts) {
+            // Check for active offers for specific products
+            query = {
+                offerType: 'product',
+                status: 'active',
+                productIds: { $in: checkProducts }
+            };
+        } else if (checkCategories) {
+            // Check for active offers for specific categories
+            query = {
+                offerType: 'category',
+                status: 'active',
+                categoryIds: { $in: checkCategories }
+            };
+        } else {
+            return res.json({ hasActiveOffers: false });
         }
 
-        // Get the variant
-        const variant = product.variants.id(variantId);
-        if (!variant) {
-            return res.status(404).json({
-                success: false,
-                message: 'Variant not found'
-            });
-        }
-
-        // Ensure sizes and quantities are arrays
-        const sizeArray = Array.isArray(sizes) ? sizes : [sizes];
-        const quantityArray = Array.isArray(quantities) ? quantities : [quantities];
-
-        // Validate input
-        if (!sizeArray || !quantityArray || sizeArray.length !== quantityArray.length) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid sizes or quantities format'
-            });
-        }
-
-        // Validate and process sizes
-        const processedSizes = [];
-        const uniqueSizes = new Set();
-
-        for (let i = 0; i < sizeArray.length; i++) {
-            const size = parseInt(sizeArray[i]);
-            const quantity = parseInt(quantityArray[i]);
-
-            // Validate size and quantity
-            if (isNaN(size) || isNaN(quantity) || quantity < 0) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Invalid size or quantity at position ${i + 1}`
-                });
-            }
-
-            // Check for duplicate sizes
-            if (uniqueSizes.has(size)) {
-                return res.status(400).json({
-                    success: false,
-                    message: `Duplicate size ${size} found`
-                });
-            }
-
-            uniqueSizes.add(size);
-            processedSizes.push({
-                size: size,
-                quantity: quantity
-            });
-        }
-
-        // Update variant
-        variant.color = color;
-        variant.sizes = processedSizes;
-
-        // Handle image updates if any are uploaded
-        if (req.files && req.files.length > 0) {
-            const images = await Promise.all(req.files.map(async (file, index) => {
-                const filename = `${Date.now()}-${index}-${file.originalname}`;
-                const outputPath = path.join('public', 'uploads', 'product-images', filename);
-                
-                await sharp(file.buffer)
-                    .jpeg({ quality: 90 })
-                    .toFile(outputPath);
-                
-                return {
-                    filename,
-                    contentType: 'image/jpeg'
-                };
-            }));
-
-            // Update images if new ones are uploaded
-            variant.images = images;
-        }
-
-        // Save the updated product
-        await product.save();
+        const existingOffers = await Offer.find(query);
 
         res.json({
-            success: true,
-            message: 'Variant updated successfully'
+            hasActiveOffers: existingOffers.length > 0,
+            activeOffers: existingOffers
         });
-
     } catch (error) {
-        console.error('Error updating variant:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating variant'
+        console.error('Error checking existing offers:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to check existing offers',
+            error: error.message 
         });
     }
 };
 
-This is my editVariant.ejs code:- 
-<%- include("../../views/partials/admin/header/") %>
+const renderCreateOfferPage = async (req, res) => {
+    try {
+        const { type } = req.query;
+        
+        // Fetch all active products and categories
+        const products = await Product.find({ isBlocked: false });
+        const categories = await Category.find({ isListed: true });
+        
+        // Render appropriate template based on offer type
+        if (type === 'product') {
+            return res.render('createProductOffer', { 
+                products,  
+                categories 
+            });
+        } else if (type === 'category') {
+            return res.render('createCategoryOffer', { 
+                products, 
+                categories 
+            });
+        } else {
+            // If no type specified, show offer type selection modal
+            return res.render('offerProduct', { 
+                products, 
+                categories,
+                showOfferTypeModal: true 
+            });
+        }
+    } catch (error) {
+        console.error('Error rendering create offer page:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to load create offer page',
+            error: error.message 
+        });
+    }
+};
 
-<div class="container mt-4">
-    <h4>Edit Variant for <%= product.productName %></h4>
-    
-    <% if (errorMessage) { %>
-        <div class="alert alert-danger" role="alert">
-            <%= errorMessage %>
-        </div>
-    <% } %>
-    
-    <!-- Edit Variant Form -->
-    <div class="card p-4 mb-4">
-        <form id="colorVariantForm" 
-      action="/admin/colorVariant/edit/<%= variant._id %>" 
-      method="POST" 
-      enctype="multipart/form-data">
-            <input type="hidden" name="productId" value="<%= product._id %>">
-            
-            <!-- Color Input -->
-            <div class="mb-3">
-                <label for="color" class="form-label">Color</label>
-                <input type="text" 
-                       name="color" 
-                       id="color" 
-                       class="form-control" 
-                       value="<%= variant.color %>" 
-                       >
-                <div class="error-message" id="color-error" style="display:none; color:red;"></div>
-            </div>
+const createOffer = async (req, res) => {
+    try {
+        const {  
+            offerType, 
+            offerName, 
+            discount, 
+            startDate,
+            expireDate 
+        } = req.body;
 
-            <!-- Image Uploads -->
-            <div class="mb-3">
-                <label class="form-label">Product Images</label>
-                <div class="row">
-                    <% for(let i = 1; i <= 3; i++) { %>
-                        <div class="col-md-4 mb-2">
-                            <div class="image-upload-container">
-                                <input class="form-control d-none image-input" 
-                                       type="file" 
-                                       id="productImage<%= i %>" 
-                                       name="images" 
-                                       data-index="<%= i-1 %>"
-                                       accept="image/*">
-                                <input type="hidden" name="existingImages[]" value="<%= variant.images && variant.images[i-1] ? variant.images[i-1].filename : '' %>">
-                                <div id="imagePreview<%= i %>" class="image-preview" onclick="document.getElementById('productImage<%= i %>').click()">
-                                    <% if (variant.images && variant.images[i-1] && variant.images[i-1].filename) { %>
-                                        <img src="/uploads/product-images/<%= variant.images[i-1].filename %>" 
-                                             alt="Product Image <%= i %>" 
-                                             class="img-fluid w-100 h-100 object-fit-cover">
-                                    <% } else { %>
-                                        <div class="preview-text">Upload Image <%= i %></div>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </div>
-                    <% } %>
-                </div>
-            </div>
+        // Check for existing offer with the same name
+        const existingOffer = await Offer.findOne({ offerName: offerName });
+        if (existingOffer) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'An offer with this name already exists',
+                field: 'offerName'
+            });
+        }
 
-            <!-- Sizes Container -->
-           <!-- Sizes Container -->
-<div id="sizesContainer">
-    <% if (variant.sizes && variant.sizes.length > 0) { %>
-        <% variant.sizes.forEach((sizeObj, index) => { %>
-            <div class="row mb-3 size-row">
-                <div class="col-md-5">
-                    <label for="size<%= index %>" class="form-label">Size</label>
-                    <select name="sizes[]" id="size<%= index %>" class="form-control size-select" >
-                        <% [6, 7, 8, 9, 10].forEach(size => { %>
-                            <option value="<%= size %>" 
-                                    <%= sizeObj.size === size ? 'selected' : '' %>>
-                                UK <%= size %>
-                            </option>
-                        <% }) %>
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <label for="quantity<%= index %>" class="form-label">Quantity</label>
-                    <input type="number" 
-                           name="quantities[]" 
-                           id="quantity<%= index %>" 
-                           class="form-control" 
-                           value="<%= sizeObj.quantity %>" 
-                           min="0" 
-                           >
-                </div>
-                <div class="col-md-2">
-                    <% if (index === 0) { %>
-                        <button type="button" class="btn btn-success mt-4" id="addSizeBtn">Add Size</button>
-                    <% } else { %>
-                        <button type="button" class="btn btn-danger mt-4 remove-size-btn" onclick="removeSize(this)">Remove</button>
-                    <% } %>
-                </div>
-            </div>
-        <% }) %>
-    <% } %>
-</div>
-            
-            <button type="submit" class="btn btn-primary">Update Variant</button>
-        </form>
-    </div>
-</div>
+        const newOffer = new Offer({
+            offerType,
+            offerName,
+            discount: parseFloat(discount),
+            startDate: new Date(startDate),
+            expireDate: new Date(expireDate),
+            status: 'active'
+        });
 
-    <!-- Crop Modal -->
-    <div class="modal fade" id="cropModal" tabindex="-1" aria-labelledby="cropModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="cropModalLabel">Crop Image</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="img-container">
-                        <img id="cropImage" src="" alt="Image to crop">
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="cropButton">Crop & Save</button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        await newOffer.save();
 
-<!-- Required CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.css">
+        res.status(201).json({ 
+            success: true, 
+            message: 'Offer created successfully',
+            offer: newOffer 
+        });
+    } catch (error) {
+        console.error('Error creating offer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to create offer',
+            error: error.message 
+        });
+    }
+};
+
+const renderEditOfferPage = async (req, res) => {
+    try {
+        const offer = await Offer.findById(req.params.id);
+
+        if (!offer) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Offer not found' 
+            });
+        }
+
+        // Send offer data as JSON for modal population
+        res.json({ 
+            success: true, 
+            offer: {
+                _id: offer._id,
+                offerName: offer.offerName,
+                offerType: offer.offerType,
+                discount: offer.discount,
+                startDate: offer.startDate ? offer.startDate.toISOString().split('T')[0] : null,
+                expireDate: offer.expireDate ? offer.expireDate.toISOString().split('T')[0] : null,
+                productIds: offer.productIds,
+                categoryIds: offer.categoryIds
+            }
+        });
+    } catch (error) {
+        console.error('Error rendering edit offer page:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to load edit offer page',
+            error: error.message 
+        });
+    }
+};
+
+const updateOffer = async (req, res) => {
+    try {
+        const { 
+            offerName, 
+            discount, 
+            startDate, 
+            expireDate 
+        } = req.body;
+
+        // Check for existing offer with the same name (excluding current offer)
+        const existingOffer = await Offer.findOne({ 
+            offerName: offerName, 
+            _id: { $ne: req.params.id } 
+        });
+
+        if (existingOffer) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'An offer with this name already exists',
+                field: 'offerName'
+            });
+        }
+
+        const updatedOffer = await Offer.findByIdAndUpdate(
+            req.params.id,
+            {
+                offerName,
+                discount: parseFloat(discount),
+                startDate: new Date(startDate),
+                expireDate: new Date(expireDate)
+            },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedOffer) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Offer not found' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Offer updated successfully',
+            offer: updatedOffer 
+        });
+    } catch (error) {
+        console.error('Error updating offer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update offer',
+            error: error.message 
+        });
+    }
+};
+
+const deleteOffer = async (req, res) => {
+    try {
+        const deletedOffer = await Offer.findByIdAndDelete(req.params.id);
+
+        if (!deletedOffer) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Offer not found' 
+            });
+        }
+
+        res.json({ 
+            success: true, 
+            message: 'Offer deleted successfully' 
+        });
+    } catch (error) {
+        console.error('Error deleting offer:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to delete offer',
+            error: error.message 
+        });
+    }
+};
+
+const toggleOfferStatus = async (req, res) => {
+    try {
+        const offerId = req.params.id;
+        
+        // Find the current offer
+        const offer = await Offer.findById(offerId);
+        
+        if (!offer) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Offer not found' 
+            });
+        }
+
+        // Toggle the status
+        const newStatus = offer.status === 'active' ? 'inactive' : 'active';
+        
+        // Update only the status field to avoid validation errors
+        await Offer.findByIdAndUpdate(offerId, { 
+            status: newStatus 
+        }, { 
+            runValidators: false,  // Skip validation
+            new: true 
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Offer status updated successfully',
+            newStatus: newStatus
+        });
+    } catch (error) {
+        console.error('Error toggling offer status:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to update offer status',
+            error: error.message 
+        });
+    }
+};
+
+const getProductsForOffer = async (req, res) => {
+    try {
+        const products = await Product.find({ isBlocked: false }, 'productName');
+        res.json({ 
+            success: true, 
+            products 
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to fetch products',
+            error: error.message 
+        });
+    }
+};
+
+const getCategoriesForOffer = async (req, res) => {
+    try {
+        const categories = await Category.find({ isListed: true }, 'name');
+        res.json({ 
+            success: true, 
+            categories 
+        });
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to fetch categories',
+            error: error.message 
+        });
+    }
+};
+
+This is my offerProduct.ejs page code:- 
+
 <style>
-    .image-upload-container {
-        width: 100%;
-        position: relative;
+    .table td {
+        vertical-align: middle;
     }
-
-    .image-preview {
-        width: 100%;
-        height: 200px;
-        border: 2px dashed #ccc;
-        border-radius: 8px;
-        position: relative;
-        background-color: #f8f9fa;
+    .btn {
+        margin: 0;
+    }
+    .dropdown-menu {
+        min-width: 120px;
+    }
+    .actions-dropdown {
         cursor: pointer;
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-size: cover;
-        background-position: center;
+    }
+    .error-message {
+        color: red;
+        font-size: 0.8em;
+        margin-top: 5px;
     }
 
-    .preview-text {
-        color: #6c757d;
+    .table td:nth-child(5) {
         text-align: center;
-        padding: 10px;
     }
 
-    .img-container {
-        max-height: 500px;
-        width: 100%;
-        overflow: hidden;
-    }
+    .custom-swal-popup {
+    z-index: 99999 !important;
+}
 
-    #cropImage {
-        max-width: 100%;
-        max-height: 500px;
-    }
+.swal2-container {
+    z-index: 99999 !important;
+}
 
-    .object-fit-cover {
-        object-fit: cover;
+    .status-cell {
+        cursor: pointer;
+        user-select: none;
     }
 </style>
 
-<!-- Essential Scripts -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.12/cropper.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-<!-- Add this in your head or before closing body tag -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-
- 
-<script>
-    let cropper;
-    let currentInput;
-    let currentPreviewId;
-    let currentImageIndex;
-    let sizeCounter = '<%= variant.sizes ? variant.sizes.length : 1 %>';
-
-    // Add Size Button Handler
-    document.getElementById('addSizeBtn').addEventListener('click', function() {
-        const sizesContainer = document.getElementById('sizesContainer');
-        const sizeRows = sizesContainer.getElementsByClassName('size-row');
-        const newIndex = sizeRows.length;
-        
-        const existingSizes = Array.from(sizesContainer.querySelectorAll('select[name="sizes[]"]'))
-            .map(select => select.value);
-        
-        const newRow = document.createElement('div');
-        newRow.className = 'row mb-3 size-row';
-        newRow.innerHTML = `
-            <div class="col-md-5">
-                <label for="size${newIndex}" class="form-label">Size</label>
-                <select name="sizes[]" id="size${newIndex}" class="form-control size-select" required>
-                    ${[6, 7, 8, 9, 10].map(size => 
-                        `<option value="${size}" ${existingSizes.includes(size.toString()) ? 'disabled' : ''}>
-                            UK ${size}
-                        </option>`
-                    ).join('')}
-                </select>
+<!-- Content wrapper -->
+<div class="content-wrapper">
+    <!-- Content -->
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <!-- Offer List Table -->
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Offers Management</h5>
+                <div>
+                    <button class="btn btn-primary" type="button" id="createOfferBtn">
+                        Create New Offer
+                    </button>
+                    
+                </div>
             </div>
-            <div class="col-md-5">
-                <label for="quantity${newIndex}" class="form-label">Quantity</label>
-                <input type="number" 
-                       name="quantities[]" 
-                       id="quantity${newIndex}" 
-                       class="form-control" 
-                       min="0" 
-                       required>
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-danger mt-4 remove-size-btn" onclick="removeSize(this)">Remove</button>
-            </div>
-        `;
-        
-        sizesContainer.appendChild(newRow);
-    });
+            <div class="card-body">
+                <!-- Search Bar -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <input type="text" id="searchInput" class="form-control" placeholder="Search offers...">
+                    </div>
+                </div>
+                
+                <!-- Offers Table -->
+                <div class="table-responsive" id="offersTableContainer">
+                    <table class="table table-striped" id="offersTable">
+                        <thead>
+                            <tr>
+                                <th>Offer Name</th>
+                                <th>Offer Type</th>
+                                <th>Discount (%)</th>
+                                <th>Expiry Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="offersTableBody">
+                            <% offers.forEach(offer => { %>
+                                <tr id="offer-<%= offer._id %>">
+                                    <td><%= offer.offerName %></td>
+                                    <td><%= offer.offerType %></td>
+                                    <td><%= offer.discount %>%</td>
+                                    <td><%= offer.expireDate.toLocaleDateString() %></td>
+                                    <td class="status-cell" data-offer-id="<%= offer._id %>" data-current-status="<%= offer.status %>">
+                                        <span class="badge <%= 
+                                            offer.status === 'active' && offer.isListed ? 'bg-success' : 
+                                            offer.status === 'inactive' || !offer.isListed ? 'bg-warning' : 'bg-danger' 
+                                        %>">
+                                            <%= 
+                                                offer.status === 'active' && offer.isListed ? 'Active' : 
+                                                offer.status === 'inactive' || !offer.isListed ? 'Inactive' : 'Error' 
+                                            %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
+                                                    type="button" 
+                                                    data-bs-toggle="dropdown" 
+                                                    aria-expanded="false">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="/admin/offers/edit/<%= offer._id %>">
+                                                        <i class="bx bx-edit-alt me-1"></i> Edit
+                                                    </a>
+                                                </li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item text-danger delete-offer" href="#" 
+                                                       data-id="<%= offer._id %>">
+                                                        <i class="bx bx-trash me-1"></i> Delete
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        </tbody>
+                    </table>
+                </div>
 
-    function removeSize(button) {
-        const sizeRow = button.closest('.size-row');
-        sizeRow.remove();
-    }
-
-
-
-    function updateSizeAvailability() {
-        const sizesContainer = document.getElementById('sizesContainer');
-        const sizeSelects = sizesContainer.querySelectorAll('.size-select');
-        const selectedSizes = Array.from(sizeSelects)
-            .map(select => select.value)
-            .filter(size => size !== '');
-
-        sizeSelects.forEach(select => {
-            const options = select.querySelectorAll('option');
-            options.forEach(option => {
-                option.disabled = selectedSizes.filter(size => size === option.value).length > 1;
-            });
-        });
-    }
-
-    
-
-    // Initial size availability update
-    updateSizeAvailability();
-
-
-
-
-    function handleImageUpload(input, previewId) {
-        const file = input.files[0];
-        if (!file) return;
-
-        // Validation checks remain the same...
-
-        currentInput = input;
-        currentPreviewId = previewId;
-        currentImageIndex = input.dataset.index;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const cropImage = document.getElementById('cropImage');
-            cropImage.src = e.target.result;
-
-            const cropModal = new bootstrap.Modal(document.getElementById('cropModal'));
-            cropModal.show();
-
-            cropImage.addEventListener('load', function() {
-                if (cropper) cropper.destroy();
-                cropper = new Cropper(cropImage, {
-                    aspectRatio: 1,
-                    viewMode: 2,
-                    autoCropArea: 1,
-                    zoomable: true,
-                    scalable: true,
-                    movable: true,
+                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+                <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+                
+                <script>
+                
+                document.addEventListener('DOMContentLoaded', function () {
+                    const axiosInstance = axios.create({
+                        baseURL: '/admin/offers',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                
+                    // Validation Functions
+                    function clearErrorMessages() {
+                        const errorMessages = document.querySelectorAll('.error-message');
+                        errorMessages.forEach(el => el.textContent = '');
+                    }
+                
+                    function validateForm() {
+                        clearErrorMessages();
+                        let isValid = true;
+                
+                        // Offer Name Validation
+                        const offerName = document.getElementById('offerName');
+                        if (!offerName.value.trim()) {
+                            document.getElementById('offerNameError').textContent = 'Offer name is required';
+                            isValid = false;
+                        }
+                
+                        // Offer Type Validation
+                        const offerType = document.getElementById('offerType');
+                        if (!offerType.value) {
+                            document.getElementById('offerTypeError').textContent = 'Please select an offer type';
+                            isValid = false;
+                        }
+                
+                        // Discount Validation
+                        const discount = document.getElementById('discount');
+                        if (!discount.value) {
+                            document.getElementById('discountError').textContent = 'Discount is required';
+                            isValid = false;
+                        } else {
+                            const discountValue = parseFloat(discount.value);
+                            if (isNaN(discountValue) || discountValue < 1 || discountValue > 50) {
+                                document.getElementById('discountError').textContent = 'Discount must be between 1 and 50%';
+                                isValid = false;
+                            }
+                        }
+                
+                        // Start Date Validation
+                        const startDate = document.getElementById('startDate');
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+                    
+                    if (!startDate.value) {
+                        document.getElementById('startDateError').textContent = 'Start date is required';
+                        isValid = false;
+                    } else {
+                        const selectedStartDate = new Date(startDate.value);
+                        if (selectedStartDate < today) {
+                            document.getElementById('startDateError').textContent = 'Start date cannot be in the past';
+                            isValid = false;
+                        }
+                    }
+                
+                
+                        // End Date Validation
+                        const expireDate = document.getElementById('expireDate');
+                        if (!expireDate.value) {
+                            document.getElementById('expireDateError').textContent = 'End date is required';
+                            isValid = false;
+                        } else {
+                            // Ensure end date is after start date
+                            if (new Date(expireDate.value) <= new Date(startDate.value)) {
+                                document.getElementById('expireDateError').textContent = 'End date must be after start date';
+                                isValid = false;
+                            }
+                        }
+                
+                        return isValid;
+                    }
+                
+                    // Submit Offer Functionality
+                    const submitOfferBtn = document.getElementById('submitOfferBtn');
+                    const createOfferModal = new bootstrap.Modal(document.getElementById('createOfferModal'));
+                
+                
+                    
+                    submitOfferBtn.addEventListener('click', async function() {
+                    if (!validateForm()) {
+                        return;
+                    }
+                
+                    try {
+                        const formData = {
+                            offerName: document.getElementById('offerName').value,
+                            offerType: document.getElementById('offerType').value,
+                            discount: document.getElementById('discount').value,
+                            startDate: document.getElementById('startDate').value,
+                            expireDate: document.getElementById('expireDate').value
+                        };
+                
+                        // Hide the modal first
+                        createOfferModal.hide();
+                
+                        const response = await axiosInstance.post('/create', formData);
+                
+                        if (response.data.success) {
+                            // Ensure the modal is completely hidden
+                            document.querySelector('.modal-backdrop')?.remove();
+                            
+                            // Show success message with high z-index
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Offer Created',
+                                text: 'Your offer has been created successfully!',
+                                showConfirmButton: true,
+                                confirmButtonText: 'OK',
+                                // Add high z-index to ensure it's on top
+                                heightAuto: false,
+                                customClass: {
+                                    popup: 'custom-swal-popup'
+                                }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Reload the page to show the new offer
+                                    window.location.reload();
+                                }
+                            });
+                        } else {
+                            // Show error message with high z-index
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.data.message || 'Failed to create offer',
+                                confirmButtonText: 'Try Again',
+                                // Add high z-index to ensure it's on top
+                                heightAuto: false,
+                                customClass: {
+                                    popup: 'custom-swal-popup'
+                                }
+                            });
+                        }
+                    } catch (error) {
+                        console.error('Offer creation error:', error);
+                        
+                        // Ensure the modal is completely hidden
+                        document.querySelector('.modal-backdrop')?.remove();
+                
+                        // Check if it's a validation error from the server
+                        if (error.response && error.response.data) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Validation Error',
+                                text: error.response.data.message || 'Failed to create offer',
+                                confirmButtonText: 'Try Again',
+                                // Add high z-index to ensure it's on top
+                                heightAuto: false,
+                                customClass: {
+                                    popup: 'custom-swal-popup'
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Network Error',
+                                text: 'Unable to create offer. Please check your connection.',
+                                confirmButtonText: 'Try Again',
+                                // Add high z-index to ensure it's on top
+                                heightAuto: false,
+                                customClass: {
+                                    popup: 'custom-swal-popup'
+                                }
+                            });
+                        }
+                    }
                 });
-            });
-        };
-        reader.readAsDataURL(file);
-    }
-
-
-
-    document.getElementById('cropButton').addEventListener('click', function() {
-        if (!cropper) return;
-
-        const canvas = cropper.getCroppedCanvas({
-            width: 600,
-            height: 600,
-            imageSmoothingQuality: 'high',
-        });
-
-        canvas.toBlob(function(blob) {
-            const filename = currentInput.files[0].name;
-            const croppedFile = new File([blob], filename, {
-                type: 'image/jpeg',
-                lastModified: new Date().getTime()
-            });
-
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(croppedFile);
-            currentInput.files = dataTransfer.files;
-
-            // Update preview
-            const preview = document.getElementById(`imagePreview${currentPreviewId}`);
-            preview.innerHTML = `<img src="${URL.createObjectURL(blob)}" class="img-fluid w-100 h-100 object-fit-cover" alt="Preview">`;
-
-            // Preserve other image filenames
-            const hiddenInputs = document.getElementsByName('existingImages[]');
-            const newFilename = filename;
-            
-            // Only update the specific image index's filename
-            if (hiddenInputs[currentImageIndex]) {
-                hiddenInputs[currentImageIndex].value = newFilename;
-            }
-
-            const cropModal = bootstrap.Modal.getInstance(document.getElementById('cropModal'));
-            cropModal.hide();
-
-            cropper.destroy();
-            cropper = null;
-        }, 'image/jpeg', 0.9);
-    });
-
-
-
-
-   // Add this to your existing script section in editVariant.ejs
-document.getElementById('colorVariantForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    // Basic validation
-    const color = document.querySelector('input[name="color"]').value.trim();
-    if (!color) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'Color is required'
-        });
-        return;
-    }
-
-    // Get all size rows
-    const sizeRows = document.querySelectorAll('.size-row');
-    if (sizeRows.length === 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            text: 'At least one size and quantity is required'
-        });
-        return;
-    }
-
-    // Create FormData
-    const formData = new FormData(this);
-    
-    // Clear existing size and quantity arrays
-    formData.delete('sizes[]');
-    formData.delete('quantities[]');
-
-    // Validate and add sizes and quantities
-    const selectedSizes = new Set();
-    const errors = [];
-
-    sizeRows.forEach((row, index) => {
-        const sizeSelect = row.querySelector('select[name="sizes[]"]');
-        const quantityInput = row.querySelector('input[name="quantities[]"]');
-        
-        const size = sizeSelect.value;
-        const quantity = quantityInput.value;
-
-        // Validate size
-        if (!size) {
-            errors.push(`Size is required for row ${index + 1}`);
-            return;
-        }
-
-        // Check for duplicate sizes
-        if (selectedSizes.has(size)) {
-            errors.push(`Size ${size} is selected multiple times`);
-            return;
-        }
-
-        // Validate quantity
-        if (!quantity || isNaN(quantity) || quantity < 0) {
-            errors.push(`Invalid quantity for size ${size}`);
-            return;
-        }
-
-        selectedSizes.add(size);
-        formData.append('sizes[]', size);
-        formData.append('quantities[]', quantity);
-    });
-
-    // Show errors if any
-    if (errors.length > 0) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Validation Error',
-            html: errors.join('<br>')
-        });
-        return;
-    }
-
-    try {
-        const response = await fetch(this.action, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: 'Variant updated successfully',
-                timer: 1500,
-                showConfirmButton: false
-            }).then(() => {
-                window.location.href = `/admin/productVariants/${formData.get('productId')}`;
-            });
-        } else {
-            Swal.fire({
-                icon: 'error',
-                title: 'Update Failed',
-                text: result.message || 'Error updating variant'
-            });
-        }
-    } catch (error) {
-        console.error('Form submission error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'An error occurred while updating the variant'
-        });
-    }
-});;
-
-    // Add file input listeners
-    document.querySelectorAll('.image-input').forEach((input, index) => {
-        input.addEventListener('change', function(e) {
-            handleImageUpload(this, index + 1);
-        });
-    });
-</script>
-
-<%- include("../../views/partials/admin/footer/") %>
-
-
-
-
-
-
-
-<script>
-
-
-const updateVariant = async (req, res) => {
-    try {
-        const variantId = req.params.id;
-        const { color, sizes, quantities, existingImages } = req.body;
-
-        // Find product containing the variant
-        const product = await Product.findOne({ "variants._id": variantId });
-        if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
-        }
-
-        // Get the variant
-        const variant = product.variants.id(variantId);
-        if (!variant) {
-            return res.status(404).json({
-                success: false,
-                message: 'Variant not found'
-            });
-        }
-
-        // ... (previous size and quantity validation code remains the same)
-
-        // Handle image updates if any are uploaded
-        if (req.files && req.files.length > 0) {
-            const newImages = await Promise.all(req.files.map(async (file, index) => {
-                const filename = `${Date.now()}-${index}-${file.originalname}`;
-                const outputPath = path.join('public', 'uploads', 'product-images', filename);
                 
-                await sharp(file.buffer)
-                    .jpeg({ quality: 90 })
-                    .toFile(outputPath);
                 
-                return {
-                    filename,
-                    contentType: 'image/jpeg'
-                };
-            }));
-
-            // Create a copy of existing images to modify
-            const updatedImages = [...variant.images];
-
-            // Replace images at specific positions where new images are uploaded
-            newImages.forEach((newImage, index) => {
-                // If a new image is uploaded, replace the image at that index
-                if (req.files[index]) {
-                    updatedImages[index] = newImage;
-                }
-            });
-
-            // Update variant images
-            variant.images = updatedImages;
-        }
-
-        // Save the updated product
-        await product.save();
-
-        res.json({
-            success: true,
-            message: 'Variant updated successfully'
-        });
-
-    } catch (error) {
-        console.error('Error updating variant:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Server error updating variant'
-        });
-    }
-};
-</script>
+                
+                    // Search Functionality
+                    const searchInput = document.getElementById('searchInput');
+                    searchInput.addEventListener('input', function() {
+                        const searchTerm = this.value.toLowerCase();
+                        const rows = document.querySelectorAll('#offersTableBody tr');
+                        
+                        rows.forEach(row => {
+                            const cells = row.getElementsByTagName('td');
+                            const shouldShow = Array.from(cells).some(cell => 
+                                cell.textContent.toLowerCase().includes(searchTerm)
+                            );
+                            row.style.display = shouldShow ? '' : 'none';
+                        });
+                    });
+                
+                    // Pagination Handling
+                    document.getElementById('pagination')?.addEventListener('click', async (e) => {
+                        if (e.target.classList.contains('page-link')) {
+                            const page = e.target.dataset.page;
+                            try {
+                                const response = await axiosInstance.get(`?page=${page}`);
+                                
+                                // Update table body 
+                                const tableBodyHTML = response.data.offers.map(offer => `
+                                    <tr id="offer-${offer._id}">
+                                        <td>${offer.offerName}</td>
+                                        <td>${offer.offerType}</td>
+                                        <td>${offer.discount}%</td>
+                                        <td>${new Date(offer.expireDate).toLocaleDateString()}</td>
+                                        <td>
+                    <span class="badge ${
+                        offer.status === 'active' && offer.isListed ? 'bg-success' : 
+                        offer.status === 'inactive' || !offer.isListed ? 'bg-warning' : 'bg-danger'
+                    }">
+                        ${
+                            offer.status === 'active' && offer.isListed ? 'Active' : 
+                            offer.status === 'inactive' || !offer.isListed ? 'Inactive' : 'Error'
+                        }
+                    </span>
+                </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
+                                                        type="button" 
+                                                        data-bs-toggle="dropdown" 
+                                                        aria-expanded="false">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item" href="/admin/offers/edit/${offer._id}">
+                                                            <i class="bx bx-edit-alt me-1"></i> Edit
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item toggle-status" href="#" 
+                                                           data-id="${offer._id}" 
+                                                           data-current-status="${offer.status}">
+                                                            <i class="bx ${offer.status === 'active' ? 'bx-block' : 'bx-check-circle'} me-1"></i> 
+                                                            ${offer.status === 'active' ? 'Deactivate' : 'Activate'}
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <hr class="dropdown-divider">
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item text-danger delete-offer" href="#" 
+                                                           data-id="${offer._id}">
+                                                            <i class="bx bx-trash me-1"></i> Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('');
+                
+                                document.getElementById('offersTableBody').innerHTML = tableBodyHTML;
+                                
+                                // Update pagination
+                                const paginationHTML = `
+                                    ${response.data.currentPage > 1 ? 
+                                        `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage - 1}">Previous</button>` : 
+                                        `<button class="btn btn-secondary" disabled>Previous</button>`
+                                    }
+                                    <span id="page-info" class="mx-3">Page ${response.data.currentPage} of ${response.data.totalPages}</span>
+                                    ${response.data.currentPage < response.data.totalPages ? 
+                                        `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage + 1}">Next</button>` : 
+                                        `<button class="btn btn-secondary" disabled>Next</button>`
+                                    }
+                                `;
+                                document.getElementById('pagination').innerHTML = paginationHTML;
+                            } catch (error) {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Pagination Error',
+                                    text: 'Failed to load page. Please try again.'
+                                });
+                            }
+                        }
+                    });
+                
+                    // Delete Offer Functionality
+                    // Delete Offer Functionality
+                document.getElementById('offersTableBody').addEventListener('click', async (e) => {
+                    const deleteOfferLink = e.target.closest('.delete-offer');
+                    if (deleteOfferLink) {
+                        e.preventDefault();
+                        const offerId = deleteOfferLink.dataset.id;
+                
+                        const result = await Swal.fire({
+                            title: 'Are you sure?',
+                            text: 'You won\'t be able to revert this!',
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: 'Yes, delete it!'
+                        });
+                
+                        if (result.isConfirmed) {
+                            try {
+                                const response = await fetch(`/admin/offers/delete/${offerId}`, {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest'
+                                    }
+                                });
+                
+                                const data = await response.json();
+                                
+                                if (data.success) {
+                                    // Remove the row from the table
+                                    const rowToRemove = document.getElementById(`offer-${offerId}`);
+                                    if (rowToRemove) {
+                                        rowToRemove.remove();
+                                    }
+                                    
+                                    // Optionally, refresh the page or update pagination
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Deleted!',
+                                        text: 'The offer has been deleted.',
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                
+                                    // Optional: Refresh the current page or adjust pagination
+                                    const currentPage = document.querySelector('#page-info').textContent.split(' ')[1];
+                                    try {
+                                        const response = await axiosInstance.get(`?page=${currentPage}`);
+                                        
+                                        // Update table body 
+                                        const tableBodyHTML = response.data.offers.map(offer => `
+                                            <tr id="offer-${offer._id}">
+                                                <td>${offer.offerName}</td>
+                                                <td>${offer.offerType}</td>
+                                                <td>${offer.discount}%</td>
+                                                <td>${new Date(offer.expireDate).toLocaleDateString()}</td>
+                                                <td>
+                                                    <span class="badge ${offer.status === 'active' ? 'bg-success' : 'bg-danger'}">
+                                                        ${offer.status}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <div class="dropdown">
+                                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
+                                                                type="button" 
+                                                                data-bs-toggle="dropdown" 
+                                                                aria-expanded="false">
+                                                            Actions
+                                                        </button>
+                                                        <ul class="dropdown-menu">
+                                                            <li>
+                                                                <a class="dropdown-item" href="/admin/offers/edit/${offer._id}">
+                                                                    <i class="bx bx-edit-alt me-1"></i> Edit
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item toggle-status" href="#" 
+                                                                   data-id="${offer._id}" 
+                                                                   data-current-status="${offer.status}">
+                                                                    <i class="bx ${offer.status === 'active' ? 'bx-block' : 'bx-check-circle'} me-1"></i> 
+                                                                    ${offer.status === 'active' ? 'Deactivate' : 'Activate'}
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <hr class="dropdown-divider">
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item text-danger delete-offer" href="#" 
+                                                                   data-id="${offer._id}">
+                                                                    <i class="bx bx-trash me-1"></i> Delete
+                                                                </a>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('');
+                
+                                        document.getElementById('offersTableBody').innerHTML = tableBodyHTML;
+                                        
+                                        // Update pagination
+                                        const paginationHTML = `
+                                            ${response.data.currentPage > 1 ? 
+                                                `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage - 1}">Previous</button>` : 
+                                                `<button class="btn btn-secondary" disabled>Previous</button>`
+                                            }
+                                            <span id="page-info" class="mx-3">Page ${response.data.currentPage} of ${response.data.totalPages}</span>
+                                            ${response.data.currentPage < response.data.totalPages ? 
+                                                `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage + 1}">Next</button>` : 
+                                                `<button class="btn btn-secondary" disabled>Next</button>`
+                                            }
+                                        `;
+                                        document.getElementById('pagination').innerHTML = paginationHTML;
+                                    } catch (error) {
+                                        console.error('Error refreshing page after delete:', error);
+                                    }
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: data.message || 'Failed to delete the offer.'
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('Delete error:', error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Delete Error',
+                                    text: 'Failed to delete offer'
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                    // Toggle Offer Status Functionality
+                    document.getElementById('offersTableBody').addEventListener('click', async (e) => {
+                    const statusCell = e.target.closest('.status-cell');
+                    if (statusCell) {
+                        const offerId = statusCell.dataset.offerId;
+                        const currentStatus = statusCell.dataset.currentStatus;
+                
+                        const actionText = currentStatus === 'active' ? 'deactivate' : 'activate';
+                        const confirmTitle = `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Offer`;
+                        const confirmText = `Are you sure you want to ${actionText} this offer?`;
+                
+                        const result = await Swal.fire({
+                            title: confirmTitle,
+                            text: confirmText,
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#3085d6',
+                            cancelButtonColor: '#d33',
+                            confirmButtonText: `Yes, ${actionText} it!`
+                        });
+                
+                        if (result.isConfirmed) {
+                            try {
+                                const response = await fetch(`/admin/offers/toggle-status/${offerId}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'X-Requested-With': 'XMLHttpRequest',
+                                        'Content-Type': 'application/json'
+                                    }
+                                });
+                
+                                const data = await response.json();
+                
+                                if (data.success) {
+                                    // Update the status
+                                    const badgeElement = statusCell.querySelector('.badge');
+                                    
+                                    if (currentStatus === 'active') {
+                                        badgeElement.classList.remove('bg-success');
+                                        badgeElement.classList.add('bg-warning');
+                                        badgeElement.textContent = 'Inactive';
+                                        statusCell.dataset.currentStatus = 'inactive';
+                                    } else {
+                                        badgeElement.classList.remove('bg-warning');
+                                        badgeElement.classList.add('bg-success');
+                                        badgeElement.textContent = 'Active';
+                                        statusCell.dataset.currentStatus = 'active';
+                                    }
+                
+                                    Swal.fire({
+                                        icon: 'success',
+                                        title: 'Offer Status Updated',
+                                        text: `The offer has been successfully ${currentStatus === 'active' ? 'deactivated' : 'activated'}.`,
+                                        showConfirmButton: false,
+                                        timer: 1500
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error',
+                                        text: data.message || 'Failed to update offer status.'
+                                    });
+                                }
+                            } catch (error) {
+                                console.error('Toggle status error:', error);
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Status Update Error',
+                                    text: 'Failed to update offer status'
+                                });
+                            }
+                        }
+                    }
+                });
+                
+                const createOfferBtn = document.getElementById('createOfferBtn');
+                createOfferBtn.addEventListener('click', function() {
+                    const createOfferModal = new bootstrap.Modal(document.getElementById('createOfferModal'));
+                    createOfferModal.show();
+                });
+                });
+                
+                </script>      

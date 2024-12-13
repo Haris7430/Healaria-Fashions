@@ -1,0 +1,380 @@
+<%- include("../partials/admin/header/") %>
+
+<style>
+    .category-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #ddd;
+        padding: 10px;
+        border-radius: 4px;
+    }
+    .category-list .form-check {
+        margin-bottom: 5px;
+    }
+    #selectedCategoriesContainer {
+        margin-bottom: 15px;
+    }
+    .error-text {
+        color: red;
+        font-size: 0.85rem;
+        margin-top: 5px;
+        display: none;
+    }
+    .is-invalid {
+        border-color: red;
+    }
+</style>
+
+<div class="content-wrapper">
+    <div class="container-xxl flex-grow-1 container-p-y">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Create Category Offer</h5>
+                <a href="/admin/offers" class="btn btn-secondary">Back to Offers</a>
+            </div>
+            <div class="card-body">
+                <form id="categoryOfferForm" novalidate>
+                    <input type="hidden" name="offerType" value="category">
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="offerName">Offer Name</label>
+                            <input type="text" class="form-control" id="offerName" name="offerName" required>
+                            <div id="offerNameError" class="error-text">
+                                Offer name must be 3-50 characters long
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="discount">Discount Percentage</label>
+                            <input type="number" class="form-control" id="discount" name="discount" 
+                                   min="0" max="50" step="0.1" required>
+                            <div id="discountError" class="error-text">
+                                Discount must be between 0 and 50%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="categorySearch">Select Categories</label>
+                            <div class="input-group mb-2">
+                                <input type="text" class="form-control" id="categorySearch" placeholder="Search categories...">
+                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">Clear</button>
+                            </div>
+                            
+                            <div class="category-list" id="categoryList">
+                                <% categories.forEach(category => { %>
+                                    <div class="form-check" data-category-name="<%= category.name.toLowerCase() %>">
+                                        <input class="form-check-input category-checkbox" 
+                                               type="checkbox" 
+                                               value="<%= category._id %>" 
+                                               id="category-<%= category._id %>"
+                                               name="categoryIds">
+                                        <label class="form-check-label" for="category-<%= category._id %>">
+                                            <%= category.name %>
+                                        </label>
+                                    </div>
+                                <% }); %>
+                            </div>
+                            
+                            <div id="categoriesError" class="error-text">
+                                Please select at least one category (max 10)
+                            </div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Expiry Date</label>
+                            <input type="date" class="form-control" id="expireDate" name="expireDate" required>
+                            <div id="expireDateError" class="error-text">
+                                Expiry date must be between today and next year
+                            </div>
+
+                            <div id="selectedCategoriesContainer" class="mt-3">
+                                <strong>Selected Categories:</strong>
+                                <div id="selectedCategoriesList" class="d-flex flex-wrap gap-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="submit" class="btn btn-primary">Create Category Offer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include("../partials/admin/footer/") %>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('categoryOfferForm');
+    const offerNameInput = document.getElementById('offerName');
+    const discountInput = document.getElementById('discount');
+    const expireDateInput = document.getElementById('expireDate');
+    const categorySearch = document.getElementById('categorySearch');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const categoryList = document.getElementById('categoryList');
+    const selectedCategoriesList = document.getElementById('selectedCategoriesList');
+    const selectedCategoriesContainer = document.getElementById('selectedCategoriesContainer');
+
+    // Error elements
+    const offerNameError = document.getElementById('offerNameError');
+    const discountError = document.getElementById('discountError');
+    const expireDateError = document.getElementById('expireDateError');
+    const categoriesError = document.getElementById('categoriesError');
+
+    // Persistent state for selected categories
+    let selectedCategoryIds = new Set();
+
+    // Set min and max dates for expiry date
+    function setDateConstraints() {
+        const today = new Date().toISOString().split('T')[0];
+        const maxDate = new Date();
+        maxDate.setFullYear(maxDate.getFullYear() + 1);
+        const maxDateString = maxDate.toISOString().split('T')[0];
+        
+        expireDateInput.setAttribute('min', today);
+        expireDateInput.setAttribute('max', maxDateString);
+    }
+    setDateConstraints();
+
+    // Real-time validation functions
+    function validateOfferName() {
+        const offerName = offerNameInput.value.trim();
+        const isValid = offerName.length >= 3 && offerName.length <= 50;
+        
+        offerNameInput.classList.toggle('is-invalid', !isValid);
+        offerNameError.style.display = isValid ? 'none' : 'block';
+        
+        return isValid;
+    }
+
+    function validateDiscount() {
+        const discount = parseFloat(discountInput.value);
+        const isValid = !isNaN(discount) && discount >= 0 && discount <= 50;
+        
+        discountInput.classList.toggle('is-invalid', !isValid);
+        discountError.style.display = isValid ? 'none' : 'block';
+        
+        return isValid;
+    }
+
+    function validateDate() {
+        const selectedDate = new Date(expireDateInput.value);
+        const today = new Date();
+        const maxDate = new Date();
+        maxDate.setFullYear(today.getFullYear() + 1);
+        
+        const isValid = selectedDate >= today && selectedDate <= maxDate;
+        
+        expireDateInput.classList.toggle('is-invalid', !isValid);
+        expireDateError.style.display = isValid ? 'none' : 'block';
+        
+        return isValid;
+    }
+
+    function validateCategories() {
+        const isValid = selectedCategoryIds.size > 0 && selectedCategoryIds.size <= 10;
+        
+        categoriesError.style.display = isValid ? 'none' : 'block';
+        
+        return isValid;
+    }
+
+    // Add event listeners for real-time validation
+    offerNameInput.addEventListener('input', validateOfferName);
+    discountInput.addEventListener('input', validateDiscount);
+    expireDateInput.addEventListener('change', validateDate);
+
+    // Real-time search functionality
+    categorySearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase().trim();
+        const categoryCheckboxes = categoryList.querySelectorAll('.form-check');
+        
+        categoryCheckboxes.forEach(checkbox => {
+            const categoryName = checkbox.getAttribute('data-category-name');
+            checkbox.style.display = categoryName.includes(searchTerm) ? 'block' : 'none';
+        });
+    });
+
+    // Clear search
+    clearSearchBtn.addEventListener('click', function() {
+        categorySearch.value = '';
+        const categoryCheckboxes = categoryList.querySelectorAll('.form-check');
+        categoryCheckboxes.forEach(checkbox => {
+            checkbox.style.display = 'block';
+        });
+    });
+
+    // Category selection handling
+    categoryList.addEventListener('change', function(e) {
+        if (e.target.classList.contains('category-checkbox')) {
+            const categoryId = e.target.value;
+            const isChecked = e.target.checked;
+
+            if (isChecked) {
+                if (selectedCategoryIds.size >= 10) {
+                    e.target.checked = false;
+                    
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Maximum Categories Reached',
+                        text: 'You can select a maximum of 10 categories.',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    return;
+                }
+                selectedCategoryIds.add(categoryId);
+            } else {
+                selectedCategoryIds.delete(categoryId);
+            }
+
+            updateSelectedCategories();
+        }
+    });
+
+    function updateSelectedCategories() {
+        selectedCategoriesList.innerHTML = '';
+
+        selectedCategoryIds.forEach(categoryId => {
+            const checkbox = document.getElementById(`category-${categoryId}`);
+            if (checkbox) {
+                const categoryLabel = checkbox.nextElementSibling.textContent.trim();
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-primary me-1 mb-1';
+                badge.innerHTML = `${categoryLabel} <i class="bx bx-x" data-category-id="${categoryId}"></i>`;
+                selectedCategoriesList.appendChild(badge);
+                
+                // Ensure checkbox remains checked
+                checkbox.checked = true;
+            }
+        });
+
+        // Allow removing categories from selected list
+        selectedCategoriesList.addEventListener('click', function(e) {
+            if (e.target.classList.contains('bx-x')) {
+                const categoryId = e.target.getAttribute('data-category-id');
+                const checkbox = document.getElementById(`category-${categoryId}`);
+                
+                if (checkbox) {
+                    checkbox.checked = false;
+                    selectedCategoryIds.delete(categoryId);
+                    updateSelectedCategories();
+                }
+                
+                e.target.closest('.badge').remove();
+            }
+        });
+
+        validateCategories();
+    }
+
+    // Form submission
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // Validate all fields
+        const isOfferNameValid = validateOfferName();
+        const isDiscountValid = validateDiscount();
+        const isDateValid = validateDate();
+        const areCategoriesValid = validateCategories();
+        
+        // Check if all validations pass
+        if (!isOfferNameValid || !isDiscountValid || !isDateValid || !areCategoriesValid) {
+            return;
+        }
+        
+        // Get form values
+        const offerName = offerNameInput.value.trim();
+        const discount = discountInput.value;
+        const expireDate = expireDateInput.value;
+        const selectedCategories = Array.from(selectedCategoryIds);
+        
+        try {
+            // Submit offer
+            const response = await axios.post('/admin/offers/create', {
+                offerType: 'category',
+                offerName: offerName,
+                discount: parseFloat(discount),
+                expireDate: expireDate,
+                categoryIds: selectedCategories
+            });
+            
+            // Success handling
+            Swal.fire({
+                icon: 'success',
+                title: 'Category Offer Created',
+                text: 'The category offer has been successfully created.',
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/admin/offers';
+            });
+        } catch (error) {
+            // Error handling
+            if (error.response && error.response.data) {
+                const errorResponse = error.response.data;
+                
+                if (errorResponse.message && errorResponse.message.includes('duplicate key')) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Duplicate Offer',
+                        text: 'An offer with this name already exists. Please choose a different offer name.',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                    
+                    // Highlight the offer name input
+                    offerNameInput.classList.add('is-invalid');
+                    offerNameError.textContent = 'An offer with this name already exists';
+                    offerNameError.style.display = 'block';
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Submission Error',
+                        text: errorResponse.message || 'An error occurred while creating the offer.',
+                        confirmButtonColor: '#3085d6',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Submission Error',
+                    text: 'An unexpected error occurred.',
+                    confirmButtonColor: '#3085d6',
+                    confirmButtonText: 'OK'
+                });
+            }
+        }
+    });
+
+    // Restore selected categories if page is reloaded
+    function restoreSelectedCategories() {
+        const savedCategories = JSON.parse(localStorage.getItem('selectedCategoryIds') || '[]');
+        savedCategories.forEach(categoryId => {
+            const checkbox = document.getElementById(`category-${categoryId}`);
+            if (checkbox) {
+                checkbox.checked = true;
+                selectedCategoryIds.add(categoryId);
+            }
+        });
+        updateSelectedCategories();
+    }
+    restoreSelectedCategories();
+
+    // Save selected categories before page unload
+    window.addEventListener('beforeunload', function() {
+        localStorage.setItem('selectedCategoryIds', JSON.stringify(Array.from(selectedCategoryIds)));
+    });
+});
+</script>
