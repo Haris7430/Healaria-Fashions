@@ -8,21 +8,44 @@
 
 <style>
 
+.product-price {
+    font-size: 26px;
+    margin-bottom: 25px;
+}
+
+.original-price {
+    text-decoration: line-through;
+    color: #888;
+    font-size: 18px;
+    margin-right: 10px;
+}
+
+.discounted-price {
+    font-weight: bold;
+    font-size: 26px;
+}
+
+.discount-badge {
+    background-color: #ff0000;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 10px;
+    font-size: 14px;
+}
+
+.offer-type {
+    font-size: 12px;
+    color: #666;
+    margin-top: 5px;
+}
+
 .product-category {
     font-size: 16px;
     color: #666;
     margin-bottom: 15px;
-    font-style: italic;
+    font-style:normal;
 }
-
-.product-category span {
-    color: #384aeb;
-    font-weight: 500;
-}
-
-
-
-
 
 
 
@@ -180,14 +203,14 @@
         font-weight: 600;
     }
 
-    .product-price {
+    /* .product-price {
         font-size: 26px;
         background: linear-gradient(45deg, #384aeb, #5c6bc0);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: bold;
         margin-bottom: 25px;
-    }
+    } */
 
     /* Variants */
     .variant-options {
@@ -423,7 +446,25 @@
 				<div class="col-lg-6">
 					<div class="product-info">
 						<h1 class="product-title"><%= product.productName %></h1>
-						<div class="product-price">₹<%= product.salesPrice.toFixed(2) %></div>
+						<!-- Price Section -->
+						<div class="product-price">
+							<% if (product.maxDiscount > 0) { %>
+								<span class="original-price" style="text-decoration: line-through; color: #888; font-size: 0.7em; margin-right: 10px;">
+									₹<%= product.regularPrice.toFixed(2) %>
+								</span>
+								<span class="discounted-price" style="color: #000; font-weight: bold; font-size: 1.2em;">
+									₹<%= product.discountedPrice.toFixed(2) %>
+								</span>
+								<span class="discount-badge" style="background-color: #ff0000; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 10px; font-size: 0.8em;">
+									<%= product.maxDiscount.toFixed(0) %>% OFF
+								</span>
+								<div class="offer-type" style="font-size: 12px; color: #666; margin-top: 5px;">
+									Offer Type: <%= product.applicableOfferType %>
+								</div>
+							<% } else { %>
+								<span>₹<%= product.regularPrice.toFixed(2) %></span>
+							<% } %>
+						</div>
 						
 						<!-- Inside the product-info div, add this section -->
 <div class="product-category">

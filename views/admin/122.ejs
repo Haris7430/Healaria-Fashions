@@ -1,4 +1,55 @@
 
+This is my productSchema.js code:- 
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const productSchema = new Schema({
+    productName: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    category: {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+        required: true
+    },
+    regularPrice: {
+        type: Number,
+        required: true
+    },
+    
+    variants: [{
+        color: { type: String, required: true },
+        sizes: [{
+            size: { type: Number, required: true },
+            quantity: { type: Number, required: true }
+        }],
+        images: [{
+            filename: { type: String, required: true },
+            contentType: { type: String, default: 'image/jpeg' }
+        }],
+        isListed: { type: Boolean, default: true },
+        mainImage: { type: Boolean, default: false }  
+    }],
+    
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
+   
+}, { timestamps: true });
+
+
+
+const Product = mongoose.model("Product", productSchema);
+
+module.exports = Product;
+
+
 This is my offerSchema.js code:- 
 const mongoose = require("mongoose");
 
@@ -21,10 +72,7 @@ const offerSchema = new mongoose.Schema(
       min: 1,
       max: 50
     },
-    startDate: {
-      type: Date,
-      required: true
-    },
+    
     expireDate: {
       type: Date,
       required: true
@@ -68,1010 +116,836 @@ const Offer = mongoose.model("Offer", offerSchema);
 
 module.exports = Offer;
 
-This is my admingRouter.js code:- 
-router.get('/offers',adminAuth, offerController.renderOffersPage);
-router.get('/offers/check-existing', adminAuth, offerController.checkExistingOffers);
-
-router.get('/offers/create',adminAuth, offerController.renderCreateOfferPage);
-router.post('/offers/create',adminAuth, offerController.createOffer);
-router.get('/offers/edit/:id',adminAuth, offerController.renderEditOfferPage);
-router.put('/offers/edit/:id',adminAuth, offerController.updateOffer);
-router.delete('/offers/delete/:id',adminAuth, offerController.deleteOffer);
-router.patch('/offers/toggle-status/:id', adminAuth, offerController.toggleOfferStatus);
-router.get('/offers/get-products',adminAuth, offerController.getProductsForOffer);
-router.get('/offers/get-categories',adminAuth, offerController.getCategoriesForOffer);
-
-This is my offerController.js code:-
-const renderOffersPage = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 10;
-        const skip = (page - 1) * limit;
-
-        const searchQuery = req.query.search ? {
-            $or: [
-                { offerName: { $regex: req.query.search, $options: 'i' } },
-                { offerType: { $regex: req.query.search, $options: 'i' } }
-            ]
-        } : {}; 
-
-        const totalOffers = await Offer.countDocuments(searchQuery);
-        const totalPages = Math.ceil(totalOffers / limit);
-
-        const offers = await Offer.find(searchQuery)
-            .sort({ createdAt: -1 }) // Sort by creation date in descending order
-            .skip(skip)
-            .limit(limit)
-            .populate('productIds', 'productName')
-            .populate('categoryIds', 'name');
-
-        // Check if it's an AJAX request
-        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.json({
-                offers,
-                currentPage: page,
-                totalPages,
-                search: req.query.search || ''
-            });
-        }
-
-        res.render('offerProduct', {
-            offers,
-            currentPage: page,
-            totalPages,
-            search: req.query.search || ''
-        });
-    } catch (error) {
-        console.error('Error rendering offers page:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to load offers',
-            error: error.message 
-        });
-    }
-};
 
 
-const checkExistingOffers = async (req, res) => {
-    try {
-        const { checkProducts, checkCategories } = req.query;
-        
-        let query;
-        if (checkProducts) {
-            // Check for active offers for specific products
-            query = {
-                offerType: 'product',
-                status: 'active',
-                productIds: { $in: checkProducts }
-            };
-        } else if (checkCategories) {
-            // Check for active offers for specific categories
-            query = {
-                offerType: 'category',
-                status: 'active',
-                categoryIds: { $in: checkCategories }
-            };
-        } else {
-            return res.json({ hasActiveOffers: false });
-        }
 
-        const existingOffers = await Offer.find(query);
-
-        res.json({
-            hasActiveOffers: existingOffers.length > 0,
-            activeOffers: existingOffers
-        });
-    } catch (error) {
-        console.error('Error checking existing offers:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to check existing offers',
-            error: error.message 
-        });
-    }
-};
-
-const renderCreateOfferPage = async (req, res) => {
-    try {
-        const { type } = req.query;
-        
-        // Fetch all active products and categories
-        const products = await Product.find({ isBlocked: false });
-        const categories = await Category.find({ isListed: true });
-        
-        // Render appropriate template based on offer type
-        if (type === 'product') {
-            return res.render('createProductOffer', { 
-                products,  
-                categories 
-            });
-        } else if (type === 'category') {
-            return res.render('createCategoryOffer', { 
-                products, 
-                categories 
-            });
-        } else {
-            // If no type specified, show offer type selection modal
-            return res.render('offerProduct', { 
-                products, 
-                categories,
-                showOfferTypeModal: true 
-            });
-        }
-    } catch (error) {
-        console.error('Error rendering create offer page:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to load create offer page',
-            error: error.message 
-        });
-    }
-};
-
-const createOffer = async (req, res) => {
-    try {
-        const {  
-            offerType, 
-            offerName, 
-            discount, 
-            startDate,
-            expireDate 
-        } = req.body;
-
-        // Check for existing offer with the same name
-        const existingOffer = await Offer.findOne({ offerName: offerName });
-        if (existingOffer) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'An offer with this name already exists',
-                field: 'offerName'
-            });
-        }
-
-        const newOffer = new Offer({
-            offerType,
-            offerName,
-            discount: parseFloat(discount),
-            startDate: new Date(startDate),
-            expireDate: new Date(expireDate),
-            status: 'active'
-        });
-
-        await newOffer.save();
-
-        res.status(201).json({ 
-            success: true, 
-            message: 'Offer created successfully',
-            offer: newOffer 
-        });
-    } catch (error) {
-        console.error('Error creating offer:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to create offer',
-            error: error.message 
-        });
-    }
-};
-
-const renderEditOfferPage = async (req, res) => {
-    try {
-        const offer = await Offer.findById(req.params.id);
-
-        if (!offer) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Offer not found' 
-            });
-        }
-
-        // Send offer data as JSON for modal population
-        res.json({ 
-            success: true, 
-            offer: {
-                _id: offer._id,
-                offerName: offer.offerName,
-                offerType: offer.offerType,
-                discount: offer.discount,
-                startDate: offer.startDate ? offer.startDate.toISOString().split('T')[0] : null,
-                expireDate: offer.expireDate ? offer.expireDate.toISOString().split('T')[0] : null,
-                productIds: offer.productIds,
-                categoryIds: offer.categoryIds
-            }
-        });
-    } catch (error) {
-        console.error('Error rendering edit offer page:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to load edit offer page',
-            error: error.message 
-        });
-    }
-};
-
-const updateOffer = async (req, res) => {
-    try {
-        const { 
-            offerName, 
-            discount, 
-            startDate, 
-            expireDate 
-        } = req.body;
-
-        // Check for existing offer with the same name (excluding current offer)
-        const existingOffer = await Offer.findOne({ 
-            offerName: offerName, 
-            _id: { $ne: req.params.id } 
-        });
-
-        if (existingOffer) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'An offer with this name already exists',
-                field: 'offerName'
-            });
-        }
-
-        const updatedOffer = await Offer.findByIdAndUpdate(
-            req.params.id,
-            {
-                offerName,
-                discount: parseFloat(discount),
-                startDate: new Date(startDate),
-                expireDate: new Date(expireDate)
-            },
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedOffer) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Offer not found' 
-            });
-        }
-
-        res.json({ 
-            success: true, 
-            message: 'Offer updated successfully',
-            offer: updatedOffer 
-        });
-    } catch (error) {
-        console.error('Error updating offer:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update offer',
-            error: error.message 
-        });
-    }
-};
-
-const deleteOffer = async (req, res) => {
-    try {
-        const deletedOffer = await Offer.findByIdAndDelete(req.params.id);
-
-        if (!deletedOffer) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Offer not found' 
-            });
-        }
-
-        res.json({ 
-            success: true, 
-            message: 'Offer deleted successfully' 
-        });
-    } catch (error) {
-        console.error('Error deleting offer:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to delete offer',
-            error: error.message 
-        });
-    }
-};
-
-const toggleOfferStatus = async (req, res) => {
-    try {
-        const offerId = req.params.id;
-        
-        // Find the current offer
-        const offer = await Offer.findById(offerId);
-        
-        if (!offer) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Offer not found' 
-            });
-        }
-
-        // Toggle the status
-        const newStatus = offer.status === 'active' ? 'inactive' : 'active';
-        
-        // Update only the status field to avoid validation errors
-        await Offer.findByIdAndUpdate(offerId, { 
-            status: newStatus 
-        }, { 
-            runValidators: false,  // Skip validation
-            new: true 
-        });
-
-        res.json({ 
-            success: true, 
-            message: 'Offer status updated successfully',
-            newStatus: newStatus
-        });
-    } catch (error) {
-        console.error('Error toggling offer status:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to update offer status',
-            error: error.message 
-        });
-    }
-};
-
-const getProductsForOffer = async (req, res) => {
-    try {
-        const products = await Product.find({ isBlocked: false }, 'productName');
-        res.json({ 
-            success: true, 
-            products 
-        });
-    } catch (error) {
-        console.error('Error fetching products:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to fetch products',
-            error: error.message 
-        });
-    }
-};
-
-const getCategoriesForOffer = async (req, res) => {
-    try {
-        const categories = await Category.find({ isListed: true }, 'name');
-        res.json({ 
-            success: true, 
-            categories 
-        });
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to fetch categories',
-            error: error.message 
-        });
-    }
-};
-
-This is my offerProduct.ejs page code:- 
-
+This is my product.ejs page code:- 
 <style>
-    .table td {
-        vertical-align: middle;
+
+    .product-price {
+        font-size: 26px;
+        margin-bottom: 25px;
     }
-    .btn {
-        margin: 0;
+    
+    .original-price {
+        text-decoration: line-through;
+        color: #888;
+        font-size: 18px;
+        margin-right: 10px;
     }
-    .dropdown-menu {
-        min-width: 120px;
+    
+    .discounted-price {
+        font-weight: bold;
+        font-size: 26px;
     }
-    .actions-dropdown {
-        cursor: pointer;
+    
+    .discount-badge {
+        background-color: #ff0000;
+        color: white;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 10px;
+        font-size: 14px;
     }
-    .error-message {
-        color: red;
-        font-size: 0.8em;
+    
+    .offer-type {
+        font-size: 12px;
+        color: #666;
         margin-top: 5px;
     }
-
-    .table td:nth-child(5) {
-        text-align: center;
+    
+    .product-category {
+        font-size: 16px;
+        color: #666;
+        margin-bottom: 15px;
+        font-style:normal;
     }
-
-    .custom-swal-popup {
-    z-index: 99999 !important;
-}
-
-.swal2-container {
-    z-index: 99999 !important;
-}
-
-    .status-cell {
-        cursor: pointer;
-        user-select: none;
-    }
-</style>
-
-<!-- Content wrapper -->
-<div class="content-wrapper">
-    <!-- Content -->
-    <div class="container-xxl flex-grow-1 container-p-y">
-        <!-- Offer List Table -->
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Offers Management</h5>
-                <div>
-                    <button class="btn btn-primary" type="button" id="createOfferBtn">
-                        Create New Offer
-                    </button>
-                    
-                </div>
-            </div>
-            <div class="card-body">
-                <!-- Search Bar -->
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <input type="text" id="searchInput" class="form-control" placeholder="Search offers...">
+    
+    
+    
+    .main-image {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: crosshair;
+        }
+    
+        .zoom-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+    
+        .zoomed {
+            transform: scale(2); /* Zoom level */
+            cursor: move;
+        }
+    
+    
+    
+    
+    .main-image {
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: crosshair;
+        }
+    
+        .main-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+    
+        .main-image img.zoomed {
+            transform: scale(3); /* Adjust zoom level */
+        }
+    
+    
+    
+    
+        .product-detail-area {
+            padding: 60px 0;
+            background: linear-gradient(to bottom, #f8f9fa, #ffffff);
+        }
+    
+        /* Product Images */
+        .product-images {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+        }
+    
+        .product-images:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+    
+        .main-image {
+            width: 100%;
+            height: 500px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    
+        .main-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+    
+        .main-image img:hover {
+            transform: scale(1.05);
+        }
+    
+        .thumbnail-row {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding: 10px 0;
+            scrollbar-width: thin;
+        }
+    
+        .thumbnail-row::-webkit-scrollbar {
+            height: 6px;
+        }
+    
+        .thumbnail-row::-webkit-scrollbar-thumb {
+            background: #384aeb;
+            border-radius: 10px;
+        }
+    
+        .thumbnail {
+            width: 90px;
+            height: 90px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
+    
+        .thumbnail.active {
+            border-color: #384aeb;
+            transform: translateY(-2px);
+        }
+    
+        .thumbnail:hover {
+            border-color: #384aeb;
+        }
+    
+        .thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    
+        /* Product Info */
+        .product-info {
+            background: #fff;
+            padding: 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+    
+        .product-title {
+            font-size: 28px;
+            color: #2d2d2d;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+    
+        /* .product-price {
+            font-size: 26px;
+            background: linear-gradient(45deg, #384aeb, #5c6bc0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+            margin-bottom: 25px;
+        } */
+    
+        /* Variants */
+        .variant-options {
+            margin: 25px 0;
+        }
+    
+        .variant-title {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+    
+        .color-options {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+    
+        .color-option {
+            width: 80px;
+            height: 80px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+    
+        .color-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
+            z-index: 1;
+        }
+    
+        .color-option.active {
+            border-color: #384aeb;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(56,74,235,0.2);
+        }
+    
+        .color-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+    
+        .color-option img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    
+        .color-name {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            color: #fff;
+            padding: 8px 4px;
+            font-size: 12px;
+            text-align: center;
+            z-index: 2;
+        }
+    
+        /* Size Options */
+        .size-options {
+            margin: 25px 0;
+        }
+    
+        .size-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 15px;
+        }
+    
+        .size-btn {
+            min-width: 85px;
+            padding: 12px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            background: #fff;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+    
+        .size-btn:hover:not(.out-of-stock) {
+            border-color: #384aeb;
+            transform: translateY(-2px);
+        }
+    
+        .size-btn.active {
+            border-color: #384aeb;
+            background: linear-gradient(45deg, #384aeb, #5c6bc0);
+            color: #fff;
+            transform: translateY(-2px);
+        }
+    
+        .size-btn.out-of-stock {
+            opacity: 0.6;
+            cursor: not-allowed;
+            background: #f5f5f5;
+        }
+    
+        .stock-info {
+            font-size: 11px;
+            color: #666;
+            margin-top: 6px;
+        }
+    
+        /* Add to Cart Button */
+        .add-cart-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(45deg, #384aeb, #5c6bc0);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+    
+        .add-cart-btn:hover:not(:disabled) {
+            background: linear-gradient(45deg, #2a3bcc, #4a5ab0);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(56,74,235,0.3);
+        }
+    
+        .add-cart-btn:disabled {
+            background: linear-gradient(45deg, #ccc, #999);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+    
+        .product-description {
+            padding: 20px 0;
+            border-top: 1px solid #eee;
+            border-bottom: 1px solid #eee;
+            margin: 20px 0;
+            line-height: 1.6;
+            color: #666;
+        }
+    </style>
+    
+    
+    
+    
+    
+        <!-- End Header Area -->
+    
+        <!-- Start Banner Area -->
+        <section class="banner-area organic-breadcrumb">
+            <div class="container">
+                <div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
+                    <div class="col-first">
+                        <h1>Product Details Page</h1>
+                        <nav class="d-flex align-items-center">
+                            <a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
+                            <a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
+                            <a href="single-product.html">product-details</a>
+                        </nav>
                     </div>
                 </div>
-                
-                <!-- Offers Table -->
-                <div class="table-responsive" id="offersTableContainer">
-                    <table class="table table-striped" id="offersTable">
-                        <thead>
-                            <tr>
-                                <th>Offer Name</th>
-                                <th>Offer Type</th>
-                                <th>Discount (%)</th>
-                                <th>Expiry Date</th>
-                                <th>Status</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="offersTableBody">
-                            <% offers.forEach(offer => { %>
-                                <tr id="offer-<%= offer._id %>">
-                                    <td><%= offer.offerName %></td>
-                                    <td><%= offer.offerType %></td>
-                                    <td><%= offer.discount %>%</td>
-                                    <td><%= offer.expireDate.toLocaleDateString() %></td>
-                                    <td class="status-cell" data-offer-id="<%= offer._id %>" data-current-status="<%= offer.status %>">
-                                        <span class="badge <%= 
-                                            offer.status === 'active' && offer.isListed ? 'bg-success' : 
-                                            offer.status === 'inactive' || !offer.isListed ? 'bg-warning' : 'bg-danger' 
-                                        %>">
-                                            <%= 
-                                                offer.status === 'active' && offer.isListed ? 'Active' : 
-                                                offer.status === 'inactive' || !offer.isListed ? 'Inactive' : 'Error' 
-                                            %>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
-                                                    type="button" 
-                                                    data-bs-toggle="dropdown" 
-                                                    aria-expanded="false">
-                                                Actions
-                                            </button>
-                                            <ul class="dropdown-menu">
-                                                <li>
-                                                    <a class="dropdown-item" href="/admin/offers/edit/<%= offer._id %>">
-                                                        <i class="bx bx-edit-alt me-1"></i> Edit
-                                                    </a>
-                                                </li>
-                                                <li>
-                                                    <hr class="dropdown-divider">
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item text-danger delete-offer" href="#" 
-                                                       data-id="<%= offer._id %>">
-                                                        <i class="bx bx-trash me-1"></i> Delete
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        </tbody>
-                    </table>
-                </div>
-
-                <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
-                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
-                <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-                
-                <script>
-                
-                document.addEventListener('DOMContentLoaded', function () {
-                    const axiosInstance = axios.create({
-                        baseURL: '/admin/offers',
-                        headers: {
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                
-                    // Validation Functions
-                    function clearErrorMessages() {
-                        const errorMessages = document.querySelectorAll('.error-message');
-                        errorMessages.forEach(el => el.textContent = '');
-                    }
-                
-                    function validateForm() {
-                        clearErrorMessages();
-                        let isValid = true;
-                
-                        // Offer Name Validation
-                        const offerName = document.getElementById('offerName');
-                        if (!offerName.value.trim()) {
-                            document.getElementById('offerNameError').textContent = 'Offer name is required';
-                            isValid = false;
-                        }
-                
-                        // Offer Type Validation
-                        const offerType = document.getElementById('offerType');
-                        if (!offerType.value) {
-                            document.getElementById('offerTypeError').textContent = 'Please select an offer type';
-                            isValid = false;
-                        }
-                
-                        // Discount Validation
-                        const discount = document.getElementById('discount');
-                        if (!discount.value) {
-                            document.getElementById('discountError').textContent = 'Discount is required';
-                            isValid = false;
-                        } else {
-                            const discountValue = parseFloat(discount.value);
-                            if (isNaN(discountValue) || discountValue < 1 || discountValue > 50) {
-                                document.getElementById('discountError').textContent = 'Discount must be between 1 and 50%';
-                                isValid = false;
-                            }
-                        }
-                
-                        // Start Date Validation
-                        const startDate = document.getElementById('startDate');
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
-                    
-                    if (!startDate.value) {
-                        document.getElementById('startDateError').textContent = 'Start date is required';
-                        isValid = false;
-                    } else {
-                        const selectedStartDate = new Date(startDate.value);
-                        if (selectedStartDate < today) {
-                            document.getElementById('startDateError').textContent = 'Start date cannot be in the past';
-                            isValid = false;
-                        }
-                    }
-                
-                
-                        // End Date Validation
-                        const expireDate = document.getElementById('expireDate');
-                        if (!expireDate.value) {
-                            document.getElementById('expireDateError').textContent = 'End date is required';
-                            isValid = false;
-                        } else {
-                            // Ensure end date is after start date
-                            if (new Date(expireDate.value) <= new Date(startDate.value)) {
-                                document.getElementById('expireDateError').textContent = 'End date must be after start date';
-                                isValid = false;
-                            }
-                        }
-                
-                        return isValid;
-                    }
-                
-                    // Submit Offer Functionality
-                    const submitOfferBtn = document.getElementById('submitOfferBtn');
-                    const createOfferModal = new bootstrap.Modal(document.getElementById('createOfferModal'));
-                
-                
-                    
-                    submitOfferBtn.addEventListener('click', async function() {
-                    if (!validateForm()) {
-                        return;
-                    }
-                
-                    try {
-                        const formData = {
-                            offerName: document.getElementById('offerName').value,
-                            offerType: document.getElementById('offerType').value,
-                            discount: document.getElementById('discount').value,
-                            startDate: document.getElementById('startDate').value,
-                            expireDate: document.getElementById('expireDate').value
-                        };
-                
-                        // Hide the modal first
-                        createOfferModal.hide();
-                
-                        const response = await axiosInstance.post('/create', formData);
-                
-                        if (response.data.success) {
-                            // Ensure the modal is completely hidden
-                            document.querySelector('.modal-backdrop')?.remove();
+            </div>
+        </section>
+        <!-- End Banner Area -->
+    
+    
+    
+    
+    
+    
+    
+    <!--================Single Product Area =================-->
+    <% if (product) { %>
+        <div class="product-detail-area">
+            <div class="container">
+                <div class="row">
+                    <!-- Product Images -->
+                    <div class="col-lg-6">
+                        <div class="product-images">
+                            <div>
+                                <input type="range" id="zoomLevel" min="1" max="5" step="0.1" value="2" />
+                            </div>
+                            <div class="main-image" id="imageZoomContainer">
+                                <% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
+                                    <img id="mainImage" 
+                                         src="/uploads/product-images/<%= initialVariant.images[0].filename %>" 
+                                         alt="<%= product.productName %>" 
+                                         class="zoom-image">
+                                <% } else { %>
+                                    <img id="mainImage" 
+                                         src="/images/default-product.jpg" 
+                                         alt="Default product image" 
+                                         class="zoom-image">
+                                <% } %>
+                            </div>
                             
-                            // Show success message with high z-index
-                            Swal.fire({
-                                icon: 'success',
-                                title: 'Offer Created',
-                                text: 'Your offer has been created successfully!',
-                                showConfirmButton: true,
-                                confirmButtonText: 'OK',
-                                // Add high z-index to ensure it's on top
-                                heightAuto: false,
-                                customClass: {
-                                    popup: 'custom-swal-popup'
-                                }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    // Reload the page to show the new offer
-                                    window.location.reload();
-                                }
-                            });
-                        } else {
-                            // Show error message with high z-index
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error',
-                                text: response.data.message || 'Failed to create offer',
-                                confirmButtonText: 'Try Again',
-                                // Add high z-index to ensure it's on top
-                                heightAuto: false,
-                                customClass: {
-                                    popup: 'custom-swal-popup'
-                                }
-                            });
-                        }
-                    } catch (error) {
-                        console.error('Offer creation error:', error);
-                        
-                        // Ensure the modal is completely hidden
-                        document.querySelector('.modal-backdrop')?.remove();
-                
-                        // Check if it's a validation error from the server
-                        if (error.response && error.response.data) {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Validation Error',
-                                text: error.response.data.message || 'Failed to create offer',
-                                confirmButtonText: 'Try Again',
-                                // Add high z-index to ensure it's on top
-                                heightAuto: false,
-                                customClass: {
-                                    popup: 'custom-swal-popup'
-                                }
-                            });
-                        } else {
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Network Error',
-                                text: 'Unable to create offer. Please check your connection.',
-                                confirmButtonText: 'Try Again',
-                                // Add high z-index to ensure it's on top
-                                heightAuto: false,
-                                customClass: {
-                                    popup: 'custom-swal-popup'
-                                }
-                            });
-                        }
-                    }
-                });
-                
-                
-                
-                    // Search Functionality
-                    const searchInput = document.getElementById('searchInput');
-                    searchInput.addEventListener('input', function() {
-                        const searchTerm = this.value.toLowerCase();
-                        const rows = document.querySelectorAll('#offersTableBody tr');
-                        
-                        rows.forEach(row => {
-                            const cells = row.getElementsByTagName('td');
-                            const shouldShow = Array.from(cells).some(cell => 
-                                cell.textContent.toLowerCase().includes(searchTerm)
-                            );
-                            row.style.display = shouldShow ? '' : 'none';
-                        });
-                    });
-                
-                    // Pagination Handling
-                    document.getElementById('pagination')?.addEventListener('click', async (e) => {
-                        if (e.target.classList.contains('page-link')) {
-                            const page = e.target.dataset.page;
-                            try {
-                                const response = await axiosInstance.get(`?page=${page}`);
-                                
-                                // Update table body 
-                                const tableBodyHTML = response.data.offers.map(offer => `
-                                    <tr id="offer-${offer._id}">
-                                        <td>${offer.offerName}</td>
-                                        <td>${offer.offerType}</td>
-                                        <td>${offer.discount}%</td>
-                                        <td>${new Date(offer.expireDate).toLocaleDateString()}</td>
-                                        <td>
-                    <span class="badge ${
-                        offer.status === 'active' && offer.isListed ? 'bg-success' : 
-                        offer.status === 'inactive' || !offer.isListed ? 'bg-warning' : 'bg-danger'
-                    }">
-                        ${
-                            offer.status === 'active' && offer.isListed ? 'Active' : 
-                            offer.status === 'inactive' || !offer.isListed ? 'Inactive' : 'Error'
-                        }
-                    </span>
-                </td>
-                                        <td>
-                                            <div class="dropdown">
-                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
-                                                        type="button" 
-                                                        data-bs-toggle="dropdown" 
-                                                        aria-expanded="false">
-                                                    Actions
-                                                </button>
-                                                <ul class="dropdown-menu">
-                                                    <li>
-                                                        <a class="dropdown-item" href="/admin/offers/edit/${offer._id}">
-                                                            <i class="bx bx-edit-alt me-1"></i> Edit
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item toggle-status" href="#" 
-                                                           data-id="${offer._id}" 
-                                                           data-current-status="${offer.status}">
-                                                            <i class="bx ${offer.status === 'active' ? 'bx-block' : 'bx-check-circle'} me-1"></i> 
-                                                            ${offer.status === 'active' ? 'Deactivate' : 'Activate'}
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item text-danger delete-offer" href="#" 
-                                                           data-id="${offer._id}">
-                                                            <i class="bx bx-trash me-1"></i> Delete
-                                                        </a>
-                                                    </li>
-                                                </ul>
+                            
+                            
+                            
+                            
+                            <!-- Thumbnails -->
+                            <div class="thumbnail-row">
+                                <% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
+                                    <% initialVariant.images.forEach((image, index) => { %>
+                                        <div class="thumbnail <%= index === 0 ? 'active' : '' %>"
+                                             onclick="changeMainImage('/uploads/product-images/<%= image.filename %>', this, '<%= image.filename %>')">
+                                            <img src="/uploads/product-images/<%= image.filename %>" 
+                                                 alt="Product view <%= index + 1 %>">
+                                        </div>
+                                    <% }); %>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <!-- Product Info -->
+                    <div class="col-lg-6">
+                        <div class="product-info">
+                            <h1 class="product-title"><%= product.productName %></h1>
+                            <!-- Price Section -->
+                            <div class="product-price">
+                                <% if (product.maxDiscount > 0) { %>
+                                    <span class="original-price" style="text-decoration: line-through; color: #888; font-size: 0.7em; margin-right: 10px;">
+                                        ₹<%= product.regularPrice.toFixed(2) %>
+                                    </span>
+                                    <span class="discounted-price" style="color: #000; font-weight: bold; font-size: 1.2em;">
+                                        ₹<%= product.discountedPrice.toFixed(2) %>
+                                    </span>
+                                    <span class="discount-badge" style="background-color: #ff0000; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 10px; font-size: 0.8em;">
+                                        <%= product.maxDiscount.toFixed(0) %>% OFF
+                                    </span>
+                                    <div class="offer-type" style="font-size: 12px; color: #666; margin-top: 5px;">
+                                        Offer Type: <%= product.applicableOfferType %>
+                                    </div>
+                                <% } else { %>
+                                    <span>₹<%= product.regularPrice.toFixed(2) %></span>
+                                <% } %>
+                            </div>
+                            
+                            <!-- Inside the product-info div, add this section -->
+    <div class="product-category">
+        <span>Category: <%= typeof categoryName !== 'undefined' ? categoryName : 'Not Available' %></span>
+    </div>
+                            <div class="product-description">
+                                <p><%= product.description %></p>
+                            </div>
+                            
+        
+                            <!-- Color Variants -->
+                            <div class="variant-options">
+                                <h4 class="variant-title">Available Colors</h4>
+                                <div class="color-options">
+                                    <% if (variants && variants.length > 0) { %>
+                                        <% variants.forEach(variant => { %>
+                                            <% if (variant.images && variant.images.length > 0) { %>
+                                                <div class="color-option <%= variant._id.toString() === initialVariant._id.toString() ? 'active' : '' %>"
+                                                     onclick="selectVariant('<%= product._id %>', '<%= variant._id %>', this)">
+                                                    <img src="/uploads/product-images/<%= variant.images[0].filename %>" 
+                                                         alt="<%= variant.color %>">
+                                                    <span class="color-name"><%= variant.color %></span>
+                                                </div>
+                                            <% } %>
+                                        <% }); %>
+                                    <% } %>
+                                </div>
+                            <!-- Size Options -->
+                            <div class="size-options">
+                                <h4 class="variant-title">Select Size</h4>
+                                <div class="size-grid" id="sizeGrid">
+                                    <% variantSizes.forEach(sizeObj => { %>
+                                        <button type="button" 
+                                                class="size-btn <%= sizeObj.quantity === 0 ? 'out-of-stock' : '' %>"
+                                                onclick="selectSize(this, '<%= sizeObj.size %>')"
+                                                <%= sizeObj.quantity === 0 ? 'disabled' : '' %>>
+                                            UK <%= sizeObj.size %>
+                                            <div class="stock-info">
+                                                <%= sizeObj.quantity === 0 ? 'Out of Stock' : `${sizeObj.quantity} left` %>
                                             </div>
-                                        </td>
-                                    </tr>
-                                `).join('');
-                
-                                document.getElementById('offersTableBody').innerHTML = tableBodyHTML;
-                                
-                                // Update pagination
-                                const paginationHTML = `
-                                    ${response.data.currentPage > 1 ? 
-                                        `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage - 1}">Previous</button>` : 
-                                        `<button class="btn btn-secondary" disabled>Previous</button>`
-                                    }
-                                    <span id="page-info" class="mx-3">Page ${response.data.currentPage} of ${response.data.totalPages}</span>
-                                    ${response.data.currentPage < response.data.totalPages ? 
-                                        `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage + 1}">Next</button>` : 
-                                        `<button class="btn btn-secondary" disabled>Next</button>`
-                                    }
-                                `;
-                                document.getElementById('pagination').innerHTML = paginationHTML;
-                            } catch (error) {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Pagination Error',
-                                    text: 'Failed to load page. Please try again.'
-                                });
-                            }
-                        }
-                    });
-                
-                    // Delete Offer Functionality
-                    // Delete Offer Functionality
-                document.getElementById('offersTableBody').addEventListener('click', async (e) => {
-                    const deleteOfferLink = e.target.closest('.delete-offer');
-                    if (deleteOfferLink) {
-                        e.preventDefault();
-                        const offerId = deleteOfferLink.dataset.id;
-                
-                        const result = await Swal.fire({
-                            title: 'Are you sure?',
-                            text: 'You won\'t be able to revert this!',
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#3085d6',
-                            cancelButtonColor: '#d33',
-                            confirmButtonText: 'Yes, delete it!'
-                        });
-                
-                        if (result.isConfirmed) {
-                            try {
-                                const response = await fetch(`/admin/offers/delete/${offerId}`, {
-                                    method: 'DELETE',
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest'
-                                    }
-                                });
-                
-                                const data = await response.json();
-                                
-                                if (data.success) {
-                                    // Remove the row from the table
-                                    const rowToRemove = document.getElementById(`offer-${offerId}`);
-                                    if (rowToRemove) {
-                                        rowToRemove.remove();
-                                    }
-                                    
-                                    // Optionally, refresh the page or update pagination
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Deleted!',
-                                        text: 'The offer has been deleted.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                
-                                    // Optional: Refresh the current page or adjust pagination
-                                    const currentPage = document.querySelector('#page-info').textContent.split(' ')[1];
-                                    try {
-                                        const response = await axiosInstance.get(`?page=${currentPage}`);
-                                        
-                                        // Update table body 
-                                        const tableBodyHTML = response.data.offers.map(offer => `
-                                            <tr id="offer-${offer._id}">
-                                                <td>${offer.offerName}</td>
-                                                <td>${offer.offerType}</td>
-                                                <td>${offer.discount}%</td>
-                                                <td>${new Date(offer.expireDate).toLocaleDateString()}</td>
-                                                <td>
-                                                    <span class="badge ${offer.status === 'active' ? 'bg-success' : 'bg-danger'}">
-                                                        ${offer.status}
-                                                    </span>
-                                                </td>
-                                                <td>
-                                                    <div class="dropdown">
-                                                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle actions-dropdown" 
-                                                                type="button" 
-                                                                data-bs-toggle="dropdown" 
-                                                                aria-expanded="false">
-                                                            Actions
-                                                        </button>
-                                                        <ul class="dropdown-menu">
-                                                            <li>
-                                                                <a class="dropdown-item" href="/admin/offers/edit/${offer._id}">
-                                                                    <i class="bx bx-edit-alt me-1"></i> Edit
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item toggle-status" href="#" 
-                                                                   data-id="${offer._id}" 
-                                                                   data-current-status="${offer.status}">
-                                                                    <i class="bx ${offer.status === 'active' ? 'bx-block' : 'bx-check-circle'} me-1"></i> 
-                                                                    ${offer.status === 'active' ? 'Deactivate' : 'Activate'}
-                                                                </a>
-                                                            </li>
-                                                            <li>
-                                                                <hr class="dropdown-divider">
-                                                            </li>
-                                                            <li>
-                                                                <a class="dropdown-item text-danger delete-offer" href="#" 
-                                                                   data-id="${offer._id}">
-                                                                    <i class="bx bx-trash me-1"></i> Delete
-                                                                </a>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        `).join('');
-                
-                                        document.getElementById('offersTableBody').innerHTML = tableBodyHTML;
-                                        
-                                        // Update pagination
-                                        const paginationHTML = `
-                                            ${response.data.currentPage > 1 ? 
-                                                `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage - 1}">Previous</button>` : 
-                                                `<button class="btn btn-secondary" disabled>Previous</button>`
-                                            }
-                                            <span id="page-info" class="mx-3">Page ${response.data.currentPage} of ${response.data.totalPages}</span>
-                                            ${response.data.currentPage < response.data.totalPages ? 
-                                                `<button class="btn btn-secondary page-link" data-page="${response.data.currentPage + 1}">Next</button>` : 
-                                                `<button class="btn btn-secondary" disabled>Next</button>`
-                                            }
-                                        `;
-                                        document.getElementById('pagination').innerHTML = paginationHTML;
-                                    } catch (error) {
-                                        console.error('Error refreshing page after delete:', error);
-                                    }
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: data.message || 'Failed to delete the offer.'
-                                    });
-                                }
-                            } catch (error) {
-                                console.error('Delete error:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Delete Error',
-                                    text: 'Failed to delete offer'
-                                });
-                            }
-                        }
-                    }
-                });
-                
-                    // Toggle Offer Status Functionality
-                    document.getElementById('offersTableBody').addEventListener('click', async (e) => {
-                    const statusCell = e.target.closest('.status-cell');
-                    if (statusCell) {
-                        const offerId = statusCell.dataset.offerId;
-                        const currentStatus = statusCell.dataset.currentStatus;
-                
-                        const actionText = currentStatus === 'active' ? 'deactivate' : 'activate';
-                        const confirmTitle = `${actionText.charAt(0).toUpperCase() + actionText.slice(1)} Offer`;
-                        const confirmText = `Are you sure you want to ${actionText} this offer?`;
-                
-                        const result = await Swal.fire({
-                            title: confirmTitle,
-                            text: confirmText,
-                            icon: 'warning',
-                            showCancelButton: true,
-                            confirmButtonColor: '#3085d6',
-                            cancelButtonColor: '#d33',
-                            confirmButtonText: `Yes, ${actionText} it!`
-                        });
-                
-                        if (result.isConfirmed) {
-                            try {
-                                const response = await fetch(`/admin/offers/toggle-status/${offerId}`, {
-                                    method: 'PATCH',
-                                    headers: {
-                                        'X-Requested-With': 'XMLHttpRequest',
-                                        'Content-Type': 'application/json'
-                                    }
-                                });
-                
-                                const data = await response.json();
-                
-                                if (data.success) {
-                                    // Update the status
-                                    const badgeElement = statusCell.querySelector('.badge');
-                                    
-                                    if (currentStatus === 'active') {
-                                        badgeElement.classList.remove('bg-success');
-                                        badgeElement.classList.add('bg-warning');
-                                        badgeElement.textContent = 'Inactive';
-                                        statusCell.dataset.currentStatus = 'inactive';
-                                    } else {
-                                        badgeElement.classList.remove('bg-warning');
-                                        badgeElement.classList.add('bg-success');
-                                        badgeElement.textContent = 'Active';
-                                        statusCell.dataset.currentStatus = 'active';
-                                    }
-                
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Offer Status Updated',
-                                        text: `The offer has been successfully ${currentStatus === 'active' ? 'deactivated' : 'activated'}.`,
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    });
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error',
-                                        text: data.message || 'Failed to update offer status.'
-                                    });
-                                }
-                            } catch (error) {
-                                console.error('Toggle status error:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Status Update Error',
-                                    text: 'Failed to update offer status'
-                                });
-                            }
-                        }
-                    }
-                });
-                
-                const createOfferBtn = document.getElementById('createOfferBtn');
-                createOfferBtn.addEventListener('click', function() {
-                    const createOfferModal = new bootstrap.Modal(document.getElementById('createOfferModal'));
-                    createOfferModal.show();
-                });
-                });
-                
-                </script>      
+                                        </button>
+                                    <% }) %>
+                                </div>
+                            </div>
+        
+                            <!-- Add to Cart Form -->
+                            <form id="addToCartForm" onsubmit="return handleAddToCart(event)">
+                                <input type="hidden" id="selectedSize" name="size" value="">
+                                <input type="hidden" id="selectedVariant" name="variantId" value="<%= initialVariant._id %>">
+                                <button type="submit" class="add-cart-btn" id="addToCartBtn" disabled>
+                                    Add to Cart
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <% } else { %>
+        <p>Product not found.</p>
+    <% } %>
+    <!--================End Single Product Area =================-->
+    
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
+	
+
+
+	<script>
+ const zoomContainer = document.getElementById('imageZoomContainer');
+    const mainImage = document.getElementById('mainImage');
+    const zoomLevelInput = document.getElementById('zoomLevel');
+
+    let isZoomed = false;
+
+    // Set initial zoom level from the range input
+    let zoomLevel = parseFloat(zoomLevelInput.value);
+
+    zoomLevelInput.addEventListener('input', (event) => {
+        zoomLevel = parseFloat(event.target.value);
+        if (isZoomed) {
+            mainImage.style.transform = `scale(${zoomLevel})`;
+        }
+    });
+
+    // Toggle Zoom on Click
+    zoomContainer.addEventListener('click', () => {
+        isZoomed = !isZoomed;
+        if (isZoomed) {
+            mainImage.classList.add('zoomed');
+            mainImage.style.transform = `scale(${zoomLevel})`;
+        } else {
+            mainImage.classList.remove('zoomed');
+            mainImage.style.transform = 'scale(1)';
+            mainImage.style.transformOrigin = 'center center';
+        }
+    });
+
+    // Mousemove for Panning
+    zoomContainer.addEventListener('mousemove', (event) => {
+        if (isZoomed) {
+            const rect = zoomContainer.getBoundingClientRect();
+            const offsetX = ((event.clientX - rect.left) / rect.width) * 100;
+            const offsetY = ((event.clientY - rect.top) / rect.height) * 100;
+
+            mainImage.style.transformOrigin = `${offsetX}% ${offsetY}%`;
+        }
+    });
+
+    // Reset Zoom when Mouse Leaves Container
+    zoomContainer.addEventListener('mouseleave', () => {
+        if (isZoomed) {
+            mainImage.classList.remove('zoomed');
+            mainImage.style.transform = 'scale(1)';
+            mainImage.style.transformOrigin = 'center center';
+            isZoomed = false; // Automatically reset zoom
+        }
+    });
+
+
+	function changeMainImage(imagePath, thumbnailElement) {
+    // Update the main image source
+    const mainImage = document.getElementById('mainImage');
+    mainImage.src = imagePath;
+
+    // Remove active class from all thumbnails
+    document.querySelectorAll('.thumbnail').forEach(thumb => {
+        thumb.classList.remove('active');
+    });
+
+    // Add active class to the clicked thumbnail
+    thumbnailElement.classList.add('active');
+}
+
+
+		
+		// Function to select variant
+		function selectVariant(productId, variantId, element) {
+			console.log('Selecting variant:', variantId); // Debug log
+			
+			// Update active state
+			document.querySelectorAll('.color-option').forEach(option => {
+				option.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form values
+			document.getElementById('selectedVariant').value = variantId;
+			document.getElementById('selectedSize').value = '';
+			document.getElementById('addToCartBtn').disabled = true;
+			
+			// Fetch variant details
+			fetch(`/product/${productId}/variant/${variantId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.images && data.images.length > 0) {
+            // Update main image
+            const mainImage = document.getElementById('mainImage');
+            mainImage.src = data.images[0].fullPath;
+            
+            // Update thumbnails
+            const thumbnailRow = document.querySelector('.thumbnail-row');
+            thumbnailRow.innerHTML = data.images.map((image, index) => `
+                <div class="thumbnail ${index === 0 ? 'active' : ''}"
+                     onclick="changeMainImage('${image.fullPath}', this)">
+                    <img src="${image.fullPath}" 
+                         alt="Product view ${index + 1}">
+                </div>
+            `).join('');
+        }
+        
+        // Update sizes
+        if (data.sizes) {
+            updateSizeOptions(data.sizes);
+        }
+    })
+    .catch(error => {
+        console.error('Error fetching variant details:', error);
+    });
+		}
+		
+		// Function to update size options
+		function updateSizeOptions(sizes) {
+			const sizeGrid = document.getElementById('sizeGrid');
+			sizeGrid.innerHTML = sizes.map(size => `
+				<button type="button" 
+						class="size-btn ${size.quantity === 0 ? 'out-of-stock' : ''}"
+						onclick="selectSize(this, ${size.size})"
+						${size.quantity === 0 ? 'disabled' : ''}>
+					UK ${size.size}
+					<div class="stock-info">
+						${size.quantity === 0 ? 'Out of Stock' : `${size.quantity} left`}
+					</div>
+				</button>
+			`).join('');
+		}
+		
+		// Function to select size
+		function selectSize(element, size) {
+			// Update active state
+			document.querySelectorAll('.size-btn').forEach(btn => {
+				btn.classList.remove('active');
+			});
+			element.classList.add('active');
+			
+			// Update form value
+			document.getElementById('selectedSize').value = size;
+			document.getElementById('addToCartBtn').disabled = false;
+		}
+		
+		
+		
+
+		function showLoginRequiredAlert() {
+    Swal.fire({
+        icon: 'warning',
+        title: 'Login Required',
+        text: 'You need to log in to add items to your cart.',
+        showConfirmButton: true,
+        confirmButtonText: 'Go to Login',
+        confirmButtonColor: '#384aeb',
+        showCancelButton: true,
+        cancelButtonColor: '#6c757d',
+        cancelButtonText: 'Cancel'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '/login';
+        }
+    });
+}
+
+function handleAddToCart(event) {
+    event.preventDefault();
+    
+    // Use the server-side passed isLoggedIn variable
+    const isLoggedIn = "<%= isLoggedIn ? 'true' : 'false' %>";
+    
+    const size = document.getElementById('selectedSize').value;
+    const variantId = document.getElementById('selectedVariant').value;
+    const productId = '<%= product._id %>'; 
+    
+    if (!size) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Oops...',
+            text: 'Please select a size before adding to cart!',
+            confirmButtonColor: '#384aeb'
+        });
+        return false;
+    }
+    
+    // If not logged in, show login prompt
+    if (!isLoggedIn) {
+        showLoginRequiredAlert();
+        return false;
+    }
+    
+    // Removed the color extraction logic
+    
+    fetch(`/addToCart/${productId}`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            size: size,
+            variantId: variantId,
+            quantity: 1
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(errorData => {
+                // Check for unauthorized error
+                if (response.status === 401 || errorData.status === 'unauthorized') {
+                    showLoginRequiredAlert();
+                    throw new Error('Unauthorized');
+                }
+                throw errorData;
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.status === 'success') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Added to Cart!',
+                text: data.message,
+                showConfirmButton: true,
+                confirmButtonText: 'Go to Cart',
+                confirmButtonColor: '#384aeb',
+                showCancelButton: true,
+                cancelButtonColor: '#6c757d',
+                cancelButtonText: 'Continue Shopping'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
+        }
+    })
+    .catch(error => {
+        // Only show error if it's not an unauthorized error (which is already handled)
+        if (error.message !== 'Unauthorized') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'There was a problem adding the product to cart.',
+                confirmButtonColor: '#384aeb'
+            });
+        }
+    });
+    
+    return false;
+}
+
+
+		
+		// Initialize any necessary elements on page load
+		document.addEventListener('DOMContentLoaded', function() {
+			// Any initialization code can go here
+			console.log('Product page initialized');
+		});
+</script>
+
+
+
+
+
+
+<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		const searchIcon = document.getElementById('search');
+		const searchInputBox = document.getElementById('search_input_box');
+		const closeSearch = document.getElementById('close_search');
+	
+		// Initially hide the search input box
+		searchInputBox.style.display = 'none';
+		searchInputBox.style.opacity = '0';
+		searchInputBox.style.visibility = 'hidden';
+	
+		// Toggle search input box
+		searchIcon.addEventListener('click', function(e) {
+			e.preventDefault();
+			if (searchInputBox.style.visibility === 'hidden') {
+				// Show search box with animation
+				searchInputBox.style.display = 'block';
+				setTimeout(() => {
+					searchInputBox.style.opacity = '1';
+					searchInputBox.style.visibility = 'visible';
+				}, 10);
+			}
+		});
+	
+		// Close search input box
+		closeSearch.addEventListener('click', function(e) {
+			e.preventDefault();
+			searchInputBox.style.opacity = '0';
+			
+			// Wait for opacity transition before hiding
+			setTimeout(() => {
+				searchInputBox.style.display = 'none';
+				searchInputBox.style.visibility = 'hidden';
+			}, 300); // Match this with transition duration
+		});
+	});
+	</script>

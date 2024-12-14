@@ -2,6 +2,7 @@ const User = require('../../models/userSchema');
 const Category= require('../../models/categorySchema');
 const Product = require('../../models/productSchema');
 const Cart = require('../../models/cartSchema')
+const Offer = require('../../models/offerSchema');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const session= require("express-session");
@@ -57,22 +58,61 @@ const loadHomePage = async (req, res) => {
         const user = req.session.user;
         const categories = await Category.find({isListed: true});
         
+        // Find active offers
+        const activeOffers = await Offer.find({
+            status: 'active',
+            isListed: true,
+            expireDate: { $gte: new Date() }
+        });
+
         let productData = await Product.find({
             isBlocked: false,
             category: {$in: categories.map(category => category._id)}
         }).populate('category');
 
+        // Process offers and calculate best discount for each product
+        const productsWithOffers = productData.map(product => {
+            // Find product-specific offers
+            const productOffers = activeOffers.filter(offer => 
+                offer.offerType === 'product' && 
+                offer.productIds.some(id => id.toString() === product._id.toString())
+            );
+
+            // Find category offers
+            const categoryOffers = activeOffers.filter(offer => 
+                offer.offerType === 'category' && 
+                offer.categoryIds.some(id => id.toString() === product.category._id.toString())
+            );
+
+            // Combine and find maximum offer
+            const allRelevantOffers = [...productOffers, ...categoryOffers];
+            const maxOffer = allRelevantOffers.length > 0 
+                ? Math.max(...allRelevantOffers.map(offer => offer.discount))
+                : 0;
+
+            // Calculate offer price
+            const offerPrice = maxOffer > 0 
+                ? product.regularPrice * (1 - maxOffer / 100)
+                : null;
+
+            return {
+                ...product.toObject(),
+                maxOfferPercentage: maxOffer,
+                offerPrice: offerPrice ? Math.round(offerPrice) : null
+            };
+        });
+
         // Sort by createdAt timestamp
-        productData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        productsWithOffers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
         // Limit to 8 products
-        productData = productData.slice(0, 8);
+        const limitedProducts = productsWithOffers.slice(0, 8);
 
         if (user) {
             const userData = await User.findOne({_id: user._id});
-            res.render("home", {user: userData, products: productData});
+            res.render("home", {user: userData, products: limitedProducts});
         } else {
-            return res.render('home', {products: productData});
+            return res.render('home', {products: limitedProducts});
         }
         
     } catch (error) {
@@ -640,8 +680,49 @@ const shopingPage = async (req, res) => {
             .limit(limit)
             .lean(); 
 
-        // Process products to get first image
-        products = products.map(product => {
+        // Get current date for offer calculations
+        const currentDate = new Date();
+
+        // Find active offers
+        const offers = await Offer.find({
+            status: 'active',
+            expireDate: { $gte: currentDate }
+        });
+
+        // Calculate the best offer for each product
+        products = await Promise.all(products.map(async (product) => {
+            let bestOffer = null;
+            let offerPercentage = 0;
+
+            // Find product-specific offers
+            const productOffers = offers.filter(offer =>
+                offer.offerType === 'product' &&
+                offer.productIds.some(id => id.toString() === product._id.toString())
+            );
+
+            // Find category-specific offers
+            const categoryOffers = offers.filter(offer =>
+                offer.offerType === 'category' &&
+                offer.categoryIds.some(id => id.toString() === product.category._id.toString())
+            );
+
+            // Combine all applicable offers
+            const allProductOffers = [...productOffers, ...categoryOffers];
+
+            // Find the best offer
+            if (allProductOffers.length > 0) {
+                bestOffer = allProductOffers.reduce((maxOffer, currentOffer) =>
+                    (currentOffer.discount > maxOffer.discount) ? currentOffer : maxOffer
+                );
+                offerPercentage = bestOffer.discount;
+            }
+
+            // Calculate the offer price
+            const offerPrice = offerPercentage
+                ? product.regularPrice * (1 - offerPercentage / 100)
+                : null;
+
+            // Get the first image
             const firstImage = product.variants.reduce((img, variant) => {
                 if (!img && variant.images && variant.images.length > 0) {
                     return variant.images[0].filename;
@@ -651,9 +732,13 @@ const shopingPage = async (req, res) => {
 
             return {
                 ...product,
-                productImages: [firstImage || 'default-image.jpg']
+                productImages: [firstImage || 'default-image.jpg'],
+                bestOffer: bestOffer,
+                offerPercentage: offerPercentage,
+                offerPrice: offerPrice
             };
-        });
+        }));
+
 
         // Pagination logic remains the same
         const pagination = {
@@ -677,13 +762,21 @@ const shopingPage = async (req, res) => {
             totalItems: totalProducts
         };
 
+        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
+            return res.json({
+                products,
+                pagination,
+                currentSort: sort,
+                currentCategory: categoryFilter || ''
+            });
+        }
+
         if (user) {
             const userData = await User.findOne({ _id: user._id }).lean();
             renderData.user = userData;
         }
 
         res.render("shop-page", renderData);
-
     } catch (error) {
         console.log('Shop Page Error:', error);
         res.status(500).send('Server Error: Shop Page Not Found');
@@ -695,11 +788,40 @@ const shopingPage = async (req, res) => {
 const getProductDetails = async (req, res) => {
     try {
         const productId = req.query.id;
-        const product = await Product.findById(productId).populate('category');
+        const product = await Product.findById(productId)
+            .populate('category')
+            .populate('variants');
         
         if (!product) {
             return res.status(404).render('error', { message: 'Product not found' });
         }
+
+        // Find applicable offers
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
+
+        // Calculate the maximum discount
+        let maxDiscount = 0;
+        let applicableOfferType = '';
+        
+        offers.forEach(offer => {
+            if (offer.offerType === 'product') {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferType = 'Product Offer';
+            } else if (offer.offerType === 'category') {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferType = 'Category Offer';
+            }
+        });
+
+        // Calculate discounted price
+        const discountedPrice = product.regularPrice * (1 - maxDiscount / 100);
 
         const variants = product.variants.filter(variant => variant.isListed);
         const initialVariant = variants[0];
@@ -710,7 +832,13 @@ const getProductDetails = async (req, res) => {
         }));
 
         res.render('product', {
-            product,
+            product: {
+                ...product.toObject(),
+                regularPrice: product.regularPrice,
+                discountedPrice: discountedPrice,
+                maxDiscount,
+                applicableOfferType
+            },
             variants,
             initialVariant,
             variantSizes,

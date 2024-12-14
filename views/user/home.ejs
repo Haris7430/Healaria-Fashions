@@ -187,47 +187,50 @@
 
             <div class="row">
                 <% products.forEach(product => { %>
-                    <!-- single product -->
-                    <div class="col-lg-3 col-md-6">
-                        <div class="single-product">
-                            <a href="/productDetails?id=<%= product._id %>">
-                                <% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
-                                    <img class="img-fluid" 
-                                         src="/uploads/product-images/<%= product.variants[0].images[0].filename %>" 
-                                         alt="<%= product.productName %>">
-                                <% } else { %>
-                                    <img class="img-fluid" src="/uploads/placeholder.jpg" alt="No Image">
-                                <% } %>
-                            </a>
-                            
-                            <div class="product-details">
-                                <h6><%= product.productName %></h6>
-                                <div class="price">
-                                    <h6>₹ <%= product.regularPrice %></h6>
-                                    <h6 class="l-through">₹ <%= product.salesPrice %></h6>
-                                </div>
-                                <div class="prd-bottom">
-                                    <a href="" class="social-info">
-                                        <span class="ti-bag"></span>
-                                        <p class="hover-text">add to bag</p>
-                                    </a>
-                                    <a href="" class="social-info">
-                                        <span class="lnr lnr-heart"></span>
-                                        <p class="hover-text">Wishlist</p>
-                                    </a>
-                                    <a href="" class="social-info">
-                                        <span class="lnr lnr-sync"></span>
-                                        <p class="hover-text">compare</p>
-                                    </a>
-                                    <a href="/productDetails?id=<%= product._id %>" class="social-info">
-                                        <span class="lnr lnr-move"></span>
-                                        <p class="hover-text">view more</p>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <% }); %>
+    <!-- single product -->
+    <div class="col-lg-3 col-md-6"><div class="single-product">
+		<a href="/productDetails?id=<%= product._id %>">
+		  <div class="product-image-container" style="position: relative;">
+			<% if (product.variants && product.variants.length > 0 && product.variants[0].images && product.variants[0].images.length > 0) { %>
+			  <img class="img-fluid" src="/uploads/product-images/<%= product.variants[0].images[0].filename %>" alt="<%= product.productName %>">
+			<% } else { %>
+			  <img class="img-fluid" src="/uploads/placeholder.jpg" alt="No Image">
+			<% } %>
+	
+			<% if (product.maxOfferPercentage && product.maxOfferPercentage > 0) { %>
+			  <div style="position: absolute; top: 10px; right: 10px; background-color: red; color: white; padding: 5px; border-radius: 3px;">
+				<%= product.maxOfferPercentage %>% OFF
+			  </div>
+			<% } %>
+		  </div>
+		</a>
+	
+		<div class="product-details">
+		  <h6><%= product.productName %></h6>
+		  <div class="price">
+			<% const offerPrice = product.regularPrice * (1 - product.maxOfferPercentage / 100); %>
+			<% if (offerPrice < product.regularPrice) { %>
+			  <h6>₹ <%= Math.round(offerPrice) %></h6>
+			  <h6 class="l-through text-muted">₹ <%= product.regularPrice %></h6>
+			<% } else { %>
+			  <h6>₹ <%= product.regularPrice %></h6>
+			<% } %>
+		  </div>
+                <div class="prd-bottom">
+                    <a href="" class="social-info">
+                        <span class="ti-bag"></span>
+                        <p class="hover-text">add to cart</p>
+                    </a>
+                    <a href="" class="social-info">
+                        <span class="lnr lnr-heart"></span>
+                        <p class="hover-text">Wishlist</p>
+                    </a>
+                    
+                </div>
+            </div>
+        </div>
+    </div>
+<% }); %>
             </div>
         </div>
     </div>

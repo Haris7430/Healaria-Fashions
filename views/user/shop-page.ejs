@@ -5,6 +5,32 @@
 
 
 <style>
+
+/* .offer-price {
+    color: #007bff;
+    font-weight: bold;
+}
+
+.regular-price {
+    color: #6c757d;
+    text-decoration: line-through;
+    margin-left: 10px;
+}
+
+.offer-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #dc3545;
+    color: white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    font-weight: bold;
+    z-index: 10;
+} */
+
+
+
 	.sidebar-categories {
 		background: #fff;
 		padding: 20px;
@@ -234,46 +260,58 @@
 						<div class="row">
 							
 							<!-- single product -->
-							<%for(let i=0; i<products.length; i++){%>
+							<% products.forEach(product => { %>
 								<div class="col-lg-4 col-md-6">
 									<div class="single-product">
-										<a href="/productDetails?id=<%= products[i]._id %>">
-											<img class="img-fluid" src="/uploads/product-images/<%= products[i].productImages[0] %>" alt="<%= products[i].productName %>">
+										<a href="/productDetails?id=<%= product._id %>">
+											<div class="product-image-container" style="position: relative;">
+												<% const firstImage = product.variants.reduce((img, variant) => {
+													if (!img && variant.images && variant.images.length > 0) {
+														return variant.images[0].filename;
+													}
+													return img;
+												}, null); %>
+							
+												<img class="img-fluid" 
+													 src="/uploads/product-images/<%= firstImage || 'placeholder.jpg' %>" 
+													 alt="<%= product.productName %>">
+							
+												<% if (product.offerPercentage && product.offerPercentage > 0) { %>
+													<div style="position: absolute; top: 10px; right: 10px; background-color: red; color: white; padding: 5px; border-radius: 3px;">
+														<%= product.offerPercentage %>% OFF
+													</div>
+												<% } %>
+											</div>
 										</a>
+							
 										<div class="product-details">
-											<%= products[i].productName.length > 20 ? products[i].productName.substring(0, 20) + '...' : products[i].productName %>
-				
+											<h6><%= product.productName.length > 20 ? product.productName.substring(0, 20) + '...' : product.productName %></h6>
 											<div class="price">
-												<h6>$ <%= products[i].regularPrice %></h6>
-												<h6 class="l-through">$ <%=products[i].salesPrice %> </h6>
+												<% const offerPrice = product.offerPercentage ? product.regularPrice * (1 - product.offerPercentage / 100) : null; %>
+												<% if (offerPrice && offerPrice < product.regularPrice) { %>
+													<h6>₹ <%= Math.round(offerPrice) %></h6>
+													<h6 class="l-through text-muted">₹ <%= product.regularPrice %></h6>
+												<% } else { %>
+													<h6>₹ <%= product.regularPrice %></h6>
+												<% } %>
 											</div>
 											<div class="prd-bottom">
-				
 												<a href="" class="social-info">
 													<span class="ti-bag"></span>
-													<p class="hover-text">add to bag</p>
+													<p class="hover-text">add to cart</p>
 												</a>
-												
 												<a href="" class="social-info">
 													<span class="lnr lnr-heart"></span>
 													<p class="hover-text">Wishlist</p>
-												</a>
-												<a href="" class="social-info">
-													<span class="lnr lnr-sync"></span>
-													<p class="hover-text">compare</p>
-												</a>
-												<a href="" class="social-info">
-													<span class="lnr lnr-move"></span>
-													<p class="hover-text">view more</p>
 												</a>
 											</div>
 										</div>
 									</div>
 								</div>
-								<% } %>
-										
-						
+							<% }); %>
 					</div>
+
+
 
 					<% if (locals.searchTerm) { %>
 						<div class="search-results-header">
@@ -674,118 +712,115 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 	<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCjCGmQ0Uq4exrzdcL6rvxywDDOvfAu6eE"></script>
 	<script src="js/gmaps.min.js"></script>
 	<script src="js/main.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
 
 
 	<script>
-		document.addEventListener('DOMContentLoaded', function() {
-			const globalSearchToggle = document.getElementById('globalSearchToggle');
-			const searchForm = document.querySelector('#search_input_box form');
-			const searchInput = document.getElementById('search_input');
-			const sortForm = document.getElementById('sortForm');
-			
-			if (globalSearchToggle && searchForm) {
-				// Set initial state based on URL parameter
-				const urlParams = new URLSearchParams(window.location.search);
-				const isGlobalSearch = urlParams.get('globalSearch') === 'true';
-				globalSearchToggle.checked = isGlobalSearch;
-		
-				// Prevent form submission and use fetch for smoother handling
-				searchForm.addEventListener('submit', function(e) {
-					e.preventDefault();
-					
-					const searchTerm = searchInput.value;
-					const currentCategory = urlParams.get('category') || '';
-					const isGlobalSearch = globalSearchToggle.checked;
-					
-					// Construct URL with parameters
-					const searchUrl = new URL('/search', window.location.origin);
-					searchUrl.searchParams.set('q', searchTerm);
-					if (currentCategory) searchUrl.searchParams.set('category', currentCategory);
-					if (isGlobalSearch) searchUrl.searchParams.set('globalSearch', 'true');
-					
-					// Use fetch to load results dynamically
-					fetch(searchUrl)
-						.then(response => response.text())
-						.then(html => {
-							// Update main content area with search results
-							const parser = new DOMParser();
-							const doc = parser.parseFromString(html, 'text/html');
-							const newContent = doc.querySelector('.category-list');
-							const currentContent = document.querySelector('.category-list');
-							
-							if (newContent && currentContent) {
-								currentContent.innerHTML = newContent.innerHTML;
-							}
-							
-							// Update URL without page reload
-							window.history.pushState({}, '', searchUrl);
-						})
-						.catch(error => {
-							console.error('Search error:', error);
-							// Fallback to traditional form submission if fetch fails
-							searchForm.submit();
-						});
-				});
-		
-				// Add event listener to update URL when global search toggled
-				globalSearchToggle.addEventListener('change', function() {
-					const currentPage = urlParams.get('page') || 1;
-					const currentSort = urlParams.get('sort') || 'default';
-					const currentCategory = urlParams.get('category') || '';
-					const currentSearchTerm = urlParams.get('q') || '';
-					
-					const params = new URLSearchParams();
-					if (currentPage) params.append('page', currentPage);
-					if (currentSort && currentSort !== 'default') params.append('sort', currentSort);
-					if (currentCategory) params.append('category', currentCategory);
-					if (currentSearchTerm) params.append('q', currentSearchTerm);
-					
-					// Add global search parameter
-					if (this.checked) {
-						params.append('globalSearch', 'true');
-					}
-					
-					window.location.href = `/search?${params.toString()}`;
-				});
-			}
-		
-			// Sorting form handler to maintain category
-			if (sortForm) {
-				sortForm.addEventListener('change', function(e) {
-					const currentPage = new URLSearchParams(window.location.search).get('page') || 1;
-					const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
-					const sortValue = e.target.value;
-					
-					const params = new URLSearchParams(window.location.search);
-					params.set('sort', sortValue);
-					params.set('page', currentPage);
-					if (currentCategory) params.set('category', currentCategory);
-					
-					window.location.href = `/shop-page?${params.toString()}`;
-				});
-			}
-		
-			// Pagination links handler
-			const paginationLinks = document.querySelectorAll('.pagination a');
-			paginationLinks.forEach(link => {
-				link.addEventListener('click', function(e) {
-					if (!this.classList.contains('dot-dot')) {
-						e.preventDefault();
-						const currentSort = new URLSearchParams(window.location.search).get('sort') || 'default';
-						const currentCategory = new URLSearchParams(window.location.search).get('category') || '';
-						const page = this.getAttribute('href').split('page=')[1].split('&')[0];
-						
-						const params = new URLSearchParams(window.location.search);
-						params.set('page', page);
-						if (currentSort && currentSort !== 'default') params.set('sort', currentSort);
-						if (currentCategory) params.set('category', currentCategory);
-						
-						window.location.href = `/shop-page?${params.toString()}`;
-					}
-				});
-			});
-		});
-		</script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Axios-based search functionality
+            const searchForm = document.getElementById('search_input_box');
+            const searchInput = document.getElementById('search_input');
+            const resultsContainer = document.querySelector('.category-list .row');
+
+            if (searchForm) {
+                searchForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    
+                    try {
+                        const searchTerm = searchInput.value;
+                        const response = await axios.get('/search', {
+                            params: {
+                                q: searchTerm,
+                                globalSearch: document.getElementById('globalSearchToggle')?.checked || false
+                            }
+                        });
+
+                        // Update products container
+                        resultsContainer.innerHTML = response.data.products.map(product => `
+                            <div class="col-lg-4 col-md-6">
+                                <div class="single-product">
+                                    <a href="/productDetails?id=${product._id}">
+                                        <img class="img-fluid" src="/uploads/product-images/${product.productImages[0]}" alt="${product.productName}">
+                                        
+                                        ${product.offerPercentage ? `
+                                            <div class="offer-badge">
+                                                ${product.offerPercentage}% OFF
+                                            </div>
+                                        ` : ''}
+                                    </a>
+                                    <div class="product-details">
+                                        ${product.productName.length > 20 
+                                            ? product.productName.substring(0, 20) + '...' 
+                                            : product.productName}
+                                        <div class="price">
+                                            ${product.offerPrice ? `
+                                                <h6 class="offer-price">$ ${product.offerPrice.toFixed(2)}</h6>
+                                                <h6 class="l-through regular-price">$ ${product.regularPrice.toFixed(2)}</h6>
+                                            ` : `
+                                                <h6>$ ${product.regularPrice.toFixed(2)}</h6>
+                                            `}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+
+                        // Update pagination if needed
+                        // You might want to add logic to update pagination here
+                    } catch (error) {
+                        console.error('Search error:', error);
+                        alert('An error occurred while searching');
+                    }
+                });
+            }
+
+            // Axios-based sorting and filtering
+            const sortSelect = document.querySelector('select[name="sort"]');
+            const categoryRadios = document.querySelectorAll('input[name="category"]');
+
+            // Sorting handler
+            if (sortSelect) {
+                sortSelect.addEventListener('change', async function() {
+                    try {
+                        const response = await axios.get('/shop-page', {
+                            params: {
+                                sort: this.value,
+                                category: document.querySelector('input[name="category"]:checked')?.value || ''
+                            }
+                        });
+
+                        // Update products and pagination similar to search
+                        resultsContainer.innerHTML = response.data.products.map(product => `
+                            <!-- Same product rendering logic as above -->
+                        `).join('');
+                    } catch (error) {
+                        console.error('Sorting error:', error);
+                    }
+                });
+            }
+
+            // Category filtering handler
+            categoryRadios.forEach(radio => {
+                radio.addEventListener('change', async function() {
+                    try {
+                        const response = await axios.get('/shop-page', {
+                            params: {
+                                category: this.value,
+                                sort: document.querySelector('select[name="sort"]')?.value || 'default'
+                            }
+                        });
+
+                        // Update products and pagination similar to search
+                        resultsContainer.innerHTML = response.data.products.map(product => `
+                            <!-- Same product rendering logic as above -->
+                        `).join('');
+                    } catch (error) {
+                        console.error('Category filtering error:', error);
+                    }
+                });
+            });
+        });
+    </script>
 
 </html>
