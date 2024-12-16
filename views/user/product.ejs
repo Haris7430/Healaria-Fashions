@@ -2,10 +2,6 @@
 
 <%- include("../../views/partials/user/header/") %>
 
-
-
-
-
 <style>
 
 .product-price {
@@ -459,7 +455,7 @@
 									<%= product.maxDiscount.toFixed(0) %>% OFF
 								</span>
 								<div class="offer-type" style="font-size: 12px; color: #666; margin-top: 5px;">
-									Offer Type: <%= product.applicableOfferType %>
+									Offer: <%= product.applicableOfferName || 'N/A' %>
 								</div>
 							<% } else { %>
 								<span>₹<%= product.regularPrice.toFixed(2) %></span>

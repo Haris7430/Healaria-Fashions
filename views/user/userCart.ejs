@@ -1,6 +1,19 @@
 <%- include("../../views/partials/user/header/") %>
 
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
 <style>
+
+.offer-badge {
+        background-color: #28a745;
+        color: white;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        margin-left: 10px;
+    }
+
 
 .product-image-link {
     cursor: pointer;
@@ -114,38 +127,46 @@
                         </thead>
                         <tbody>
                             <% cart.items.forEach(item => { 
-                                // Find the specific variant for the cart item
-                                const variant = item.productId.variants.find(v => 
-                                    v.color === item.color
-                                );
-                            %>
-                            <tr data-product-id="<%= item.productId._id %>" 
-                                data-variant-color="<%= item.color %>"
-                                data-variant-size="<%= item.size %>">
-                                <td>
-                                    <div class="cart-product-details">
-                                        <% if (variant && variant.images && variant.images.length > 0) { %>
-                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
-                                                <img src="/uploads/product-images/<%= variant.images[0].filename %>" 
-                                                     alt="<%= item.productId.productName %>" 
-                                                     class="cart-product-image">
-                                            </a>
-                                        <% } else { %>
-                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
-                                                <img src="/images/default-product.jpg" 
-                                                     alt="<%= item.productId.productName %>" 
-                                                     class="cart-product-image">
-                                            </a>
-                                        <% } %>
-                                        <div class="cart-product-info">
-                                            <p class="mb-1"><%= item.productId.productName %></p>
-                                            <small class="text-muted">Color: <%= item.color %>, Size: UK <%= item.size %></small>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <h5>₹<%= item.price.toFixed(2) %></h5>
-                                </td>
+        const variant = item.productId.variants.find(v => v.color === item.color);
+        const productOffer = item.offer; // New offer information
+    %>
+    <tr data-product-id="<%= item.productId._id %>" 
+        data-variant-color="<%= item.color %>"
+        data-variant-size="<%= item.size %>">
+        <td>
+            <div class="cart-product-details">
+                <% if (variant && variant.images && variant.images.length > 0) { %>
+                    <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
+                        <img src="/uploads/product-images/<%= variant.images[0].filename %>" 
+                             alt="<%= item.productId.productName %>" 
+                             class="cart-product-image">
+                    </a>
+                <% } else { %>
+                    <a href="/productDetails?id=<%= item.productId._id %>" class="product-image-link">
+                        <img src="/images/default-product.jpg" 
+                             alt="<%= item.productId.productName %>" 
+                             class="cart-product-image">
+                    </a>
+                <% } %>
+                <div class="cart-product-info">
+                    <p class="mb-1"><%= item.productId.productName %></p>
+                    <small class="text-muted">Color: <%= item.color %>, Size: UK <%= item.size %></small>
+                    <% if (item.offer) { %>
+                        <span class="offer-badge"><%= item.offer.offerName %> (<%= item.offer.discount %>% OFF)</span>
+                    <% } %>
+                </div>
+            </div>
+        </td>
+        <td>
+            <h5>
+                <% if (item.offer) { %>
+                    <span class="text-muted" style="text-decoration: line-through;">₹<%= item.originalPrice.toFixed(2) %></span>
+                    <span>₹<%= item.price.toFixed(2) %></span>
+                <% } else { %>
+                    ₹<%= item.price.toFixed(2) %>
+                <% } %>
+            </h5>
+        </td>
                                 <td>
                                     <div class="cart-quantity-control">
                                         <button onclick="decreaseQuantity('<%= item.productId._id %>', '<%= item.color %>', '<%= item.size %>')" 
@@ -211,29 +232,36 @@
     </div>
 </section>
 <!--================End Cart Area =================-->
-
-<%- include("../../views/partials/user/footer/") %>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-function increaseQuantity(productId, variantId, size, color) {
-    const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
-    const quantityInput = row.querySelector('.qty');
-    const currentQuantity = parseInt(quantityInput.value);
-
-    // Validate max quantity
-    if (currentQuantity >= 5) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Maximum Quantity Reached',
-            text: 'You cannot add more than 5 items of this product.'
-        });
-        return;
-    }
-
-    // Fetch current stock for this specific variant and size
-    fetch(`/check-stock/${productId}?color=${color}&size=${size}&variantId=${variantId}`)
-        .then(response => response.json())
-        .then(stockData => {
+    // Axios-based implementation
+    function increaseQuantity(productId, variantId, size, color) {
+        const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
+        const quantityInput = row.querySelector('.qty');
+        const currentQuantity = parseInt(quantityInput.value);
+    
+        // Validate max quantity
+        if (currentQuantity >= 5) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Maximum Quantity Reached',
+                text: 'You cannot add more than 5 items of this product.'
+            });
+            return;
+        }
+    
+        // Use Axios to check stock
+        axios.get(`/check-stock/${productId}`, {
+            params: {
+                color: color,
+                size: size,
+                variantId: variantId
+            }
+        })
+        .then(response => {
+            const stockData = response.data;
             if (currentQuantity + 1 > stockData.availableQuantity) {
                 Swal.fire({
                     icon: 'warning',
@@ -242,8 +270,8 @@ function increaseQuantity(productId, variantId, size, color) {
                 });
                 return;
             }
-
-            // Proceed with quantity update for this specific variant and size
+    
+            // Proceed with quantity update
             updateQuantity(productId, currentQuantity + 1, color, size, variantId);
         })
         .catch(error => {
@@ -254,70 +282,80 @@ function increaseQuantity(productId, variantId, size, color) {
                 text: 'Failed to check stock availability'
             });
         });
-}
-
-function decreaseQuantity(productId, color, size) {
-    const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
-    const quantityInput = row.querySelector('.qty');
-    const currentQuantity = parseInt(quantityInput.value);
-    const variantId = quantityInput.getAttribute('data-variant-id');
-
-    if (currentQuantity > 1) {
-        updateQuantity(productId, currentQuantity - 1, color, size, variantId);
     }
-}
-
-function updateQuantity(productId, newQuantity, color, size, variantId) {
-    fetch(`/updateCart/${productId}`, {
-        method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
+    
+    function decreaseQuantity(productId, color, size) {
+        const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
+        const quantityInput = row.querySelector('.qty');
+        const currentQuantity = parseInt(quantityInput.value);
+        const variantId = quantityInput.getAttribute('data-variant-id');
+    
+        if (currentQuantity > 1) {
+            updateQuantity(productId, currentQuantity - 1, color, size, variantId);
+        }
+    }
+    
+    function updateQuantity(productId, newQuantity, color, size, variantId) {
+        axios.put(`/updateCart/${productId}`, { 
             quantity: newQuantity, 
             color: color,
             size: size,
             variantId: variantId
         })
-    })
-    .then(response => response.json())
-    .then(data => {
-        // Find the specific row for this product, variant, and size
-        const row = document.querySelector(
-            `tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`
-        );
-        
-        // Update quantity input
-        const quantityInput = row.querySelector('.qty');
-        quantityInput.value = newQuantity;
-        
-        // Update total price for the specific item
-        const totalPriceElement = row.querySelector('.total-price');
-        const itemInCart = data.cart.items.find(item => 
-            item.productId.toString() === productId && 
-            item.variantId.toString() === variantId &&
-            item.color === color && 
-            item.size === parseInt(size)
-        );
-        
-        // Update item's total price
-        totalPriceElement.textContent = `₹${itemInCart.totalPrice.toFixed(2)}`;
-        
-        // Update cart subtotal
-        const subtotalElement = document.getElementById('subtotal');
-        subtotalElement.textContent = `₹${data.subtotal.toFixed(2)}`;
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Failed to update cart quantity'
+        .then(response => {
+            const data = response.data;
+            
+            // Find the specific row for this product, variant, and size
+            const row = document.querySelector(
+                `tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`
+            );
+            
+            // Update quantity input
+            const quantityInput = row.querySelector('.qty');
+            quantityInput.value = newQuantity;
+            
+            // Update total price for the specific item
+            const totalPriceElement = row.querySelector('.total-price');
+            const itemInCart = data.cart.items.find(item => 
+                item.productId.toString() === productId && 
+                item.variantId.toString() === variantId &&
+                item.color === color && 
+                item.size === parseInt(size)
+            );
+            
+            // Update item's total price and offer details
+            const priceContainer = row.querySelector('h5');
+            if (itemInCart.offer) {
+                priceContainer.innerHTML = `
+                    <span class="text-muted" style="text-decoration: line-through;">₹${itemInCart.originalPrice.toFixed(2)}</span>
+                    <span>₹${itemInCart.price.toFixed(2)}</span>
+                `;
+            } else {
+                priceContainer.textContent = `₹${itemInCart.price.toFixed(2)}`;
+            }
+            
+            // Update total price cell
+            totalPriceElement.textContent = `₹${itemInCart.totalPrice.toFixed(2)}`;
+            
+            // Update cart subtotal
+            const subtotalElement = document.getElementById('subtotal');
+            subtotalElement.textContent = `₹${data.subtotal.toFixed(2)}`;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to update cart quantity'
+            });
         });
-    });
-}
+    }
+    
+    function removeFromCart(productId, color, size) {
+    // Find the specific variant for this product
+    const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
+    const variantId = row.querySelector('.qty').getAttribute('data-variant-id');
 
-function removeFromCart(productId, color, size) {
     Swal.fire({
         title: 'Remove Item',
         text: 'Are you sure you want to remove this item from your cart?',
@@ -328,13 +366,10 @@ function removeFromCart(productId, color, size) {
         confirmButtonText: 'Yes, remove it!'
     }).then((result) => {
         if (result.isConfirmed) {
-            fetch(`/removeFromCart/${productId}?color=${color}&size=${size}`, {
-                method: 'DELETE'
+            axios.delete(`/removeFromCart/${productId}`, {
+                params: { color, size, variantId }
             })
             .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to remove item');
-                }
                 location.reload();
             })
             .catch(error => {
@@ -348,7 +383,7 @@ function removeFromCart(productId, color, size) {
         }
     });
 }
-</script>
+    </script>
+    
+    <%- include("../../views/partials/user/footer/") %>
 
-<!-- Add Font Awesome for plus and minus icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">

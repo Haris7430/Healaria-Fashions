@@ -808,15 +808,15 @@ const getProductDetails = async (req, res) => {
 
         // Calculate the maximum discount
         let maxDiscount = 0;
-        let applicableOfferType = '';
+        let applicableOfferName = '';
         
         offers.forEach(offer => {
-            if (offer.offerType === 'product') {
+            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
                 maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferType = 'Product Offer';
-            } else if (offer.offerType === 'category') {
+                applicableOfferName = offer.offerName;
+            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
                 maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferType = 'Category Offer';
+                applicableOfferName = offer.offerName;
             }
         });
 
@@ -837,7 +837,7 @@ const getProductDetails = async (req, res) => {
                 regularPrice: product.regularPrice,
                 discountedPrice: discountedPrice,
                 maxDiscount,
-                applicableOfferType
+                applicableOfferName
             },
             variants,
             initialVariant,

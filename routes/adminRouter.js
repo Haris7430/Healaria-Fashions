@@ -13,6 +13,7 @@ const categoryController = require('../controllers/admin/categoryController');
 const productController = require('../controllers/admin/productController');
 const orderController = require('../controllers/admin/orderController')
 const offerController = require('../controllers/admin/offerController');
+const couponController = require('../controllers/admin/couponController')
 const multer = require('multer'); 
 const storage = multer.memoryStorage(); // Store files in memory
 const upload = multer({ storage }).array('images', 10);
@@ -84,6 +85,19 @@ router.get('/offers/get-products',adminAuth, offerController.getProductsForOffer
 router.get('/offers/get-categories',adminAuth, offerController.getCategoriesForOffer);
 
  
+
+router.get('/coupons',adminAuth, couponController.getCoupons);
+router.post('/coupons/create',adminAuth, couponController.createCoupon);
+router.get('/check-coupon-code', couponController.checkCouponCode);
+router.get('/coupons/edit/:id',adminAuth, couponController.getEditCouponPage);
+router.put('/coupons/edit/:id',adminAuth, couponController.updateCoupon);
+router.delete('/coupons/delete/:id',adminAuth, couponController.deleteCoupon);
+router.patch('/coupons/toggle-status/:id',adminAuth, couponController.toggleCouponStatus);
+
+
+
+
+
 module.exports = router; 
 
 
