@@ -52,25 +52,32 @@ const createCoupon = async (req, res) => {
             validFrom, 
             expiryDate, 
             discountPercentage, 
+            maxDiscountAmount,
             minPurchaseLimit 
         } = req.body;
 
-        // Check if coupon code already exists
-        const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
-        if (existingCoupon) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'A coupon with this code already exists' 
-            });
+        // Additional server-side validation
+        if (maxDiscountAmount !== null && maxDiscountAmount !== '') {
+            const maxDiscountNum = parseFloat(maxDiscountAmount);
+            
+            // Validate maxDiscountAmount
+            if (isNaN(maxDiscountNum) || maxDiscountNum < 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Invalid maximum discount amount' 
+                });
+            }
         }
 
+        // Rest of your existing code remains the same...
         const newCoupon = new Coupon({
             title,
             description,
             code: code.toUpperCase(),
             validFrom: new Date(validFrom),
             expiryDate: new Date(expiryDate),
-            discountPercentage: discountPercentage || null,
+            discountPercentage,
+            maxDiscountAmount: maxDiscountAmount ? parseFloat(maxDiscountAmount) : null,
             minPurchaseLimit: minPurchaseLimit || 0
         });
 
@@ -84,11 +91,12 @@ const createCoupon = async (req, res) => {
     } catch (error) {
         console.error('Coupon creation error:', error);
         
-        // Handle mongoose duplicate key error
-        if (error.code === 11000) {
+        // Detailed error handling
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
             return res.status(400).json({ 
                 success: false, 
-                message: 'A coupon with this code already exists' 
+                message: messages.join(', ') 
             });
         }
 
@@ -146,8 +154,8 @@ const updateCoupon = async (req, res) => {
             code, 
             validFrom, 
             expiryDate, 
-            discountAmount, 
             discountPercentage, 
+            maxDiscountAmount,
             minPurchaseLimit 
         } = req.body;
 
@@ -159,14 +167,27 @@ const updateCoupon = async (req, res) => {
             });
         }
 
+        // Additional server-side validation
+        if (maxDiscountAmount !== null && maxDiscountAmount !== '') {
+            const maxDiscountNum = parseFloat(maxDiscountAmount);
+            
+            // Validate maxDiscountAmount
+            if (isNaN(maxDiscountNum) || maxDiscountNum < 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: 'Invalid maximum discount amount' 
+                });
+            }
+        }
+
         // Update coupon fields
         coupon.title = title;
         coupon.description = description;
         coupon.code = code.toUpperCase();
         coupon.validFrom = new Date(validFrom);
         coupon.expiryDate = new Date(expiryDate);
-        coupon.discountAmount = discountAmount || null;
-        coupon.discountPercentage = discountPercentage || null;
+        coupon.discountPercentage = discountPercentage;
+        coupon.maxDiscountAmount = maxDiscountAmount ? parseFloat(maxDiscountAmount) : null;
         coupon.minPurchaseLimit = minPurchaseLimit;
 
         await coupon.save();
@@ -178,12 +199,23 @@ const updateCoupon = async (req, res) => {
         });
     } catch (error) {
         console.error('Coupon update error:', error);
+        
+        // Detailed error handling
+        if (error.name === 'ValidationError') {
+            const messages = Object.values(error.errors).map(err => err.message);
+            return res.status(400).json({ 
+                success: false, 
+                message: messages.join(', ') 
+            });
+        }
+
         res.status(400).json({ 
             success: false, 
             message: error.message || 'Failed to update coupon' 
         });
     }
 };
+
 
 const deleteCoupon = async (req, res) => {
     try {

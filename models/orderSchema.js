@@ -118,10 +118,29 @@ const orderSchema = new Schema({
         type: Number,
         required: true
     },
+    discountAmount: {
+        type: Number,
+        default: 0
+    },
     total: {
         type: Number,
         required: true
     },
+    couponApplied: {
+        code: {
+            type: String,
+            default: null
+        },
+        discountPercentage: {
+            type: Number,
+            default: null
+        },
+        discountAmount: {
+            type: Number,
+            default: null
+        }
+    },
+    
     paymentStatus: {
         type: String,
         enum: ['pending', 'paid', 'failed'],

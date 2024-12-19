@@ -6,13 +6,13 @@
 <style>
 
 .offer-badge {
-        background-color: #28a745;
-        color: white;
-        padding: 2px 5px;
-        border-radius: 3px;
-        font-size: 0.8em;
-        margin-left: 10px;
-    }
+    background-color: #28a745;
+    color: white;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    margin-left: 10px;
+}
 
 
 .product-image-link {
@@ -151,6 +151,7 @@
                 <div class="cart-product-info">
                     <p class="mb-1"><%= item.productId.productName %></p>
                     <small class="text-muted">Color: <%= item.color %>, Size: UK <%= item.size %></small>
+                    
                     <% if (item.offer) { %>
                         <span class="offer-badge"><%= item.offer.offerName %> (<%= item.offer.discount %>% OFF)</span>
                     <% } %>
@@ -158,15 +159,10 @@
             </div>
         </td>
         <td>
-            <h5>
-                <% if (item.offer) { %>
-                    <span class="text-muted" style="text-decoration: line-through;">₹<%= item.originalPrice.toFixed(2) %></span>
-                    <span>₹<%= item.price.toFixed(2) %></span>
-                <% } else { %>
-                    ₹<%= item.price.toFixed(2) %>
-                <% } %>
-            </h5>
-        </td>
+    <h5>
+        ₹<%= item.price.toFixed(2) %>
+    </h5>
+</td>
                                 <td>
                                     <div class="cart-quantity-control">
                                         <button onclick="decreaseQuantity('<%= item.productId._id %>', '<%= item.color %>', '<%= item.size %>')" 
@@ -241,7 +237,7 @@
         const row = document.querySelector(`tr[data-product-id="${productId}"][data-variant-color="${color}"][data-variant-size="${size}"]`);
         const quantityInput = row.querySelector('.qty');
         const currentQuantity = parseInt(quantityInput.value);
-    
+
         // Validate max quantity
         if (currentQuantity >= 5) {
             Swal.fire({
@@ -251,7 +247,7 @@
             });
             return;
         }
-    
+
         // Use Axios to check stock
         axios.get(`/check-stock/${productId}`, {
             params: {
@@ -270,7 +266,7 @@
                 });
                 return;
             }
-    
+
             // Proceed with quantity update
             updateQuantity(productId, currentQuantity + 1, color, size, variantId);
         })
@@ -314,28 +310,47 @@
             const quantityInput = row.querySelector('.qty');
             quantityInput.value = newQuantity;
             
-            // Update total price for the specific item
-            const totalPriceElement = row.querySelector('.total-price');
-            const itemInCart = data.cart.items.find(item => 
-                item.productId.toString() === productId && 
-                item.variantId.toString() === variantId &&
-                item.color === color && 
-                item.size === parseInt(size)
-            );
-            
-            // Update item's total price and offer details
+            // Find price containers
             const priceContainer = row.querySelector('h5');
-            if (itemInCart.offer) {
-                priceContainer.innerHTML = `
-                    <span class="text-muted" style="text-decoration: line-through;">₹${itemInCart.originalPrice.toFixed(2)}</span>
-                    <span>₹${itemInCart.price.toFixed(2)}</span>
-                `;
-            } else {
-                priceContainer.textContent = `₹${itemInCart.price.toFixed(2)}`;
-            }
+            const totalPriceElement = row.querySelector('.total-price');
+            const productInfoContainer = row.querySelector('.cart-product-info');
             
-            // Update total price cell
-            totalPriceElement.textContent = `₹${itemInCart.totalPrice.toFixed(2)}`;
+            // Update price display
+            if (data.cart && data.cart.items) {
+                const itemInCart = data.cart.items.find(item => 
+                    item.productId.toString() === productId && 
+                    item.variantId.toString() === variantId &&
+                    item.color === color && 
+                    item.size === parseInt(size)
+                );
+                
+                if (itemInCart) {
+                    // Remove existing offer badge if present
+                    const existingOfferBadge = productInfoContainer.querySelector('.offer-badge');
+                    if (existingOfferBadge) {
+                        existingOfferBadge.remove();
+                    }
+
+                    // Update price display with offer
+                    if (itemInCart.offer) {
+                        priceContainer.innerHTML = `
+                            <span class="text-muted" style="text-decoration: line-through;">₹${itemInCart.originalPrice.toFixed(2)}</span>
+                            <span>₹${itemInCart.price.toFixed(2)}</span>
+                        `;
+                        
+                        // Add offer badge
+                        const offerBadge = document.createElement('span');
+                        offerBadge.className = 'offer-badge';
+                        offerBadge.textContent = `${itemInCart.offer.offerName} (${itemInCart.offer.discount}% OFF)`;
+                        productInfoContainer.appendChild(offerBadge);
+                    } else {
+                        priceContainer.innerHTML = `₹${itemInCart.price.toFixed(2)}`;
+                    }
+                    
+                    // Update total price cell
+                    totalPriceElement.textContent = `₹${itemInCart.totalPrice.toFixed(2)}`;
+                }
+            }
             
             // Update cart subtotal
             const subtotalElement = document.getElementById('subtotal');

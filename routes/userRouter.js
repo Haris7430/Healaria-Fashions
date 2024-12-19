@@ -60,8 +60,8 @@ router.get('/check-stock/:productId', userAuth, userCartController.checkStockAva
 router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
 router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
 router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
-
-
+router.get('/checkout/available-coupons', userAuth, checkoutController.getAvailableCoupons);
+router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCoupon);
 
 
 router.get('/userProfile/:section?', userAuth, userProfileController.getUserProfile);

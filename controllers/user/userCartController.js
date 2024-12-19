@@ -4,6 +4,7 @@ const Product = require('../../models/productSchema');
 const Cart = require('../../models/cartSchema');
 const Offer = require('../../models/offerSchema');
 
+
 const getCartPage = async (req, res) => {
     try {
         if (!req.session.user) {
@@ -27,63 +28,18 @@ const getCartPage = async (req, res) => {
             });
         }
 
-        // Find applicable offers for each product in the cart
-        const cartItemsWithOffers = await Promise.all(cart.items.map(async (item) => {
-            // Find applicable offers for the product
-            const offers = await Offer.find({
-                $or: [
-                    { offerType: 'product', productIds: item.productId._id },
-                    { offerType: 'category', categoryIds: item.productId.category }
-                ],
-                status: 'active',
-                expireDate: { $gte: new Date() }
-            });
-
-            // Find the maximum discount offer
-            let maxOffer = null;
-            let originalPrice = item.price;
-            let discountedPrice = item.price;
-
-            if (offers.length > 0) {
-                maxOffer = offers.reduce((max, offer) => 
-                    offer.discount > (max ? max.discount : 0) ? offer : max
-                , null);
-
-                if (maxOffer) {
-                    discountedPrice = originalPrice * (1 - maxOffer.discount / 100);
-                }
-            }
-
-            return {
-                ...item.toObject(),
-                originalPrice: originalPrice,
-                price: discountedPrice,
-                totalPrice: discountedPrice * item.quantity,
-                offer: maxOffer ? {
-                    offerName: maxOffer.offerName,
-                    discount: maxOffer.discount
-                } : null
-            };
-        }));
-
-        // Create a new cart object with updated items
-        const updatedCart = {
-            ...cart.toObject(),
-            items: cartItemsWithOffers
-        };
-
-        // Recalculate subtotal with discounted prices
-        const subtotal = cartItemsWithOffers.reduce((sum, item) => sum + item.totalPrice, 0);
+        // Recalculate subtotal with original prices
+        const subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
 
         res.render('userCart', { 
-            cart: updatedCart, 
+            cart, 
             subtotal 
         });
     } catch (error) {
         console.error(error);
         res.status(500).send("Internal Server Error");
     }
-}; 
+};
 
 const addToCart = async (req, res) => {
     try {
@@ -98,13 +54,42 @@ const addToCart = async (req, res) => {
         const userId = req.session.user._id;
         const { quantity = 1, size, variantId } = req.body;
 
-        const product = await Product.findById(productId);
+        const product = await Product.findById(productId)
+            .populate('category');
         if (!product) {
             return res.status(404).json({ 
                 status: 'error',
                 message: "Product not found" 
             });
         }
+
+        // Find applicable offers
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
+
+        // Calculate the maximum discount
+        let maxDiscount = 0;
+        let applicableOfferName = '';
+        
+        offers.forEach(offer => {
+            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            }
+        });
+
+        // Calculate discounted price
+        const originalPrice = product.regularPrice;
+        const discountedPrice = originalPrice * (1 - maxDiscount / 100);
 
         // Validate quantity
         if (quantity > 5) {
@@ -157,17 +142,28 @@ const addToCart = async (req, res) => {
             });
         }
 
-        // Add new item to cart (using regular price)
-        cart.items.push({
+        // Add new item to cart with offer details
+        const cartItem = {
             productId,
             variantId: selectedVariant._id,
             size: parseInt(size),
             color: selectedVariant.color,
             quantity,
-            price: product.regularPrice,
-            totalPrice: product.regularPrice * quantity,
+            originalPrice,
+            price: discountedPrice,
+            totalPrice: discountedPrice * quantity,
             availableQuantity: sizeObj.quantity
-        });
+        };
+
+        // Add offer details if applicable
+        if (maxDiscount > 0) {
+            cartItem.offer = {
+                discount: maxDiscount,
+                offerName: applicableOfferName
+            };
+        }
+
+        cart.items.push(cartItem);
 
         await cart.save();
         return res.status(200).json({ 
@@ -193,101 +189,102 @@ const updateCart = async (req, res) => {
         const { quantity, color, size, variantId } = req.body;
         const userId = req.session.user._id;
 
-        const product = await Product.findById(productId);
+        const product = await Product.findById(productId)
+            .populate('category');
         if (!product) {
             return res.status(404).json({ message: "Product not found" });
         }
 
-        // Find the specific variant
-        const variant = product.variants.find(v => 
-            v._id.toString() === variantId && v.color === color
-        );
-        if (!variant) {
-            return res.status(404).json({ message: "Variant not found" });
-        }
+        // Find applicable offers (same logic as addToCart)
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
 
-        // Check stock availability for specific size
-        const sizeObj = variant.sizes.find(s => s.size === parseInt(size));
-        if (!sizeObj || sizeObj.quantity < quantity) {
-            return res.status(400).json({ 
-                message: `Only ${sizeObj ? sizeObj.quantity : 0} items available in stock for this size` 
-            });
-        }
+        // Calculate the maximum discount
+        let maxDiscount = 0;
+        let applicableOfferName = '';
+        
+        offers.forEach(offer => {
+            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            }
+        });
 
-        // Quantity limit check
-        if (quantity > 5) {
-            return res.status(400).json({ 
-                message: "Cannot add more than 5 items of this product" 
-            });
-        }
+        // Calculate discounted price
+        const originalPrice = product.regularPrice;
+        const discountedPrice = originalPrice * (1 - maxDiscount / 100);
 
-        // Find the cart
+        // Find the cart for the user
         const userCart = await Cart.findOne({ userId });
+        
         if (!userCart) {
-            return res.status(404).json({ message: "Cart not found" });
+            return res.status(404).json({ message: 'Cart not found' });
         }
 
-        // Find the specific cart item with matching product, variant, and size
+        // Find the specific item in the cart
         const itemIndex = userCart.items.findIndex(
             item => item.productId.toString() === productId &&
-                    item.variantId.toString() === variantId &&
                     item.color === color &&
-                    item.size === parseInt(size)
+                    item.size === parseInt(size) &&
+                    item.variantId.toString() === variantId
         );
-        
-        if (itemIndex !== -1) {
-            // Find applicable offers for the product
-            const offers = await Offer.find({
-                $or: [
-                    { offerType: 'product', productIds: productId },
-                    { offerType: 'category', categoryIds: product.category }
-                ],
-                status: 'active',
-                expireDate: { $gte: new Date() }
-            });
 
-            // Determine the maximum discount offer
-            let maxOffer = null;
-            let originalPrice = product.regularPrice;
-            let price = originalPrice;
+        if (itemIndex === -1) {
+            return res.status(404).json({ message: 'Item not found in cart' });
+        }
 
-            if (offers.length > 0) {
-                maxOffer = offers.reduce((max, offer) => 
-                    offer.discount > (max ? max.discount : 0) ? offer : max
-                , null);
+        // Find the variant and size
+        const selectedVariant = product.variants.find(v => v._id.toString() === variantId);
+        const sizeObj = selectedVariant.sizes.find(s => s.size === parseInt(size));
 
-                if (maxOffer) {
-                    price = originalPrice * (1 - maxOffer.discount / 100);
-                }
-            }
-
-            // Update quantity and total price for the specific item
-            userCart.items[itemIndex].quantity = quantity;
-            userCart.items[itemIndex].price = price;
-            userCart.items[itemIndex].totalPrice = price * quantity;
-            userCart.items[itemIndex].availableQuantity = sizeObj.quantity;
-
-            // Optional: Update offer details in cart item if needed
-            if (maxOffer) {
-                userCart.items[itemIndex].offer = {
-                    offerName: maxOffer.offerName,
-                    discount: maxOffer.discount,
-                    originalPrice: originalPrice
-                };
-            }
-            
-            await userCart.save();
-            
-            // Recalculate subtotal
-            const subtotal = userCart.items.reduce((sum, item) => sum + item.totalPrice, 0);
-            
-            return res.status(200).json({
-                cart: userCart,
-                subtotal: subtotal
+        // Validate new quantity
+        if (quantity > 5) {
+            return res.status(400).json({ 
+                message: "Cannot add more than 5 of this product" 
             });
         }
 
-        return res.status(404).json({ message: "Item not found in cart" });
+        if (quantity > sizeObj.quantity) {
+            return res.status(400).json({ 
+                message: `Only ${sizeObj.quantity} items available in stock` 
+            });
+        }
+
+        // Update quantity and prices
+        userCart.items[itemIndex].originalPrice = originalPrice;
+        userCart.items[itemIndex].price = discountedPrice;
+        userCart.items[itemIndex].quantity = quantity;
+        userCart.items[itemIndex].totalPrice = discountedPrice * quantity;
+        userCart.items[itemIndex].availableQuantity = sizeObj.quantity;
+
+        // Add or remove offer details
+        if (maxDiscount > 0) {
+            userCart.items[itemIndex].offer = {
+                discount: maxDiscount,
+                offerName: applicableOfferName
+            };
+        } else {
+            delete userCart.items[itemIndex].offer;
+        }
+
+        await userCart.save();
+        
+        // Recalculate subtotal
+        const subtotal = userCart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+        
+        return res.status(200).json({
+            cart: userCart,
+            subtotal: subtotal
+        });
     } catch (error) {
         console.error('Error updating cart:', error);
         res.status(500).json({ message: "Server error" });
