@@ -1,4 +1,6 @@
 <style>
+
+    
 /* General Styles */
 body {
     background-color: #f7f8fc;
@@ -47,6 +49,11 @@ body {
     color: #856404;
 }
 
+.status-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
 .status-processing {
     background-color: #cce5ff;
     color: #004085;
@@ -55,6 +62,11 @@ body {
 .status-shipped {
     background-color: #d4edda;
     color: #155724;
+}
+
+.status-delivered {
+    background-color: #28a745;
+    color: #fff;
 }
 
 .order-items {
@@ -70,6 +82,15 @@ body {
 
 .item-card:last-child {
     border-bottom: none;
+}
+
+.item-image-container img {
+    transition: transform 0.3s ease;
+    cursor: pointer;
+}
+
+.item-image-container img:hover {
+    transform: scale(1.05);
 }
 
 .item-image {
@@ -158,17 +179,18 @@ body {
     </div>
 
     <!-- Order Items -->
-   <!-- Order Items -->
 <% orderItems.forEach(item => { %>
     <div class="order-item" style="display: flex; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
         <div class="item-image-container" style="width: 150px; margin-right: 20px;">
-            <% if (item.product.productImages && item.product.productImages.length > 0) { %>
-                <img src="/uploads/product-images/<%= item.product.productImages[0] %>" alt="Product Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
-            <% } else if (item.product.variantImages.length > 0) { %>
-                <img src="data:<%= item.product.variantImages[0].contentType %>;base64,<%= item.product.variantImages[0].data.toString('base64') %>" alt="Variant Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
-            <% } else { %>
-                <p>No image available</p>
-            <% } %>
+            <a href="/product/<%= item.productId._id %>" style="text-decoration: none;">
+                <% if (item.product.productImages && item.product.productImages.length > 0) { %>
+                    <img src="/uploads/product-images/<%= item.product.productImages[0] %>" alt="Product Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+                <% } else if (item.product.variantImages && item.product.variantImages.length > 0) { %>
+                    <img src="/uploads/product-images/<%= item.product.variantImages[0].filename %>" alt="Variant Image" style="width: 100%; height: 150px; object-fit: cover; border-radius: 8px;">
+                <% } else { %>
+                    <p>No image available</p>
+                <% } %>
+            </a>
         </div>
         <div class="item-details" style="flex-grow: 1;">
             <h5 style="margin-bottom: 10px;"><%= item.product.productName %></h5>
@@ -179,8 +201,8 @@ body {
                     <p><strong>Quantity:</strong> <%= item.quantity %></p>
                 </div>
                 <div style="text-align: right;">
-                    <p><strong>Price:</strong> $<%= item.price %></p>
-                    <p><strong>Total:</strong> $<%= (item.price * item.quantity).toFixed(2) %></p>
+                    <p><strong>Price:</strong> ₹<%= item.price %></p>
+                    <p><strong>Total:</strong> ₹<%= (item.price * item.quantity).toFixed(2) %></p>
                 </div>
             </div>
         </div>
@@ -207,15 +229,21 @@ body {
     <div class="total-section">
         <div class="total-row">
             <span>Subtotal:</span>
-            <span>$<%= order.subtotal.toFixed(2) %></span>
+            <span>₹<%= order.subtotal.toFixed(2) %></span>
         </div>
         <div class="total-row">
             <span>Shipping:</span>
-            <span>$<%= order.shippingCost.toFixed(2) %></span>
+            <span>₹<%= order.shippingCost.toFixed(2) %></span>
         </div>
+        <% if (order.discountAmount > 0) { %>
+        <div class="total-row">
+            <span>Discount:</span>
+            <span>-₹<%= order.discountAmount.toFixed(2) %></span>
+        </div>
+        <% } %>
         <div class="total-row final">
             <span>Total:</span>
-            <span>$<%= order.total.toFixed(2) %></span>
+            <span>₹<%= order.total.toFixed(2) %></span>
         </div>
     </div>
 

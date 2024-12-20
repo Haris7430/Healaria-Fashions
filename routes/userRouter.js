@@ -62,7 +62,7 @@ router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
 router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
 router.get('/checkout/available-coupons', userAuth, checkoutController.getAvailableCoupons);
 router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCoupon);
-
+router.post('/verify-payment',userAuth,checkoutController.verifyPayment);
 
 router.get('/userProfile/:section?', userAuth, userProfileController.getUserProfile);
 router.get('/profile/addresses', userAuth, userProfileController.getAddressPage);

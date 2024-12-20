@@ -108,7 +108,7 @@ const orderSchema = new Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['COD', 'paypal']
+        enum: ['COD', 'RazorPay']  
     },
     subtotal: {
         type: Number,
@@ -150,6 +150,11 @@ const orderSchema = new Schema({
         type: String,
         required: true,
         enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+    },
+    paymentDetails: {
+        razorpay_payment_id: String,
+        razorpay_order_id: String,
+        razorpay_signature: String
     }
 }, { timestamps: true });
 
