@@ -575,6 +575,7 @@
                     <li><a href="/profile/add-address" class="<%= activeSection === 'add-address' ? 'active' : '' %>">Add New Address</a></li>
                     <li><a href="/profile/orders" class="<%= activeSection === 'order-details' ? 'active' : '' %>">Order Details</a></li>
                     <li><a href="/profile/wallet" class="<%= activeSection === 'wallet' ? 'active' : '' %>">My Wallet</a></li>
+                    <li><a href="/wishlist" class="<%= activeSection === 'wishlist' ? 'active' : '' %>">My Wishlist</a></li>
                     <li><a href="/logout">Sign Out</a></li>
                 </ul>
             </div>
@@ -981,6 +982,144 @@
                         }
                     </style>
                 <% } %>
+
+                
+
+                <% if (activeSection === 'wishlist') { %>
+                    <div class="wishlist-section">
+                        <h2>My Wishlist</h2>
+                        <% if (wishlist && wishlist.items && wishlist.items.length > 0) { %>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Product</th>
+                                            <th>Price</th>
+                                            <th>Variants</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% wishlist.items.forEach(item => { %>
+                                            <tr class="wishlist-item">
+                                                <td class="product-info">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="product-image-carousel" style="width: 100px;">
+                                                            <div id="carousel-<%= item.productId._id %>" class="carousel slide" data-bs-ride="carousel">
+                                                                <div class="carousel-inner">
+                                                                    <% item.productId.variants.forEach((variant, variantIndex) => { %>
+                                                                        <% variant.images.forEach((image, imageIndex) => { %>
+                                                                            <div class="carousel-item <%= variantIndex === 0 && imageIndex === 0 ? 'active' : '' %>">
+                                                                                <img src="/uploads/product-images/<%= image.filename %>" 
+                                                                                     class="d-block w-100" 
+                                                                                     alt="<%= item.productId.productName %>"
+                                                                                     data-color="<%= variant.color %>">
+                                                                            </div>
+                                                                        <% }) %>
+                                                                    <% }) %>
+                                                                </div>
+                                                                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-<%= item.productId._id %>" data-bs-slide="prev">
+                                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                                </button>
+                                                                <button class="carousel-control-next" type="button" data-bs-target="#carousel-<%= item.productId._id %>" data-bs-slide="next">
+                                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                        <div class="ms-3">
+                                                            <h5><%= item.productId.productName %></h5>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="price-info">
+                                                    <% if (item.productId.offerPercentage > 0) { %>
+                                                        <div>
+                                                            <span class="text-danger">₹<%= Math.round(item.productId.regularPrice * (1 - item.productId.offerPercentage/100)) %></span>
+                                                            <br>
+                                                            <small class="text-muted text-decoration-line-through">₹<%= item.productId.regularPrice %></small>
+                                                            <span class="badge bg-danger"><%= item.productId.offerPercentage %>% OFF</span>
+                                                        </div>
+                                                    <% } else { %>
+                                                        <span>₹<%= item.productId.regularPrice %></span>
+                                                    <% } %>
+                                                </td>
+                                                <td class="variant-info">
+                                                    <select class="form-select size-select" data-product-id="<%= item.productId._id %>">
+                                                        <option value="">Select Variant</option>
+                                                        <% item.productId.variants.forEach(variant => { %>
+                                                            <optgroup label="<%= variant.color %>">
+                                                                <% variant.sizes.forEach(size => { %>
+                                                                    <option value="<%= size.size %>" 
+                                                                            data-color="<%= variant.color %>"
+                                                                            data-variant-id="<%= variant._id %>"
+                                                                            <%= (item.selectedVariant && 
+                                                                                item.selectedVariant.size === size.size && 
+                                                                                item.selectedVariant.color === variant.color) ? 'selected' : '' %>
+                                                                            <%= size.quantity === 0 ? 'disabled' : '' %>>
+                                                                        Size <%= size.size %> 
+                                                                        (<%= size.quantity > 0 ? `${size.quantity} in stock` : 'Out of Stock' %>)
+                                                                    </option>
+                                                                <% }) %>
+                                                            </optgroup>
+                                                        <% }) %>
+                                                    </select>
+                                                </td>
+                                                <td class="actions">
+                                                    <div class="btn-group">
+                                                        <button class="btn btn-primary btn-sm add-to-cart-from-wishlist" 
+                                                                data-id="<%= item.productId._id %>">
+                                                            <i class="fas fa-shopping-cart"></i>
+                                                        </button>
+                                                        <button class="btn btn-danger btn-sm remove-from-wishlist" 
+                                                                data-id="<%= item.productId._id %>">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+            <div class="wishlist-actions mt-4">
+                <button class="btn btn-success add-all-to-cart">Add All to Cart</button>
+                <button class="btn btn-danger clear-wishlist">Clear Wishlist</button>
+                <a href="/shop-page" class="btn btn-primary">Continue Shopping</a>
+            </div>
+        <% } else { %>
+            <div class="empty-wishlist text-center">
+                <i class="fas fa-heart-broken fa-3x mb-3"></i>
+                <h4>Your wishlist is empty</h4>
+                <p>Add items that you like to your wishlist</p>
+                <a href="/shop-page" class="btn btn-primary mt-3">Continue Shopping</a>
+            </div>
+        <% } %>
+    </div>
+
+    <style>
+        .wishlist-section {
+            padding: 20px;
+        }
+        .product-image-carousel {
+            width: 100px;
+            height: 100px;
+            overflow: hidden;
+        }
+        .product-image-carousel img {
+            object-fit: cover;
+            height: 100px;
+        }
+        .variant-info select {
+            max-width: 200px;
+        }
+        .actions .btn-group {
+            gap: 5px;
+        }
+        .table > :not(caption) > * > * {
+            vertical-align: middle;
+        }
+    </style>
+<% } %>
 
                 
             </div>
@@ -1870,7 +2009,236 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
 
+         // Handle variant selection
+    // Update the variant selection handler in your script
+document.querySelectorAll('.size-select').forEach(select => {
+    select.addEventListener('change', async function() {
+        const productId = this.getAttribute('data-product-id');
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (!this.value) {
+            return; // Do nothing if "Select Variant" is chosen
+        }
+
+        const selectedVariant = {
+            size: parseInt(this.value),
+            color: selectedOption.getAttribute('data-color')
+        };
+
+        try {
+            const response = await fetch(`/update-wishlist-variant/${productId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify({ selectedVariant })
+            });
+
+            // First check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response');
+            }
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update variant');
+            }
+
+            // Update carousel image
+            updateCarouselImage(this, selectedVariant.color);
+
+            Swal.fire({
+                title: 'Success!',
+                text: 'Variant updated successfully',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error!',
+                text: error.message || 'Failed to update variant',
+                icon: 'error'
+            });
+        }
+    });
+});
+
+    // Add to cart from wishlist
+    document.querySelectorAll('.add-to-cart-from-wishlist').forEach(button => {
+    button.addEventListener('click', async function() {
+        const productId = this.dataset.id;
+        const row = this.closest('.wishlist-item');
+        const select = row.querySelector('.size-select');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (!select.value) {
+            Swal.fire('Error', 'Please select a size and color', 'warning');
+            return;
+        }
+
+        const variantData = {
+            productId,
+            size: parseInt(select.value),
+            color: selectedOption.getAttribute('data-color'),
+            variantId: selectedOption.getAttribute('data-variant-id'),
+            quantity: 1
+        };
+
+        try {
+            // First check if item already exists in cart
+            const checkResponse = await fetch(`/check-cart-item`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify(variantData)
+            });
+
+            const checkData = await checkResponse.json();
+
+            if (checkData.exists) {
+                Swal.fire('Info', `This product with selected color ${variantData.color} and size ${variantData.size} already exists in your cart`, 'info');
+                return;
+            }
+
+            // If not exists, proceed to add to cart
+            const addResponse = await fetch('/addToCart/' + productId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify(variantData)
+            });
+
+            if (!addResponse.ok) {
+                const errorData = await addResponse.json();
+                throw new Error(errorData.message || 'Failed to add to cart');
+            }
+
+            Swal.fire({
+                title: 'Success!',
+                text: 'Product added to cart',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Cart',
+                cancelButtonText: 'Continue Shopping'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
+        } catch (error) {
+            Swal.fire('Error', error.message, 'error');
+        }
+    });
+});
+
+
+        // Remove from wishlist
+        document.querySelectorAll('.remove-from-wishlist').forEach(button => {
+            button.addEventListener('click', async function() {
+                const productId = this.getAttribute('data-id');
+                try {
+                    const response = await fetch(`/remove-from-wishlist/${productId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        this.closest('.wishlist-item').remove();
+                        Swal.fire('Removed!', 'Item removed from wishlist', 'success');
+                    }
+                } catch (error) {
+                    Swal.fire('Error!', 'Failed to remove item', 'error');
+                }
+            });
+        });
+
+        // Clear wishlist
+        document.querySelector('.clear-wishlist')?.addEventListener('click', async function() {
+            try {
+                const response = await fetch('/clear-wishlist', {
+                    method: 'DELETE',
+                    headers: {
+                        'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                    }
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                }
+            } catch (error) {
+                Swal.fire('Error!', 'Failed to clear wishlist', 'error');
+            }
+        });
+
+        // Add all to cart
+        // Add all to cart handler
+document.querySelector('.add-all-to-cart')?.addEventListener('click', async function() {
+    try {
+        const response = await fetch('/wishlist/add-all-to-cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to add items to cart');
+        }
+
+        Swal.fire({
+            title: 'Success!',
+            text: data.message,
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: 'Go to Cart',
+            cancelButtonText: 'Continue Shopping'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = '/userCart';
+            }
+        });
+    } catch (error) {
+        Swal.fire({
+            title: 'Error!',
+            text: error.message,
+            icon: 'error'
+        });
+    }
+});
+
+    // Helper function to update carousel image
+    function updateCarouselImage(select, selectedColor) {
+        const carousel = select.closest('tr').querySelector('.carousel');
+        const items = carousel.querySelectorAll('.carousel-item');
+        
+        items.forEach(item => {
+            const img = item.querySelector('img');
+            if (img.getAttribute('data-color') === selectedColor) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+});
+</script>
 
 
 

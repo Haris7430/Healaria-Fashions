@@ -14,15 +14,15 @@ const cartSchema = new mongoose.Schema({
             ref: 'Product',
             required: true
         },
-        variantId: {  // Add this for variant reference
+        variantId: { 
             type: Schema.Types.ObjectId,
             default: null
         },
-        size: {  // Add this for size
+        size: {  
             type: Number,
             required: true
         },
-        color: {  // Add this for color
+        color: {  
             type: String,
             required: true
         },

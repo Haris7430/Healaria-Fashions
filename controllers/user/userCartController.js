@@ -368,10 +368,69 @@ const checkStockAvailability = async (req, res) => {
     }
 };
 
+
+
+const checkCartItem = async (req, res) => {
+    try {
+        const { productId, color, size, variantId } = req.body;
+        
+        // Validate required fields
+        if (!productId || !color || !size || !variantId) {
+            return res.status(400).json({ 
+                message: 'Missing required fields',
+                exists: false 
+            });
+        }
+
+        const userId = req.user._id;
+
+        // Find cart and populate product details
+        const cart = await Cart.findOne({ userId })
+            .populate('items.productId');
+        
+        if (!cart) {
+            return res.json({ exists: false });
+        }
+
+        // Check if item exists in cart
+        const itemExists = cart.items.some(item => {
+            // Check if item and productId exist
+            if (!item || !item.productId) {
+                return false;
+            }
+
+            // Convert productId to string for comparison
+            const itemProductId = typeof item.productId === 'object' 
+                ? item.productId._id.toString() 
+                : item.productId.toString();
+
+            return itemProductId === productId &&
+                   item.color === color &&
+                   item.size === parseInt(size) &&
+                   item.variantId.toString() === variantId;
+        });
+
+        res.json({ 
+            exists: itemExists,
+            message: itemExists ? 'Item already exists in cart' : 'Item not in cart'
+        });
+
+    } catch (error) {
+        console.error('Error checking cart item:', error);
+        res.status(500).json({ 
+            message: 'Server error while checking cart item',
+            error: error.message,
+            exists: false
+        });
+    }
+};
+
+
 module.exports = {
     getCartPage,
     addToCart,
     removeFromCart,
     updateCart,
     checkStockAvailability,
+    checkCartItem,
 };

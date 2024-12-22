@@ -1,168 +1,58 @@
 
-This is my walletSchema.js code:- 
-
-const mongoose = require('mongoose');
+This is my productSchema.js code:- 
+const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const walletTransactionSchema = new Schema({
-    amount: {
-        type: Number,
-        required: true
-    },
-    type: {
+const productSchema = new Schema({
+    productName: {
         type: String,
-        enum: ['credit', 'debit'],
         required: true
     },
     description: {
         type: String,
+        default: ''
+    },
+    category: {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
         required: true
     },
-    orderId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Order',
-        default: null
-    },
-    balance: {
+    regularPrice: {
         type: Number,
         required: true
-    }
+    },
+    
+    variants: [{
+        color: { type: String, required: true },
+        sizes: [{
+            size: { type: Number, required: true },
+            quantity: { type: Number, required: true }
+        }],
+        images: [{
+            filename: { type: String, required: true },
+            contentType: { type: String, default: 'image/jpeg' }
+        }],
+        isListed: { type: Boolean, default: true },
+        mainImage: { type: Boolean, default: false }  
+    }],
+    
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
+   
 }, { timestamps: true });
 
-const walletSchema = new Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-        unique: true
-    },
-    balance: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    transactions: [walletTransactionSchema]
-});
+const Product = mongoose.model("Product", productSchema);
+module.exports = Product;
 
-const Wallet = mongoose.model('Wallet', walletSchema);
-module.exports = Wallet;
+This is my cartSChema.js code:- 
+
+const mongoose= require('mongoose');
+const {Schema}= mongoose;
 
 
-This is my couponSchema.js code:- 
-const mongoose = require('mongoose');
-
-const couponSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
-        trim: true,
-        validate: {
-            validator: function(v) {
-                // Allow letters, numbers, and spaces
-                return /^[A-Za-z0-9\s]+$/.test(v);
-            },
-            message: props => `${props.value} is not a valid title! Only letters, numbers, and spaces are allowed.`
-        }
-    },
-    description: {
-        type: String,
-        trim: true
-    },
-    code: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        trim: true
-    },
-    validFrom: {
-        type: Date,
-        required: true
-    },
-    expiryDate: {
-        type: Date,
-        required: true
-    },
-    discountPercentage: {
-        type: Number,
-        required: true,
-        min: 1,
-        max: 80
-    },
-    maxDiscountAmount: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function(v) {
-                return typeof v === 'number' && v >= 0;
-            },
-            message: props => `${props.value} is not a valid maximum discount amount!`
-        }
-    },
-    minPurchaseLimit: {
-        type: Number,
-        required: true, 
-        min: 0
-    },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-    }
-}, { timestamps: true });
-
-const Coupon = mongoose.model('Coupon', couponSchema);
-
-module.exports = Coupon;
-
-
-This is my orderSchema.js code:- 
-
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
-
-
-
-const returnRequestSchema = new Schema({
-    itemId: {
-        type: Schema.Types.ObjectId,
-        required: true
-    },
-    reason: {
-        type: String,
-        required: true
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
-    },
-    adminResponse: {
-        type: String,
-        default: null
-    },
-    customReason: {
-        type: String,
-        default: null
-    },
-    refundAmount: {
-        type: Number,
-        required: true
-    }
-}, { timestamps: true });
-
-
-const orderSchema = new Schema({
-    orderId: {
-        type: String,
-        unique: true,
-        default: function() {
-           
-            const timestamp = Date.now().toString().slice(-10);
-            const randomStr = Math.random().toString(36).substr(2, 6).toUpperCase();
-            return `ORD-${timestamp}-${randomStr}`;
-        }
-    },
+const cartSchema = new mongoose.Schema({
     userId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
@@ -174,21 +64,21 @@ const orderSchema = new Schema({
             ref: 'Product',
             required: true
         },
-        variantId: {
+        variantId: { 
             type: Schema.Types.ObjectId,
-            ref: 'Product'
+            default: null
         },
-        color: {
-            type: String,
+        size: {  
+            type: Number,
             required: true
         },
-        size: {
-            type: Number,
+        color: {  
+            type: String,
             required: true
         },
         quantity: {
             type: Number,
-            required: true
+            default: 1
         },
         price: {
             type: Number,
@@ -200,1719 +90,1699 @@ const orderSchema = new Schema({
         },
         status: {
             type: String,
-            enum: ['placed', 'cancelled', 'returned', 'return_requested'],
             default: 'placed'
         },
-        returnRequest: returnRequestSchema
+        cancellationReason: {
+            type: String,
+            default: 'none'
+        }
+    }]
+});
+
+const Cart= mongoose.model('Cart',cartSchema)
+module.exports= Cart
+
+
+This is my offerSChema.js code:- 
+const mongoose = require("mongoose");
+
+const offerSchema = new mongoose.Schema(
+  {
+    offerType: {
+      type: String,
+      enum: ["product", "category", "referral"],
+      required: true,
+    },
+    offerName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    discount: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100
+    },
+    expireDate: {
+      type: Date,
+      required: true
+    },
+    productIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: function () {
+        return this.offerType === "product";
+      },
     }],
-    // Embedded shipping address details
-    shippingAddress: {
-        name: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        addressType: {
-            type: String,
-            enum: ['Home', 'Work', 'Other'],
-            required: true
-        },
-        city: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        landmark: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        state: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        pincode: {
-            type: String,
-            required: true,
-            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
-        },
-        phone: {
-            type: String,
-            required: true,
-            validate: {
-                validator: function(v) {
-                    return /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        },
-        altPhone: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        }
-    },
-    paymentMethod: {
-        type: String,
-        required: true,
-        enum: ['COD', 'RazorPay', 'Wallet']  // Added Wallet
-    },
-    walletAmountUsed: {
-        type: Number,
-        default: 0
-    },
-    subtotal: {
-        type: Number,
-        required: true
-    },
-    shippingCost: {
-        type: Number,
-        required: true
-    },
-    discountAmount: {
-        type: Number,
-        default: 0
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    couponApplied: {
-        code: {
-            type: String,
-            default: null
-        },
-        discountPercentage: {
-            type: Number,
-            default: null
-        },
-        discountAmount: {
-            type: Number,
-            default: null
-        }
-    },
-    
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'paid', 'failed'],
-        default: 'pending'
+    categoryIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: function () {
+        return this.offerType === "category";
+      },
+    }],
+    referralCode: {
+      type: String,
+      required: function () {
+        return this.offerType === "referral";
+      },
+      unique: true,
+      sparse: true
     },
     status: {
-        type: String,
-        required: true,
-        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
     },
-    paymentDetails: {
-        razorpay_payment_id: String,
-        razorpay_order_id: String,
-        razorpay_signature: String
-    },
-
-    totalDiscount: {
-        type: Number,
-        default: 0,
-        comment: 'Total discount including product discount and coupon discount'
+    isListed: {
+      type: Boolean,
+      default: true
     }
+  },
+  { timestamps: true }
+);
+const Offer = mongoose.model("Offer", offerSchema);
+module.exports = Offer;
+
+
+This is my wishlistSchema.js code:- 
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const wishlistSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    items: [{
+        productId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true
+        },
+        selectedVariant: {
+            color: String,
+            size: Number
+        },
+        addedAt: {
+            type: Date,
+            default: Date.now
+        }
+    }]
 }, { timestamps: true });
 
-const Order = mongoose.model('Order', orderSchema);
-module.exports = Order;
+const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+module.exports = Wishlist;
 
-This is my adminRouter.js code:- 
+This is my userRouter.js code:- 
 
-router.get('/orders',adminAuth, orderController.listOrders);
-router.get('/order-details/:id',adminAuth, orderController.orderDetails);
-router.post('/update-order-status/:id',adminAuth, orderController.updateOrderStatus);
-router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
-router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
-router.get('/return-request-details/:orderId', adminAuth, orderController.getReturnRequestDetails);
-router.post('/handle-return-request', adminAuth, orderController.handleReturnRequest);
+router.post('/add-to-wishlist', userAuth, wishlistController.addToWishlist);
+router.get('/wishlist', userAuth, wishlistController.getWishlist);
+router.delete('/remove-from-wishlist/:productId', userAuth, wishlistController.removeFromWishlist);
+router.delete('/clear-wishlist', userAuth, wishlistController.clearWishlist);
+router.post('/wishlist/add-all-to-cart', userAuth, wishlistController.addAllToCart);
+router.patch('/update-wishlist-variant/:productId', userAuth, wishlistController.updateWishlistVariant);
 
-This is my orderController.js code:- 
+router.get('/userCart',userAuth, userCartController.getCartPage); 
+router.post('/addToCart/:id', userAuth, userCartController.addToCart);
+router.delete('/removeFromCart/:productId', userAuth, userCartController.removeFromCart);
+router.put('/updateCart/:productId', userAuth, userCartController.updateCart);
+router.get('/check-stock/:productId', userAuth, userCartController.checkStockAvailability);
+router.post('/check-cart-item', userAuth, userCartController.checkCartItem);
 
+This is my wishlistController.js code:- 
 
+const Wishlist = require('../../models/wishlistSchema');
+const Product = require('../../models/productSchema');
+const Cart = require('../../models/cartSchema');
 
-// controllers/orderController.js
-const Order = require('../../models/orderSchema');
-const User = require('../../models/userSchema');
-const Product= require('../../models/productSchema')
-const Address= require('../../models/addressSchema')
-const Wallet = require('../../models/walletSchema');
-
-/// controllers/orderController.js
-const listOrders = async (req, res) => {
+const addToWishlist = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 10;
-        const skip = (page - 1) * limit;
+        const { productId, selectedVariant } = req.body;
+        let wishlist = await Wishlist.findOne({ userId: req.user._id });
 
-        // Search and filter options
-        const search = req.query.search ? req.query.search.trim() : '';
-        const status = req.query.status || '';
-        const paymentStatus = req.query.paymentStatus || '';
-
-        // Build query
-        const query = {};
-        let noResultsMessage = '';
-        let searchApplied = false;
-
-        // Enhanced search logic
-        if (search) {
-            searchApplied = true;
-            query.$or = [
-                { orderId: { $regex: search, $options: 'i' } },
-                // Perform a lookup on the User collection for name search
-                { 'userId': await getUserIdsByName(search) }
-            ];
-        }
-
-        if (status) {
-            searchApplied = true;
-            query.status = status;
-        }
-
-        if (paymentStatus) {
-            searchApplied = true;
-            query.paymentStatus = paymentStatus;
-        }
-
-        // Fetch orders with pagination and populate
-        const orders = await Order.find(query)
-            .populate('userId', 'name email')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit);
-
-        // Count total documents for pagination
-        const totalOrders = await Order.countDocuments(query);
-        const totalPages = Math.ceil(totalOrders / limit);
-
-        // Determine no results message
-        if (searchApplied && orders.length === 0) {
-            if (search) {
-                // Check if search term exists in any field
-                const orderIdExists = await Order.findOne({ orderId: { $regex: search, $options: 'i' } });
-                const userExists = await User.findOne({ name: { $regex: search, $options: 'i' } });
-
-                if (!orderIdExists && !userExists) {
-                    noResultsMessage = `No orders found for "${search}". The order ID or customer name does not exist.`;
-                }
-            }
-
-            if (status) {
-                const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-                if (!validStatuses.includes(status)) {
-                    noResultsMessage = `Invalid order status "${status}". Please select a valid status.`;
-                } else {
-                    noResultsMessage = `No orders found with status "${status}".`;
-                }
-            }
-
-            if (paymentStatus) {
-                const validPaymentStatuses = ['pending', 'paid', 'failed'];
-                if (!validPaymentStatuses.includes(paymentStatus)) {
-                    noResultsMessage = `Invalid payment status "${paymentStatus}". Please select a valid payment status.`;
-                } else {
-                    noResultsMessage = `No orders found with payment status "${paymentStatus}".`;
-                }
-            }
-
-            // Combination search message
-            if (search && status) {
-                noResultsMessage = `No orders found for "${search}" with status "${status}".`;
-            }
-
-            if (search && paymentStatus) {
-                noResultsMessage = `No orders found for "${search}" with payment status "${paymentStatus}".`;
-            }
-        }
-
-        res.render('order-list', {
-            orders,
-            currentPage: page,
-            totalPages,
-            search,
-            status,
-            paymentStatus,
-            noResultsMessage
-        });
-    } catch (error) {
-        console.error('Error in listing orders:', error);
-        res.status(500).render('error', { 
-            message: 'Internal Server Error',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-
-// Helper function to get user IDs by name
-async function getUserIdsByName(searchTerm) {
-    try {
-        const users = await User.find({ 
-            name: { $regex: searchTerm, $options: 'i' } 
-        }, '_id');
-        return { $in: users.map(user => user._id) };
-    } catch (error) {
-        console.error('Error finding users:', error);
-        return [];
-    }
-}
-
-
-
-
-
-
-const orderDetails = async (req, res) => {
-    try {
-        const orderId = req.params.id;
-        const order = await Order.findOne({ orderId: orderId })
-            .populate({
-                path: 'userId',
-                model: 'User'
-            })
-            .populate({
-                path: 'items.productId',
-                populate: {
-                    path: 'category',
-                    model: 'Category'
-                }
-            });
-
-        if (!order) {
-            return res.status(404).render('pageerror', { 
-                message: 'Order not found' 
+        if (!wishlist) {
+            wishlist = new Wishlist({
+                userId: req.user._id,
+                items: []
             });
         }
 
-        // Optional: Fetch user's address details
-        const userAddress = await Address.findOne({ userId: order.userId._id });
-
-        res.render('order-details', { 
-            order, 
-            userAddress 
-        });
-    } catch (error) {
-        console.error('Error in order details:', error);
-        res.status(500).render('pageerror', { 
-            message: 'Internal Server Error',
-            error: process.env.NODE_ENV === 'development' ? error : {}
-        });
-    }
-};
-
-
-
-const updateOrderStatus = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { status, paymentStatus } = req.body;
-
-        // Log incoming request details for debugging
-        console.log('Update Order Status Request:', {
-            orderId: id,
-            newStatus: status
-        });
-
-        // Validate input
-        if (!status) {
-            console.error('Status is undefined');
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Status is required',
-                error: 'Status parameter cannot be empty or undefined'
-            });
-        }
-
-        // Predefined status flow
-        const STATUS_FLOW = {
-            'pending': ['processing', 'shipped'],  // Added 'shipped' as a direct option from pending
-            'processing': ['shipped'],
-            'shipped': ['delivered'],
-            'delivered': [],
-            'cancelled': []
-        };
-
-        // Find the order
-        const order = await Order.findById(id);
-        if (!order) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Order not found',
-                error: `No order exists with ID ${id}`
-            });
-        }
-
-        // Get current status
-        const currentStatus = order.status;
-
-        // Validate status transition
-        const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
-
-        console.log('Status Transition Check:', {
-            currentStatus,
-            requestedStatus: status,
-            allowedNextStatuses
-        });
-
-        if (!allowedNextStatuses.includes(status)) {
-            console.error('Invalid Status Transition', {
-                from: currentStatus,
-                to: status,
-                allowed: allowedNextStatuses
-            });
-
-            return res.status(400).json({ 
-                success: false, 
-                message: `Invalid status transition from ${currentStatus} to ${status}`,
-                error: 'Status transition not allowed',
-                currentStatus,
-                allowedStatuses: allowedNextStatuses
-            });
-        }
-
-        // Update order status
-        order.status = status;
-
-        if (paymentStatus) {
-            order.paymentStatus = paymentStatus;
-        }
-
-        await order.save();
-
-        console.log('Order Status Successfully Updated', {
-            orderId: id,
-            newStatus: status
-        });
-
-        res.json({ 
-            success: true, 
-            message: 'Order status updated successfully',
-            order 
-        });
-    } catch (error) {
-        
-            console.error('Comprehensive Error in Update Order Status:', {
-                error: error.message,
-                stack: error.stack
-            });
-    
-            res.status(500).json({ 
-                success: false, 
-                message: 'Internal Server Error',
-                error: process.env.NODE_ENV === 'development' 
-                    ? { 
-                        message: error.message, 
-                        stack: error.stack 
-                    } 
-                    : 'An unexpected error occurred'
-            });
-        }
-};
-
-
-
-
-const cancelEntireOrder = async (req, res) => {
-    try {
-        const { id } = req.params;
-        
-        const order = await Order.findById(id)
-            .populate('items.productId')
-            .populate('userId');
-
-        if (!order) { 
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Order not found' 
-            });
-        }
-
-        // Check if order can be cancelled
-        if (order.status === 'delivered' || order.status === 'cancelled') {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Cannot cancel this order' 
-            });
-        }
-
-        // Calculate total refund amount
-        const refundAmount = order.items.reduce((total, item) => {
-            if (item.status !== 'cancelled') {
-                return total + item.totalPrice;
-            }
-            return total;
-        }, 0);
-
-        // Process each item for quantity restoration
-        for (const item of order.items) {
-            if (item.status !== 'cancelled') {
-                const product = await Product.findById(item.productId);
-                if (!product) continue;
-
-                const variant = product.variants.find(v => v.color === item.color);
-                if (!variant) continue;
-
-                const sizeVariant = variant.sizes.find(s => s.size === item.size);
-                if (sizeVariant) {
-                    sizeVariant.quantity += item.quantity;
-                }
-
-                await product.save();
-                item.status = 'cancelled';
-            }
-        }
-        
-        // Update order status
-        order.status = 'cancelled';
-
-        // Process refund to wallet
-        let wallet = await Wallet.findOne({ userId: order.userId._id });
-        if (!wallet) {
-            wallet = new Wallet({ userId: order.userId._id });
-        }
-
-        // Add refund transaction
-        wallet.balance += refundAmount;
-        wallet.transactions.push({
-            amount: refundAmount,
-            type: 'credit',
-            description: `Refund for cancelled order ${order.orderId}`,
-            orderId: order._id,
-            balance: wallet.balance
-        });
-
-        await Promise.all([
-            order.save(),
-            wallet.save()
-        ]);
-
-        res.json({ 
-            success: true, 
-            message: 'Order cancelled successfully and amount refunded to wallet',
-            orderStatus: order.status
-        });
-    } catch (error) {
-        console.error('Cancel Entire Order Error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Failed to cancel order' 
-        });
-    }
-};
-
-
-// Update the handleReturnRequest function in orderController.js
-const handleReturnRequest = async (req, res) => {
-    try {
-        const { orderId, itemId, action, adminResponse, refundAmount } = req.body;
-
-        if (!orderId || !itemId || !action || (action === 'approve' && !refundAmount)) {
-            return res.status(400).json({
-                success: false,
-                message: 'Missing required parameters'
-            });
-        }
-
-        const order = await Order.findOne({ orderId })
-            .populate('items.productId')
-            .populate('userId');
-
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-
-        const orderItem = order.items.find(item => 
-            item._id.toString() === itemId.toString()
+        const existingItem = wishlist.items.find(item => 
+            item.productId.toString() === productId
         );
 
-        if (!orderItem) {
-            return res.status(404).json({
+        if (existingItem) {
+            return res.status(400).json({
                 success: false,
-                message: 'Order item not found'
+                message: 'Product already in wishlist',
+                isExisting: true
             });
         }
 
-        if (action === 'approve') {
-            // Update item status to returned
-            orderItem.status = 'returned';
-            orderItem.returnRequest.status = 'approved';
-            orderItem.returnRequest.adminResponse = adminResponse;
-            orderItem.returnRequest.refundAmount = refundAmount;
+        // Add product with selected variant (if provided)
+        wishlist.items.push({
+            productId,
+            selectedVariant: selectedVariant || null,
+            addedAt: new Date()
+        });
 
-            // Process refund
-            let wallet = await Wallet.findOne({ userId: order.userId });
-            if (!wallet) {
-                wallet = new Wallet({ userId: order.userId });
-            }
+        await wishlist.save();
 
-            wallet.balance += refundAmount;
-            wallet.transactions.push({
-                amount: refundAmount,
-                type: 'credit',
-                description: `Refund for returned item from order ${order.orderId}`,
-                orderId: order._id,
-                balance: wallet.balance
-            });
-
-            await wallet.save();
-
-            // Restore inventory
-            const product = await Product.findById(orderItem.productId);
-            if (product) {
-                const variant = product.variants.find(v => v.color === orderItem.color);
-                if (variant) {
-                    const sizeVariant = variant.sizes.find(s => s.size === orderItem.size);
-                    if (sizeVariant) {
-                        sizeVariant.quantity += orderItem.quantity;
-                        await product.save();
-                    }
-                }
-            }
-        } else if (action === 'reject') {
-            orderItem.status = 'return_rejected';  // Updated status
-            orderItem.returnRequest.status = 'rejected';
-            orderItem.returnRequest.adminResponse = adminResponse;
-        }
-
-        await order.save();
-
-        res.json({
+        res.status(200).json({
             success: true,
-            message: `Return request ${action}ed successfully`
+            message: 'Product added to wishlist'
         });
     } catch (error) {
-        console.error('Error handling return request:', error);
+        console.error('Add to wishlist error:', error);
         res.status(500).json({
             success: false,
-            message: error.message || 'Failed to process return request'
+            message: 'Error adding to wishlist'
+        });
+    }
+};
+
+const getWishlist = async (req, res) => {
+    try {
+        const wishlist = await Wishlist.findOne({ userId: req.user._id })
+            .populate({
+                path: 'items.productId',
+                select: 'productName regularPrice offerPercentage variants'
+            });
+
+        res.render('userProfile', { 
+            activeSection: 'wishlist',
+            wishlist,
+            user: req.user
+        });
+    } catch (error) {
+        console.error('Get wishlist error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching wishlist'
+        });
+    }
+};
+
+const removeFromWishlist = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        await Wishlist.updateOne(
+            { userId: req.user._id },
+            { $pull: { items: { productId } } }
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: 'Product removed from wishlist'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error removing product from wishlist'
+        });
+    }
+};
+
+const clearWishlist = async (req, res) => {
+    try {
+        await Wishlist.updateOne(
+            { userId: req.user._id },
+            { $set: { items: [] } }
+        );
+        
+        res.status(200).json({
+            success: true,
+            message: 'Wishlist cleared'
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error clearing wishlist'
         });
     }
 };
 
 
 
-// Add this function for wallet refunds on order cancellation
-const handleOrderRefund = async (order, items) => {
+const addAllToCart = async (req, res) => {
     try {
-        let refundAmount = 0;
+        const wishlist = await Wishlist.findOne({ userId: req.user._id })
+            .populate('items.productId');
         
-        // Calculate refund amount for specified items or all items
-        const itemsToRefund = items || order.items;
-        itemsToRefund.forEach(item => {
-            refundAmount += item.totalPrice;
-        });
-
-        // Create or update wallet
-        let wallet = await Wallet.findOne({ userId: order.userId });
-        if (!wallet) {
-            wallet = new Wallet({ userId: order.userId });
+        let cart = await Cart.findOne({ userId: req.user._id });
+        if (!cart) {
+            cart = new Cart({ userId: req.user._id, items: [] });
         }
 
-        // Add refund transaction
-        wallet.balance += refundAmount;
-        wallet.transactions.push({
-            amount: refundAmount,
-            type: 'credit',
-            description: `Refund for cancelled items from order ${order.orderId}`,
-            orderId: order._id,
-            balance: wallet.balance
+        let addedItems = 0;
+        let skippedItems = 0;
+
+        for (const item of wishlist.items) {
+            // Skip items without selected variant
+            if (!item.selectedVariant) {
+                skippedItems++;
+                continue;
+            }
+
+            // Check if item already exists in cart
+            const existingCartItem = cart.items.find(cartItem => 
+                cartItem.productId.toString() === item.productId._id.toString() &&
+                cartItem.color === item.selectedVariant.color &&
+                cartItem.size === item.selectedVariant.size
+            );
+
+            if (existingCartItem) {
+                skippedItems++;
+                continue;
+            }
+
+            const product = await Product.findById(item.productId._id)
+                .populate('category');
+
+            // Find the variant and check stock
+            const variant = product.variants.find(v => 
+                v.color === item.selectedVariant.color
+            );
+            
+            const sizeObj = variant?.sizes.find(s => 
+                s.size === item.selectedVariant.size
+            );
+
+            if (!variant || !sizeObj || sizeObj.quantity < 1) {
+                skippedItems++;
+                continue;
+            }
+
+            // Calculate any applicable discounts (similar to addToCart)
+            const offers = await Offer.find({
+                $or: [
+                    { offerType: 'product', productIds: product._id },
+                    { offerType: 'category', categoryIds: product.category._id }
+                ],
+                status: 'active',
+                expireDate: { $gte: new Date() }
+            });
+
+            let maxDiscount = 0;
+            let applicableOfferName = '';
+            
+            offers.forEach(offer => {
+                if (offer.discount > maxDiscount) {
+                    maxDiscount = offer.discount;
+                    applicableOfferName = offer.offerName;
+                }
+            });
+
+            const originalPrice = product.regularPrice;
+            const discountedPrice = originalPrice * (1 - maxDiscount / 100);
+
+            // Add item to cart
+            cart.items.push({
+                productId: product._id,
+                variantId: variant._id,
+                size: item.selectedVariant.size,
+                color: item.selectedVariant.color,
+                quantity: 1,
+                originalPrice,
+                price: discountedPrice,
+                totalPrice: discountedPrice,
+                availableQuantity: sizeObj.quantity,
+                ...(maxDiscount > 0 && {
+                    offer: {
+                        discount: maxDiscount,
+                        offerName: applicableOfferName
+                    }
+                })
+            });
+
+            addedItems++;
+        }
+
+        await cart.save();
+        
+        res.status(200).json({
+            success: true,
+            message: `Added ${addedItems} items to cart${skippedItems > 0 ? `. ${skippedItems} items were skipped (already in cart or out of stock)` : ''}`
+        });
+    } catch (error) {
+        console.error('Add all to cart error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error adding items to cart'
+        });
+    }
+};
+
+
+
+
+const updateWishlistVariant = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { selectedVariant } = req.body;
+        
+        // Validate input
+        if (!selectedVariant || !selectedVariant.size || !selectedVariant.color) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid variant selection'
+            });
+        }
+
+        // First verify the product and variant exist
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                message: 'Product not found'
+            });
+        }
+
+        // Verify the variant exists and has stock
+        const variant = product.variants.find(v => 
+            v.color === selectedVariant.color &&
+            v.sizes.some(s => s.size === selectedVariant.size && s.quantity > 0)
+        );
+
+        if (!variant) {
+            return res.status(400).json({
+                success: false,
+                message: 'Selected variant not available'
+            });
+        }
+
+        // Update the wishlist item
+        const result = await Wishlist.findOneAndUpdate(
+            { 
+                userId: req.user._id,
+                'items.productId': productId 
+            },
+            { 
+                $set: { 
+                    'items.$.selectedVariant': selectedVariant 
+                } 
+            },
+            { new: true }
+        );
+
+        if (!result) {
+            return res.status(404).json({
+                success: false,
+                message: 'Wishlist item not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Variant updated successfully'
         });
 
-        await wallet.save();
+    } catch (error) {
+        console.error('Update wishlist variant error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error updating variant'
+        });
+    }
+};
+
+
+
+
+const addToCartFromWishlist = async (productId, variantData) => {
+    try {
+        // Check if item exists in cart
+        const checkResponse = await fetch('/check-cart-item', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            },
+            body: JSON.stringify(variantData)
+        });
+
+        const checkData = await checkResponse.json();
+
+        if (!checkResponse.ok) {
+            throw new Error(checkData.message || 'Failed to check cart item');
+        }
+
+        if (checkData.exists) {
+            await Swal.fire({
+                title: 'Item Already in Cart',
+                text: `This product with color ${variantData.color} and size ${variantData.size} is already in your cart`,
+                icon: 'info'
+            });
+            return false;
+        }
+
+        // If item doesn't exist, add to cart
+        const addResponse = await fetch(`/addToCart/${productId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            },
+            body: JSON.stringify(variantData)
+        });
+
+        if (!addResponse.ok) {
+            const errorData = await addResponse.json();
+            throw new Error(errorData.message || 'Failed to add to cart');
+        }
+
+        const result = await Swal.fire({
+            title: 'Success!',
+            text: 'Product added to cart successfully',
+            icon: 'success',
+            showCancelButton: true,
+            confirmButtonText: 'Go to Cart',
+            cancelButtonText: 'Continue Shopping'
+        });
+
+        if (result.isConfirmed) {
+            window.location.href = '/userCart';
+        }
+
         return true;
     } catch (error) {
-        console.error('Error processing refund:', error);
+        await Swal.fire('Error', error.message, 'error');
         return false;
     }
 };
 
-// Modify existing cancel functions to include refund
-const cancelOrderItem = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-        const { itemIndex } = req.body;
+This is my shop-page.ejs page code:- 
 
-        const order = await Order.findById(orderId)
-            .populate('items.productId');
+<div class="container">
+    <div class="row">
+        <div class="col-xl-3 col-lg-4 col-md-5">
+            <div class="sidebar-categories">
+                <div class="head">Sort By</div>
+                <div class="common-filter">
+                    <form action="/shop-page" method="GET" id="sortForm">
+                        <ul class="filter-options">
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="default" name="sort" value="default" 
+                                        <%= currentSort === 'default' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="default">Default sorting</label>
+                                </div>
+                            </li>
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="price-low" name="sort" value="price-low" 
+                                        <%= currentSort === 'price-low' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="price-low">Price: Low to High</label>
+                                </div>
+                            </li>
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="price-high" name="sort" value="price-high" 
+                                        <%= currentSort === 'price-high' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="price-high">Price: High to Low</label>
+                                </div>
+                            </li>
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="name-asc" name="sort" value="name-asc" 
+                                        <%= currentSort === 'name-asc' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="name-asc">Name: A to Z</label>
+                                </div>
+                            </li>
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="name-desc" name="sort" value="name-desc" 
+                                        <%= currentSort === 'name-desc' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="name-desc">Name: Z to A</label>
+                                </div>
+                            </li>
+                            <li class="filter-list">
+                                <div class="filter-box">
+                                    <input class="pixel-radio" type="radio" id="new-arrivals" name="sort" value="new-arrivals" 
+                                        <%= currentSort === 'new-arrivals' ? 'checked' : '' %> onchange="this.form.submit()">
+                                    <label for="new-arrivals">New Arrivals</label>
+                                </div>
+                            </li>
+                        </ul>
+                    </form>
+                </div>
 
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-
-        const item = order.items[itemIndex];
-        if (!item) {
-            return res.status(404).json({
-                success: false,
-                message: 'Item not found'
-            });
-        }
-
-        item.status = 'cancelled';
-        await handleOrderRefund(order, [item]);
-        await order.save();
-
-        res.json({
-            success: true,
-            message: 'Item cancelled and refunded successfully'
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to cancel item'
-        });
-    }
-};
-
-
-
-
-const getReturnRequestDetails = async (req, res) => {
-    try {
-        const { orderId } = req.params;
-
-        const order = await Order.findOne({ orderId })
-            .populate({
-                path: 'items.productId',
-                select: 'productName variants'
-            });
-
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
-
-        // Filter only items with return requests
-        const returnRequestItems = order.items.filter(item => 
-            item.status === 'return_requested' && item.returnRequest
-        );
-
-        if (returnRequestItems.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No return requests found for this order'
-            });
-        }
-
-        // Calculate coupon discount proportion for each item if applicable
-        const totalOrderValue = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
-        
-        // Format the response data
-        const items = returnRequestItems.map(item => {
-            let couponDiscount = 0;
-            if (order.couponApplied && order.couponApplied.discountAmount) {
-                const itemProportion = item.totalPrice / totalOrderValue;
-                couponDiscount = order.couponApplied.discountAmount * itemProportion;
-            }
-
-            return {
-                _id: item._id,
-                productId: item.productId,
-                color: item.color,
-                size: item.size,
-                quantity: item.quantity,
-                price: item.price,
-                totalPrice: item.totalPrice,
-                couponDiscount: couponDiscount,
-                returnRequest: {
-                    reason: item.returnRequest.reason,
-                    customReason: item.returnRequest.customReason,
-                    status: item.returnRequest.status,
-                    createdAt: item.returnRequest.createdAt
-                }
-            };
-        });
-
-        res.json({
-            success: true,
-            items
-        });
-    } catch (error) {
-        console.error('Error fetching return request details:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch return request details',
-            error: error.message
-        });
-    }
-};
-
-This is my order-list.ejs page code:- 
-
-<!-- views/admin/order-list.ejs -->
-<%- include("../../views/partials/admin/header/") %>
-
-<div class="content-wrapper">
-  <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">Order Management</h5>
-        
-        <!-- Search and Filter Section -->
-        <div class="row my-3">
-          <div class="col-md-12">
-            <form action="/admin/orders" method="GET" class="row g-3">
-              <div class="col-md-4">
-                <input 
-                  type="text" 
-                  name="search" 
-                  class="form-control" 
-                  placeholder="Search by Order ID or Customer Name" 
-                  value="<%= search || '' %>"
-                >
-              </div>
-              <div class="col-md-3">
-                <select name="status" class="form-select">
-                  <option value="">All Order Status</option>
-                  <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
-                  <option value="processing" <%= status === 'processing' ? 'selected' : '' %>>Processing</option>
-                  <option value="shipped" <%= status === 'shipped' ? 'selected' : '' %>>Shipped</option>
-                  <option value="delivered" <%= status === 'delivered' ? 'selected' : '' %>>Delivered</option>
-                  <option value="cancelled" <%= status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
-                </select>
-              </div>
-              <div class="col-md-3">
-                <select name="paymentStatus" class="form-select">
-                  <option value="">All Payment Status</option>
-                  <option value="paid" <%= paymentStatus === 'paid' ? 'selected' : '' %>>Paid</option>
-                  <option value="pending" <%= paymentStatus === 'pending' ? 'selected' : '' %>>Pending</option>
-                  <option value="failed" <%= paymentStatus === 'failed' ? 'selected' : '' %>>Failed</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <button type="submit" class="btn btn-primary w-100">Search</button>
-              </div>
-            </form>
-            <% if (noResultsMessage) { %>
-              <div class="alert alert-warning alert-dismissible fade show" role="alert">
-                <%= noResultsMessage %>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-              </div>
-            <% } %>
-          </div>
-        </div>
-
-        <div class="card-datatable table-responsive">
-          <% if (orders.length > 0) { %>
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Order Date</th>
-                <th>Customer Name</th>
-                <th>Total Price</th>
-                <th>Payment Method</th>
-                <th>Payment Status</th>
-                <th>Order Status</th>
-                <th>Return Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% orders.forEach(order => { %>
-                <tr>
-                  <td><%= order.orderId %></td>
-                  <td><%= order.createdAt.toLocaleDateString() %></td>
-                  <td><%= order.userId.name %></td>
-                  <td>₹<%= order.total.toFixed(2) %></td>
-                  <td><%= order.paymentMethod.toUpperCase() %></td>
-                  <td>
-                    <span class="badge 
-                      <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
-                          order.paymentStatus === 'pending' ? 'bg-label-warning' : 
-                          'bg-label-danger' %>">
-                      <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
-                    </span>
-                  </td>
-                  <td>
-                    <span class="badge 
-                      <%= order.status === 'pending' ? 'bg-label-warning' : 
-                          order.status === 'processing' ? 'bg-label-info' : 
-                          order.status === 'shipped' ? 'bg-label-primary' : 
-                          order.status === 'delivered' ? 'bg-label-success' : 
-                          'bg-label-danger' %>">
-                      <%= order.status.toUpperCase() %>
-                    </span>
-                  </td>
-
-                  <td>
-                    <% 
-                      const totalItems = order.items.length;
-                      const returnedItems = order.items.filter(item => 
-                        item.status === 'returned' || item.status === 'return_requested'
-                      ).length;
-                      const hasReturnRequest = order.items.some(item => 
-                        item.status === 'return_requested'
-                      );
-                    %>
-                    
-                    <% if (hasReturnRequest) { %>
-                      <button 
-                        class="btn btn-sm btn-warning view-return-request position-relative" 
-                        data-order-id="<%= order.orderId %>"
-                        data-bs-toggle="modal" 
-                        data-bs-target="#returnRequestModal">
-                        View Return Request
-                        <% if (returnedItems > 0) { %>
-                          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                            <%= returnedItems %>
-                          </span>
-                        <% } %>
-                      </button>
-                    <% } else if (returnedItems > 0) { %>
-                      <span class="badge bg-success position-relative">
-                        Returned
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">
-                          <%= returnedItems %>/<%= totalItems %>
-                        </span>
-                      </span>
-                    <% } else { %>
-                      <span class="text-muted">No Returns</span>
+                <div class="head">Filter by Category</div>
+<div class="common-filter">
+<form action="/shop-page" method="GET" id="categoryForm">
+    <ul class="filter-options">
+        <li class="filter-list">
+            <div class="filter-box">
+                <input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
+                    <%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
+                <label for="all-categories">
+                    All Categories 
+                    <% if (locals.globalSearch) { %>
+                        <span class="text-primary">(Global Search Enabled)</span>
                     <% } %>
-                  </td>
-
-                  <td>
-                    <a href="/admin/order-details/<%= order.orderId %>" class="btn btn-sm btn-info">
-                      View Details
-                    </a>
-                  </td>
-                </tr>
-              <% }); %>
-            </tbody>
-          </table>
-          <% } else if (!noResultsMessage) { %>
-            <div class="alert alert-info text-center">
-              No orders found. Try adjusting your search criteria.
+                </label>
             </div>
-          <% } %>
-        </div>
-      </div>
-    </div>
-
-
-
-    <!-- Return Request Modal -->
-    <div class="modal fade" id="returnRequestModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Return Request Details</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div id="returnRequestDetails">
-              <div class="table-responsive">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Product Image</th>
-                      <th>Product Details</th>
-                      <th>Return Reason</th>
-                      <th>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="returnRequestTableBody">
-                    <!-- Will be populated dynamically -->
-                  </tbody>
-                </table>
-              </div>
+        </li>
+        <% categories.forEach(function(category) { %>
+            <li class="filter-list">
+                <div class="filter-box">
+                    <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
+                        <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
+                    <label for="<%= category.name %>"><%= category.name %></label>
+                </div>
+            </li>
+        <% }) %>
+    </ul>
+</form>
+</div>
             </div>
-          </div>
         </div>
-      </div>
+
+
+
+        <div class="col-xl-9 col-lg-8 col-md-7">
+            
+            <!-- Start Best Seller -->
+            <section class="lattest-product-area pb-40 category-list">
+                
+                    <div class="row">
+                        
+                        <!-- single product -->
+                        <% products.forEach(product => { %>
+                            <div class="col-lg-4 col-md-6">
+                                <div class="single-product">
+                                    <a href="/productDetails?id=<%= product._id %>">
+                                        <div class="product-image-container" style="position: relative;">
+                                            <% const firstImage = product.variants.reduce((img, variant) => {
+                                                if (!img && variant.images && variant.images.length > 0) {
+                                                    return variant.images[0].filename;
+                                                }
+                                                return img;
+                                            }, null); %>
+                        
+                                            <img class="img-fluid" 
+                                                 src="/uploads/product-images/<%= firstImage || 'placeholder.jpg' %>" 
+                                                 alt="<%= product.productName %>">
+                        
+                                            <% if (product.offerPercentage && product.offerPercentage > 0) { %>
+                                                <div style="position: absolute; top: 10px; right: 10px; background-color: red; color: white; padding: 5px; border-radius: 3px;">
+                                                    <%= product.offerPercentage %>% OFF
+                                                </div>
+                                            <% } %>
+                                        </div>
+                                    </a>
+                        
+                                    <div class="product-details">
+                                        <h6><%= product.productName.length > 20 ? product.productName.substring(0, 20) + '...' : product.productName %></h6>
+                                        <div class="price">
+                                            <% const offerPrice = product.offerPercentage ? product.regularPrice * (1 - product.offerPercentage / 100) : null; %>
+                                            <% if (offerPrice && offerPrice < product.regularPrice) { %>
+                                                <h6>₹ <%= Math.round(offerPrice) %></h6>
+                                                <h6 class="l-through text-muted">₹ <%= product.regularPrice %></h6>
+                                            <% } else { %>
+                                                <h6>₹ <%= product.regularPrice %></h6>
+                                            <% } %>
+                                        </div>
+                                        <div class="prd-bottom">
+                                            <a href="#" class="social-info add-to-cart" data-product-id="<%= product._id %>">
+                                                <span class="ti-bag"></span>
+                                                <p class="hover-text">add to cart</p>
+                                            </a>
+                                            <a href="#" class="social-info add-to-wishlist" data-product-id="<%= product._id %>">
+                                                <span class="lnr lnr-heart"></span>
+                                                <p class="hover-text">Wishlist</p>
+                                            </a>
+                                        </div>
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        <% }); %>
+                </div>
+
+
+
+                <% if (locals.searchTerm) { %>
+                    <div class="search-results-header">
+                        <h3>Search Results for "<%= searchTerm %>"</h3>
+                        <% if (products.length === 0) { %>
+                            <% if (locals.noProductsInCategory) { %>
+                                <div class="alert alert-warning">
+                                    <p>No products found in the "<%= currentCategory %>" category. 
+                                       <% if (locals.suggestGlobalSearch) { %>
+                                           Please check the global search option to search across all categories.
+                                       <% } %>
+                                    </p>
+                                </div>
+                            <% } else { %>
+                                <p>No products found matching your search.</p>
+                            <% } %>
+                        <% } %>
+                    </div>
+                <% } %>
+
+                <% if (locals.noProductsMessage) { %>
+                    <div class="alert alert-warning text-center">
+                        <%= noProductsMessage %>
+                    </div>
+                <% } %>
+            </section>
+
+        
+            <!-- Start Filter Bar -->
+            <div class="filter-bar d-flex flex-wrap align-items-center">
+
+                <div class="sorting">
+                    <div class="sorting-options">
+                        <form action="/shop-page" method="GET" id="sortForm">
+                            <select name="sort" class="form-control" onchange="this.form.submit()">
+                                <option value="default" <%= currentSort === 'default' ? 'selected' : '' %>>Default sorting</option>
+                                <option value="price-low" <%= currentSort === 'price-low' ? 'selected' : '' %>>Price: Low to High</option>
+                                <option value="price-high" <%= currentSort === 'price-high' ? 'selected' : '' %>>Price: High to Low</option>
+                                <option value="name-asc" <%= currentSort === 'name-asc' ? 'selected' : '' %>>Name: A to Z</option>
+                                <option value="name-desc" <%= currentSort === 'name-desc' ? 'selected' : '' %>>Name: Z to A</option>
+                                <option value="new-arrivals" <%= currentSort === 'new-arrivals' ? 'selected' : '' %>>New Arrivals</option>
+                            </select>
+                        </form>
+                    </div>
+                </div>
+                <div class="sorting mr-auto">
+                    
+                </div>
+                <div class="filter-bar d-flex flex-wrap align-items-center">
+                    <% if (pagination.totalPages > 1) { %>
+                        <div class="pagination">
+                            <% if (pagination.hasPrev) { %>
+                                <a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>" class="prev-arrow">
+                                    <i class="fa fa-long-arrow-left" aria-hidden="true"></i>
+                                </a>
+                            <% } %>
+                
+                            <% 
+                            let startPage = Math.max(1, pagination.currentPage - 2);
+                            let endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+                            
+                            if (startPage > 1) { %>
+                                <a href="/shop-page?page=1&sort=<%= currentSort %>">1</a>
+                                <% if (startPage > 2) { %>
+                                    <span class="dot-dot">...</span>
+                                <% } %>
+                            <% } %>
+                
+                            <% for(let i = startPage; i <= endPage; i++) { %>
+                                <a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>" 
+                                   class="<%= pagination.currentPage === i ? 'active' : '' %>">
+                                    <%= i %>
+                                </a>
+                            <% } %>
+                
+                            <% if (endPage < pagination.totalPages) { %>
+                                <% if (endPage < pagination.totalPages - 1) { %>
+                                    <span class="dot-dot">...</span>
+                                <% } %>
+                                <a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>">
+                                    <%= pagination.totalPages %>
+                                </a>
+                            <% } %>
+                
+                            <% if (pagination.hasNext) { %>
+                                <a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>" class="next-arrow">
+                                    <i class="fa fa-long-arrow-right" aria-hidden="true"></i>
+                                </a>
+                            <% } %>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+            <!-- End Filter Bar -->
+        </div>
     </div>
-
-    <!-- Pagination -->
-    <div class="container mt-3">
-      <nav aria-label="Page navigation">
-        <ul class="pagination justify-content-center">
-          <% if (currentPage > 1) { %>
-            <li class="page-item">
-              <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-                Previous
-              </a>
-            </li>
-          <% } %>
-
-          <% for(let i=1; i<=totalPages; i++) { %>
-            <li class="page-item <%= (i === currentPage) ? 'active' : '' %>">
-              <a class="page-link" href="?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-                <%= i %>
-              </a>
-            </li>
-          <% } %>
-
-          <% if (currentPage < totalPages) { %>
-            <li class="page-item">
-              <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-                Next
-              </a>
-            </li>
-          <% } %>
-        </ul>
-      </nav>
-    </div>
-  </div>
 </div>
 
-<%- include("../../views/partials/admin/footer/") %>
+This is my userProfile.ejs page code:- 
+<% if (activeSection === 'wishlist') { %>
+    <div class="wishlist-section">
+        <h2>My Wishlist</h2>
+        <% if (wishlist && wishlist.items && wishlist.items.length > 0) { %>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Price</th>
+                            <th>Variants</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% wishlist.items.forEach(item => { %>
+                            <tr class="wishlist-item">
+                                <td class="product-info">
+                                    <div class="d-flex align-items-center">
+                                        <div class="product-image-carousel" style="width: 100px;">
+                                            <div id="carousel-<%= item.productId._id %>" class="carousel slide" data-bs-ride="carousel">
+                                                <div class="carousel-inner">
+                                                    <% item.productId.variants.forEach((variant, variantIndex) => { %>
+                                                        <% variant.images.forEach((image, imageIndex) => { %>
+                                                            <div class="carousel-item <%= variantIndex === 0 && imageIndex === 0 ? 'active' : '' %>">
+                                                                <img src="/uploads/product-images/<%= image.filename %>" 
+                                                                     class="d-block w-100" 
+                                                                     alt="<%= item.productId.productName %>"
+                                                                     data-color="<%= variant.color %>">
+                                                            </div>
+                                                        <% }) %>
+                                                    <% }) %>
+                                                </div>
+                                                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-<%= item.productId._id %>" data-bs-slide="prev">
+                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                </button>
+                                                <button class="carousel-control-next" type="button" data-bs-target="#carousel-<%= item.productId._id %>" data-bs-slide="next">
+                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="ms-3">
+                                            <h5><%= item.productId.productName %></h5>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="price-info">
+                                    <% if (item.productId.offerPercentage > 0) { %>
+                                        <div>
+                                            <span class="text-danger">₹<%= Math.round(item.productId.regularPrice * (1 - item.productId.offerPercentage/100)) %></span>
+                                            <br>
+                                            <small class="text-muted text-decoration-line-through">₹<%= item.productId.regularPrice %></small>
+                                            <span class="badge bg-danger"><%= item.productId.offerPercentage %>% OFF</span>
+                                        </div>
+                                    <% } else { %>
+                                        <span>₹<%= item.productId.regularPrice %></span>
+                                    <% } %>
+                                </td>
+                                <td class="variant-info">
+                                    <select class="form-select size-select" data-product-id="<%= item.productId._id %>">
+                                        <option value="">Select Variant</option>
+                                        <% item.productId.variants.forEach(variant => { %>
+                                            <optgroup label="<%= variant.color %>">
+                                                <% variant.sizes.forEach(size => { %>
+                                                    <option value="<%= size.size %>" 
+                                                            data-color="<%= variant.color %>"
+                                                            data-variant-id="<%= variant._id %>"
+                                                            <%= (item.selectedVariant && 
+                                                                item.selectedVariant.size === size.size && 
+                                                                item.selectedVariant.color === variant.color) ? 'selected' : '' %>
+                                                            <%= size.quantity === 0 ? 'disabled' : '' %>>
+                                                        Size <%= size.size %> 
+                                                        (<%= size.quantity > 0 ? `${size.quantity} in stock` : 'Out of Stock' %>)
+                                                    </option>
+                                                <% }) %>
+                                            </optgroup>
+                                        <% }) %>
+                                    </select>
+                                </td>
+                                <td class="actions">
+                                    <div class="btn-group">
+                                        <button class="btn btn-primary btn-sm add-to-cart-from-wishlist" 
+                                                data-id="<%= item.productId._id %>">
+                                            <i class="fas fa-shopping-cart"></i>
+                                        </button>
+                                        <button class="btn btn-danger btn-sm remove-from-wishlist" 
+                                                data-id="<%= item.productId._id %>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+<div class="wishlist-actions mt-4">
+<button class="btn btn-success add-all-to-cart">Add All to Cart</button>
+<button class="btn btn-danger clear-wishlist">Clear Wishlist</button>
+<a href="/shop-page" class="btn btn-primary">Continue Shopping</a>
+</div>
+<% } else { %>
+<div class="empty-wishlist text-center">
+<i class="fas fa-heart-broken fa-3x mb-3"></i>
+<h4>Your wishlist is empty</h4>
+<p>Add items that you like to your wishlist</p>
+<a href="/shop-page" class="btn btn-primary mt-3">Continue Shopping</a>
+</div>
+<% } %>
+</div>
 
-
-
+<style>
+.wishlist-section {
+padding: 20px;
+}
+.product-image-carousel {
+width: 100px;
+height: 100px;
+overflow: hidden;
+}
+.product-image-carousel img {
+object-fit: cover;
+height: 100px;
+}
+.variant-info select {
+max-width: 200px;
+}
+.actions .btn-group {
+gap: 5px;
+}
+.table > :not(caption) > * > * {
+vertical-align: middle;
+}
+</style>
+<% } %>
 
 <script>
- document.querySelectorAll('.view-return-request').forEach(button => {
-    button.addEventListener('click', async function() {
-        const orderId = this.getAttribute('data-order-id');
+    document.addEventListener('DOMContentLoaded', function() {
+
+         // Handle variant selection
+    // Update the variant selection handler in your script
+document.querySelectorAll('.size-select').forEach(select => {
+    select.addEventListener('change', async function() {
+        const productId = this.getAttribute('data-product-id');
+        const selectedOption = this.options[this.selectedIndex];
+        
+        if (!this.value) {
+            return; // Do nothing if "Select Variant" is chosen
+        }
+
+        const selectedVariant = {
+            size: parseInt(this.value),
+            color: selectedOption.getAttribute('data-color')
+        };
+
         try {
-            const response = await fetch(`/admin/return-request-details/${orderId}`);
-            const data = await response.json();
-            
-            if (!data.success) {
-                throw new Error(data.message);
+            const response = await fetch(`/update-wishlist-variant/${productId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify({ selectedVariant })
+            });
+
+            // First check if response is JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Server returned non-JSON response');
             }
-            
-            const tableBody = document.getElementById('returnRequestTableBody');
-            tableBody.innerHTML = '';
 
-            data.items.forEach(item => {
-                const row = document.createElement('tr');
-                const variant = item.productId.variants.find(v => v.color === item.color);
-                
-                // Calculate the discounted price if coupon was applied
-                const originalPrice = item.price * item.quantity;
-                const couponDiscount = item.couponDiscount || 0;
-                const finalPrice = originalPrice - couponDiscount;
+            const data = await response.json();
 
-                row.innerHTML = `
-                    <td>
-                        <img src="/uploads/product-images/${variant?.images[0]?.filename || 'placeholder.jpg'}"
-                             alt="${item.productId.productName}"
-                             style="width: 50px; height: 50px; object-fit: cover;">
-                    </td>
-                    <td>
-                        <strong>${item.productId.productName}</strong><br>
-                        Color: ${item.color}<br>
-                        Size: ${item.size}<br>
-                        Quantity: ${item.quantity}<br>
-                        <div class="price-details mt-2">
-                            <small class="d-block">Original Price: ₹${originalPrice.toFixed(2)}</small>
-                            ${couponDiscount > 0 ? `<small class="d-block text-danger">Coupon Discount: -₹${couponDiscount.toFixed(2)}</small>` : ''}
-                            <strong class="d-block">Final Price: ₹${finalPrice.toFixed(2)}</strong>
-                        </div>
-                    </td>
-                    <td>${item.returnRequest.reason}
-                        ${item.returnRequest.customReason ? `<br><small>(${item.returnRequest.customReason})</small>` : ''}
-                    </td>
-                    <td>
-                        <div class="btn-group">
-                            <button class="btn btn-success btn-sm approve-return"
-                                    data-order-id="${orderId}"
-                                    data-item-id="${item._id}"
-                                    data-refund-amount="${finalPrice}">
-                                Approve
-                            </button>
-                            <button class="btn btn-danger btn-sm reject-return"
-                                    data-order-id="${orderId}"
-                                    data-item-id="${item._id}">
-                                Reject
-                            </button>
-                        </div>
-                    </td>
-                `;
-                tableBody.appendChild(row);
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update variant');
+            }
+
+            // Update carousel image
+            updateCarouselImage(this, selectedVariant.color);
+
+            Swal.fire({
+                title: 'Success!',
+                text: 'Variant updated successfully',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
             });
         } catch (error) {
             console.error('Error:', error);
-            Swal.fire('Error!', 'Failed to load return request details', 'error');
+            Swal.fire({
+                title: 'Error!',
+                text: error.message || 'Failed to update variant',
+                icon: 'error'
+            });
         }
     });
 });
-  
-  // Handle approve/reject actions
-  document.addEventListener('click', async function(e) {
-    if (e.target.matches('.approve-return, .reject-return')) {
-        const action = e.target.classList.contains('approve-return') ? 'approve' : 'reject';
-        const orderId = e.target.getAttribute('data-order-id');
-        const itemId = e.target.getAttribute('data-item-id');
-        const refundAmount = e.target.getAttribute('data-refund-amount');
 
-        // Hide modal before showing Swal
-        const returnModal = bootstrap.Modal.getInstance(document.getElementById('returnRequestModal'));
-        if (returnModal) {
-            returnModal.hide();
+    // Add to cart from wishlist
+    document.querySelectorAll('.add-to-cart-from-wishlist').forEach(button => {
+    button.addEventListener('click', async function() {
+        const productId = this.dataset.id;
+        const row = this.closest('.wishlist-item');
+        const select = row.querySelector('.size-select');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (!select.value) {
+            Swal.fire('Error', 'Please select a size and color', 'warning');
+            return;
         }
 
-        // Show loading message
-        Swal.fire({
-            title: 'Processing...',
-            text: `Processing ${action} request`,
-            allowOutsideClick: false,
-            showConfirmButton: false,
-            willOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        const variantData = {
+            productId,
+            size: parseInt(select.value),
+            color: selectedOption.getAttribute('data-color'),
+            variantId: selectedOption.getAttribute('data-variant-id'),
+            quantity: 1
+        };
 
         try {
-            const response = await fetch('/admin/handle-return-request', {
+            // First check if item already exists in cart
+            const checkResponse = await fetch(`/check-cart-item`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
                 },
-                body: JSON.stringify({
-    orderId,
-    itemId,
-    action,
-    refundAmount: parseFloat(refundAmount),
-    adminResponse: action === 'approve' ? 'Return request approved' : 'Return request rejected',
-    status: action === 'approve' ? 'returned' : 'return_rejected' 
-})
+                body: JSON.stringify(variantData)
             });
 
-            const data = await response.json();
-            
-            // Close loading message
-            Swal.close();
+            const checkData = await checkResponse.json();
 
-            if (data.success) {
-    await Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: action === 'approve' 
-            ? `Return request approved and ₹${parseFloat(refundAmount).toFixed(2)} refunded to wallet`
-            : 'Return request rejected successfully',
-        showConfirmButton: true,
-        confirmButtonText: 'OK',
-        allowOutsideClick: false
-    });
-    
-    // Reload page after user clicks OK
-    window.location.reload();
-} else {
-                throw new Error(data.message || 'Failed to process return request');
+            if (checkData.exists) {
+                Swal.fire('Info', `This product with selected color ${variantData.color} and size ${variantData.size} already exists in your cart`, 'info');
+                return;
             }
+
+            // If not exists, proceed to add to cart
+            const addResponse = await fetch('/addToCart/' + productId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                },
+                body: JSON.stringify(variantData)
+            });
+
+            if (!addResponse.ok) {
+                const errorData = await addResponse.json();
+                throw new Error(errorData.message || 'Failed to add to cart');
+            }
+
+            Swal.fire({
+                title: 'Success!',
+                text: 'Product added to cart',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Cart',
+                cancelButtonText: 'Continue Shopping'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
         } catch (error) {
-            console.error('Error:', error);
-            await Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: error.message || 'Failed to process return request',
-                showConfirmButton: true,
-                confirmButtonText: 'OK',
-                allowOutsideClick: false
-            });
-            
-            // Reopen modal after error
-            if (returnModal) {
-                returnModal.show();
-            }
-        }
-    }
-});
-  </script>
-
-
-This is my order-details.ejs page code:- 
-<!-- views/admin/order-details.ejs -->
-<%- include("../../views/partials/admin/header/") %>
-
-<div class="content-wrapper">
-  <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="row">
-      <!-- Order Summary and Shipping Address in a 12/2 layout -->
-      <div class="col-lg-8 col-md-12">
-        <div class="card mb-4">
-          <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Order Summary</h5>
-            <div>
-              <a href="/admin/orders" class="btn btn-secondary me-2">Back to Orders</a>
-              <% if (order.status !== 'delivered' && order.status !== 'cancelled') { %>
-                <button id="cancelEntireOrder" class="btn btn-danger">Cancel Entire Order</button>
-              <% } %>
-            </div>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Order ID</strong>
-                  <p class="text-dark"><%= order.orderId %></p>
-                </div>
-                <div>
-                  <strong class="d-block text-muted mb-1">Order Date</strong>
-                  <p class="text-dark"><%= order.createdAt.toLocaleString() %></p>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Total Amount</strong>
-                  <p class="text-dark">₹<%= order.total.toFixed(2) %></p>
-                </div>
-                <div>
-                  <strong class="d-block text-muted mb-1">Payment Status</strong>
-                  <span class="badge 
-                    <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
-                        order.paymentStatus === 'pending' ? 'bg-label-warning' : 
-                        'bg-label-danger' %>">
-                    <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
-                  </span>
-                </div>
-              </div>
-              <div class="col-md-4">
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Customer Name</strong>
-                  <p class="text-dark"><%= order.userId.name %></p>
-                </div>
-                <div>
-                  <strong class="d-block text-muted mb-1">Order Status</strong>
-                  <form id="orderStatusForm" method="POST" action="/admin/update-order-status/<%= order._id %>">
-                    <select name="status" class="form-select form-select-sm" id="orderStatusSelect">
-                      <% 
-                      const STATUS_FLOW = {
-                        'pending': ['processing'],
-                        'processing': ['shipped'],
-                        'shipped': ['delivered'],
-                        'delivered': [],
-                        'cancelled': []
-                      };
-                    
-                      const currentStatus = order.status;
-                      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
-                      const allStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
-                      %>
-                    
-                      <% allStatuses.forEach(status => { 
-                        const isCurrentStatus = status === currentStatus;
-                        const isAllowedTransition = allowedNextStatuses.includes(status);
-                      %>
-                        <option value="<%= status %>" 
-                                <%= isCurrentStatus ? 'selected' : '' %>>
-                          <%= status.charAt(0).toUpperCase() + status.slice(1) %>
-                        </option>
-                      <% }); %>
-                    </select>
-                  </form>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="col-lg-4 col-md-12">
-        <div class="card mb-4">
-          <div class="card-header">
-            <h5 class="mb-0">Shipping Address</h5>
-          </div>
-          <div class="card-body">
-            <div class="row">
-              <div class="col-12">
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Name</strong>
-                  <p class="text-dark"><%= order.shippingAddress.name %></p>
-                </div>
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Contact</strong>
-                  <p class="text-dark">
-                    <%= order.shippingAddress.phone %>
-                    <% if (order.shippingAddress.altPhone) { %>
-                      | Alt: <%= order.shippingAddress.altPhone %>
-                    <% } %>
-                  </p>
-                </div>
-                <div class="mb-3">
-                  <strong class="d-block text-muted mb-1">Full Address</strong>
-                  <p class="text-dark">
-                    <%= order.shippingAddress.address %>, 
-                    <%= order.shippingAddress.landmark %><br>
-                    <%= order.shippingAddress.city %>, 
-                    <%= order.shippingAddress.state %> - 
-                    <%= order.shippingAddress.pincode %>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Order Items -->
-    <div class="card">
-      <div class="card-header">
-        <h5 class="mb-0">Order Items</h5>
-      </div>
-      <div class="card-body">
-        <div class="table-responsive">
-          <table class="table table-bordered">
-            <thead>
-              <tr>
-                <th>Product Details</th>
-                <th>Color</th>
-                <th>Size</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Total Price</th>
-                <th>Item Status</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% order.items.forEach((item, index) => { 
-                const variant = item.productId.variants.find(v => v.color === item.color);
-                const isItemCancellable = order.status !== 'delivered' && order.status !== 'cancelled' && item.status !== 'cancelled';
-              %>
-                <tr>
-                  <td class="d-flex align-items-center">
-                    <img 
-                      src="/uploads/product-images/<%= 
-                          variant?.images && variant.images.length > 0 
-                              ? variant.images[0].filename 
-                              : 'placeholder.jpg' 
-                      %>" 
-                      alt="<%= item.productId.productName %>" 
-                      style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;"
-                    >
-                    <div>
-                      <strong><%= item.productId.productName %></strong><br>
-                      <small class="text-muted">
-                        Category: <%= item.productId.category ? item.productId.category.name : 'N/A' %>
-                      </small>
-                    </div>
-                  </td>
-                  <td><%= item.color %></td>
-                  <td><%= item.size %></td>
-                  <td><%= item.quantity %></td>
-                  <td>₹<%= item.price.toFixed(2) %></td>
-                  <td>₹<%= item.totalPrice.toFixed(2) %></td>
-
-                  <td>
-                    <% if (item.status === 'placed') { %>
-                        <% if (order.status === 'pending') { %>
-                            <span class="badge bg-label-warning">Pending</span>
-                        <% } else if (order.status === 'processing') { %>
-                            <span class="badge bg-label-info">Processing</span>
-                        <% } else if (order.status === 'shipped') { %>
-                            <span class="badge bg-label-primary">Shipped</span>
-                        <% } else if (order.status === 'delivered') { %>
-                            <span class="badge bg-label-success">Delivered</span>
-                        <% } %>
-                    <% } else if (item.status === 'return_requested') { %>
-                        <span class="badge bg-label-warning">Return Requested</span>
-                    <% } else if (item.status === 'returned') { %>
-                        <span class="badge bg-label-info">Returned</span>
-                    <% } else if (item.status === 'cancelled') { %>
-                        <span class="badge bg-label-danger">Cancelled</span>
-                    <% } %>
-                </td>
-
-                  <td>
-                    <% if (isItemCancellable) { %>
-                      <button class="btn btn-sm btn-danger cancel-item" 
-                              data-order-id="<%= order._id %>" 
-                              data-item-index="<%= index %>">
-                        Cancel Item
-                      </button>
-                    <% } else { %>
-                      <span class="text-muted">Not Cancellable</span>
-                    <% } %>
-                  </td>
-                </tr>
-              <% }); %>
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colspan="4" class="text-end"><strong>Subtotal</strong></td>
-                <td colspan="4">₹<%= order.subtotal.toFixed(2) %></td>
-              </tr>
-              <tr>
-                <td colspan="4" class="text-end"><strong>Shipping Cost</strong></td>
-                <td colspan="4">₹<%= order.shippingCost.toFixed(2) %></td>
-              </tr>
-
-              <% if (order.couponApplied && order.couponApplied.code) { %>
-                <tr>
-                  <td colspan="4" class="text-end"><strong>Coupon Applied</strong></td>
-                  <td colspan="4">
-                    Code: <%= order.couponApplied.code %><br>
-                    Discount: ₹<%= order.couponApplied.discountAmount.toFixed(2) %>
-                    (<%= order.couponApplied.discountPercentage %>%)
-                  </td>
-                </tr>
-              <% } %>
-
-              <tr>
-                <td colspan="4" class="text-end"><strong>Total</strong></td>
-                <td colspan="4" class="text-danger">₹<%= order.total.toFixed(2) %></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- SweetAlert2 CDN -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    const STATUS_FLOW = {
-    'pending': ['processing', 'shipped'],
-    'processing': ['shipped'],
-    'shipped': ['delivered']
-};
-  
-    const orderStatusSelect = document.getElementById('orderStatusSelect');
-    const currentStatus = '<%= order.status %>';
-  
-    // Function to validate and control status dropdown
-    function setupStatusDropdown() {
-    const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
-    
-    // Disable/enable options based on current status
-    Array.from(orderStatusSelect.options).forEach(option => {
-        const optionValue = option.value;
-        
-        // Remove 'Cancelled' option entirely
-        if (optionValue === 'cancelled') {
-            option.remove();
-        }
-        
-        // Disable all options except current status and allowed next statuses
-        if (optionValue !== currentStatus && !allowedNextStatuses.includes(optionValue)) {
-            option.disabled = true;
-        } else {
-            option.disabled = false;
+            Swal.fire('Error', error.message, 'error');
         }
     });
+});
 
-    // Always keep the current status selected
-    orderStatusSelect.value = currentStatus;
-}
-  
-    // Initial setup of dropdown
-    setupStatusDropdown();
-  
-    orderStatusSelect.addEventListener('change', function() {
-      const newStatus = this.value;
-      
-      // Validate status transition
-      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
-      if (newStatus !== currentStatus && !allowedNextStatuses.includes(newStatus)) {
-        Swal.fire({
-          title: 'Invalid Status Transition',
-          text: `You cannot change the order status from ${currentStatus} to ${newStatus}. 
-                 Allowed transitions are: ${allowedNextStatuses.join(', ')}`,
-          icon: 'error',
-          confirmButtonText: 'OK'
+
+        // Remove from wishlist
+        document.querySelectorAll('.remove-from-wishlist').forEach(button => {
+            button.addEventListener('click', async function() {
+                const productId = this.getAttribute('data-id');
+                try {
+                    const response = await fetch(`/remove-from-wishlist/${productId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        this.closest('.wishlist-item').remove();
+                        Swal.fire('Removed!', 'Item removed from wishlist', 'success');
+                    }
+                } catch (error) {
+                    Swal.fire('Error!', 'Failed to remove item', 'error');
+                }
+            });
+        });
+
+        // Clear wishlist
+        document.querySelector('.clear-wishlist')?.addEventListener('click', async function() {
+            try {
+                const response = await fetch('/clear-wishlist', {
+                    method: 'DELETE',
+                    headers: {
+                        'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                    }
+                });
+                
+                if (response.ok) {
+                    location.reload();
+                }
+            } catch (error) {
+                Swal.fire('Error!', 'Failed to clear wishlist', 'error');
+            }
+        });
+
+        // Add all to cart
+        // Add all to cart handler
+document.querySelector('.add-all-to-cart')?.addEventListener('click', async function() {
+    try {
+        const response = await fetch('/wishlist/add-all-to-cart', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+            }
         });
         
-        // Reset to current status
-        setupStatusDropdown();
-        return;
-      }
-  
-      // Confirmation and update logic
-      Swal.fire({
-        title: 'Update Order Status',
-        text: `Are you sure you want to update the order status from ${currentStatus} to ${newStatus}?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, update it!'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          // Special handling for delivered status to update payment status
-          // In the fetch call for updating order status
-const updateData = newStatus === 'delivered' 
-  ? { status: newStatus, paymentStatus: 'paid' }
-  : { status: newStatus };
-
-fetch('/admin/update-order-status/<%= order._id %>', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  },
-  body: JSON.stringify(updateData)
-})
-          .then(response => {
-            if (!response.ok) {
-              return response.json().then(errorData => {
-                throw new Error(errorData.message || 'Failed to update order status');
-              });
-            }
-            return response.json();
-          })
-          .then(data => {
-            if (data.success) {
-              Swal.fire(
-                'Updated!', 
-                'Order status has been updated.', 
-                'success'
-              ).then(() => {
-                window.location.reload();
-              });
-            } else {
-              throw new Error(data.message || 'Failed to update order status');
-            }
-          })
-          .catch(error => {
-            console.error('Comprehensive Error:', error);
-  
-            Swal.fire(
-              'Error!', 
-              `Status Update Failed: ${error.message}`, 
-              'error'
-            );
-  
-            // Reset to current status
-            setupStatusDropdown();
-          });
-        } else {
-          // Reset to current status if cancelled
-          setupStatusDropdown();
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to add items to cart');
         }
-      });
-    });
-  
-    // Cancel Individual Item
 
-document.querySelectorAll('.cancel-item').forEach(button => {
-  button.addEventListener('click', function() {
-    const orderId = this.getAttribute('data-order-id');
-    const itemIndex = this.getAttribute('data-item-index');
-
-    Swal.fire({
-      title: 'Cancel Item',
-      text: 'Are you sure you want to cancel this item?',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, cancel it',
-      cancelButtonText: 'No, keep it'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        cancelItem(orderId, itemIndex);
-      }
-    });
-  });
-});
-
-function cancelItem(orderId, itemIndex) {
-  fetch(`/admin/cancel-order-item/${orderId}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json'
-    },
-    body: JSON.stringify({ itemIndex })
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      Swal.fire('Cancelled!', 'Item has been cancelled.', 'success')
-      .then(() => window.location.reload());
-    } else {
-      Swal.fire('Error!', data.message || 'Failed to cancel item', 'error');
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    Swal.fire('Error!', 'An error occurred while cancelling the item', 'error');
-  });
-}
-  
-    // Cancel Entire Order
-    const cancelEntireOrderBtn = document.getElementById('cancelEntireOrder');
-if (cancelEntireOrderBtn) {
-    cancelEntireOrderBtn.addEventListener('click', function() {
         Swal.fire({
-            title: 'Cancel Entire Order',
-            text: 'Are you sure you want to cancel this order? The amount will be refunded to the customer\'s wallet.',
-            icon: 'warning',
+            title: 'Success!',
+            text: data.message,
+            icon: 'success',
             showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, cancel it!',
-            cancelButtonText: 'No, keep it'
+            confirmButtonText: 'Go to Cart',
+            cancelButtonText: 'Continue Shopping'
         }).then((result) => {
             if (result.isConfirmed) {
-                fetch(`/admin/cancel-order/<%= order._id %>`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        Swal.fire(
-                            'Cancelled!', 
-                            'Order has been cancelled and refund has been processed.', 
-                            'success'
-                        ).then(() => {
-                            window.location.reload();
-                        });
-                    } else {
-                        throw new Error(data.message || 'Failed to cancel order');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire(
-                        'Error!', 
-                        'An error occurred while cancelling the order', 
-                        'error'
-                    );
-                });
+                window.location.href = '/userCart';
             }
         });
-    });
-}
-  });
-  </script>
+    } catch (error) {
+        Swal.fire({
+            title: 'Error!',
+            text: error.message,
+            icon: 'error'
+        });
+    }
+});
 
-<%- include("../../views/partials/admin/footer/") %>
+    // Helper function to update carousel image
+    function updateCarouselImage(select, selectedColor) {
+        const carousel = select.closest('tr').querySelector('.carousel');
+        const items = carousel.querySelectorAll('.carousel-item');
+        
+        items.forEach(item => {
+            const img = item.querySelector('img');
+            if (img.getAttribute('data-color') === selectedColor) {
+                item.classList.add('active');
+            } else {
+                item.classList.remove('active');
+            }
+        });
+    }
+});
+</script>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+This is my middleware, auth.js code:- 
 
 
 
+const User= require('../models/userSchema');
 
+const userAuth = (req, res, next) => {
+    // If no user in session, redirect to login or send unauthorized response
+    if (!req.session.user) {
+        // If it's an AJAX request (like from addToCart), send a JSON response
+        if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+            return res.status(401).json({ 
+                status: 'unauthorized', 
+                message: 'Please log in to continue' 
+            });
+        }
+        
+        // For regular page requests, redirect to login
+        return res.redirect('/login');
+    }
 
-
-<!-- Updated Pagination Section for order-list.ejs -->
-<div class="container mt-3">
-    <nav aria-label="Page navigation">
-      <ul class="pagination justify-content-center">
-        <% if (currentPage > 1) { %>
-          <li class="page-item">
-            <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-              Previous
-            </a>
-          </li>
-        <% } %>
-  
-        <%
-          const delta = 2; // Pages to show before and after current page
-          let range = [];
-          
-          if (totalPages <= 5) {
-            // If total pages are 5 or less, show all pages
-            range = [...Array(totalPages)].map((_, i) => i + 1);
-          } else {
-            // Always include first page
-            range.push(1);
+    // Check if user exists and is not blocked
+    User.findById(req.session.user._id)
+        .then(user => {
+            if (user && !user.isBlocked) {
+                req.user = user;
+                next();
+            } else {
+                // Clear the session if user is blocked or not found
+                req.session.destroy();
+                
+                // For AJAX requests
+                if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+                    return res.status(401).json({ 
+                        status: 'unauthorized', 
+                        message: 'Account is blocked or invalid' 
+                    });
+                }
+                
+                // For page requests
+                res.redirect('/login');
+            }
+        })
+        .catch(error => {
+            console.error('Error in user auth middleware:', error);
             
-            // Calculate range around current page
-            let start = Math.max(2, currentPage - delta);
-            let end = Math.min(totalPages - 1, currentPage + delta);
-            
-            // Add dots after first page if needed
-            if (start > 2) {
-              range.push('...');
+            // For AJAX requests
+            if (req.xhr || req.headers.accept.indexOf('json') > -1) {
+                return res.status(500).json({ 
+                    status: 'error', 
+                    message: 'Internal server error' 
+                });
             }
             
-            // Add pages around current page
-            for (let i = start; i <= end; i++) {
-              range.push(i);
+            // For page requests
+            res.status(500).send('Internal server error');
+        });
+};
+
+
+
+
+const adminAuth = (req, res, next) => {
+    User.findOne({ isAdmin: true })
+        .then(data => {
+            if (data) {
+                next();
+            } else {
+                console.log('Redirecting to login page');
+                res.redirect('/admin/admin-login');
             }
-            
-            // Add dots before last page if needed
-            if (end < totalPages - 1) {
-              range.push('...');
+        })
+        .catch(error => {
+            console.log('Error in adminAuth middleware:', error);
+            res.status(500).send('Internal Server Error');
+        });
+};
+
+
+
+This is my userCart.ejs page code just for your reference only:- 
+
+const User = require('../../models/userSchema');
+const Category = require('../../models/categorySchema');
+const Product = require('../../models/productSchema');
+const Cart = require('../../models/cartSchema');
+const Offer = require('../../models/offerSchema');
+
+
+const getCartPage = async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.redirect('/login');
+        }
+
+        const cart = await Cart.findOne({ userId: req.session.user._id })
+            .populate({
+                path: 'items.productId',
+                model: 'Product',
+                populate: {
+                    path: 'variants',
+                    model: 'Product'
+                }
+            });
+
+        if (!cart) {
+            return res.render('userCart', { 
+                cart: { items: [] },
+                subtotal: 0
+            });
+        }
+
+        // Recalculate subtotal with original prices
+        const subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+        res.render('userCart', { 
+            cart, 
+            subtotal 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).send("Internal Server Error");
+    }
+};
+
+const addToCart = async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ 
+                status: 'unauthorized', 
+                message: 'Please log in to add items to cart' 
+            });
+        }
+
+        const productId = req.params.id;
+        const userId = req.session.user._id;
+        const { quantity = 1, size, variantId } = req.body;
+
+        const product = await Product.findById(productId)
+            .populate('category');
+        if (!product) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: "Product not found" 
+            });
+        }
+
+        // Find applicable offers
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
+
+        // Calculate the maximum discount
+        let maxDiscount = 0;
+        let applicableOfferName = '';
+        
+        offers.forEach(offer => {
+            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
             }
+        });
+
+        // Calculate discounted price
+        const originalPrice = product.regularPrice;
+        const discountedPrice = originalPrice * (1 - maxDiscount / 100);
+
+        // Validate quantity
+        if (quantity > 5) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: "Cannot add more than 5 of this product" 
+            });
+        }
+
+        // Find the specific variant
+        const selectedVariant = product.variants.find(v => 
+            v._id && variantId && v._id.toString() === variantId.toString()
+        );
+
+        if (!selectedVariant) {
+            return res.status(404).json({ 
+                status: 'error',
+                message: "Selected variant not found" 
+            });
+        }
+
+        // Check available quantity for specific size
+        const sizeObj = selectedVariant.sizes.find(s => s.size === parseInt(size));
+        if (!sizeObj || sizeObj.quantity < quantity) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: `Only ${sizeObj ? sizeObj.quantity : 0} items available in stock` 
+            });
+        }
+
+        // Find or create cart
+        let cart = await Cart.findOne({ userId });
+        if (!cart) {
+            cart = new Cart({ userId, items: [] });
+        }
+
+        // Check if item already exists in cart with same product, variant, and size
+        const existingItemIndex = cart.items.findIndex(item => 
+            item.productId && productId && 
+            item.productId.toString() === productId.toString() &&
+            item.variantId && variantId && 
+            item.variantId.toString() === variantId.toString() &&
+            item.size === parseInt(size)
+        );
+
+        if (existingItemIndex !== -1) {
+            return res.status(400).json({ 
+                status: 'error',
+                message: "Product with this variant and size already in the cart" 
+            });
+        }
+
+        // Add new item to cart with offer details
+        const cartItem = {
+            productId,
+            variantId: selectedVariant._id,
+            size: parseInt(size),
+            color: selectedVariant.color,
+            quantity,
+            originalPrice,
+            price: discountedPrice,
+            totalPrice: discountedPrice * quantity,
+            availableQuantity: sizeObj.quantity
+        };
+
+        // Add offer details if applicable
+        if (maxDiscount > 0) {
+            cartItem.offer = {
+                discount: maxDiscount,
+                offerName: applicableOfferName
+            };
+        }
+
+        cart.items.push(cartItem);
+
+        await cart.save();
+        return res.status(200).json({ 
+            status: 'success', 
+            message: "Product added to cart successfully" 
+        });
+    } catch (error) {
+        console.error('Add to cart error:', error);
+        res.status(500).json({ 
+            status: 'error', 
+            message: "Server error" 
+        });
+    }
+};
+
+const updateCart = async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { productId } = req.params;
+        const { quantity, color, size, variantId } = req.body;
+        const userId = req.session.user._id;
+
+        const product = await Product.findById(productId)
+            .populate('category');
+        if (!product) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // Find applicable offers (same logic as addToCart)
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
+
+        // Calculate the maximum discount
+        let maxDiscount = 0;
+        let applicableOfferName = '';
+        
+        offers.forEach(offer => {
+            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
+                maxDiscount = Math.max(maxDiscount, offer.discount);
+                applicableOfferName = offer.offerName;
+            }
+        });
+
+        // Calculate discounted price
+        const originalPrice = product.regularPrice;
+        const discountedPrice = originalPrice * (1 - maxDiscount / 100);
+
+        // Find the cart for the user
+        const userCart = await Cart.findOne({ userId });
+        
+        if (!userCart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        // Find the specific item in the cart
+        const itemIndex = userCart.items.findIndex(
+            item => item.productId.toString() === productId &&
+                    item.color === color &&
+                    item.size === parseInt(size) &&
+                    item.variantId.toString() === variantId
+        );
+
+        if (itemIndex === -1) {
+            return res.status(404).json({ message: 'Item not found in cart' });
+        }
+
+        // Find the variant and size
+        const selectedVariant = product.variants.find(v => v._id.toString() === variantId);
+        const sizeObj = selectedVariant.sizes.find(s => s.size === parseInt(size));
+
+        // Validate new quantity
+        if (quantity > 5) {
+            return res.status(400).json({ 
+                message: "Cannot add more than 5 of this product" 
+            });
+        }
+
+        if (quantity > sizeObj.quantity) {
+            return res.status(400).json({ 
+                message: `Only ${sizeObj.quantity} items available in stock` 
+            });
+        }
+
+        // Update quantity and prices
+        userCart.items[itemIndex].originalPrice = originalPrice;
+        userCart.items[itemIndex].price = discountedPrice;
+        userCart.items[itemIndex].quantity = quantity;
+        userCart.items[itemIndex].totalPrice = discountedPrice * quantity;
+        userCart.items[itemIndex].availableQuantity = sizeObj.quantity;
+
+        // Add or remove offer details
+        if (maxDiscount > 0) {
+            userCart.items[itemIndex].offer = {
+                discount: maxDiscount,
+                offerName: applicableOfferName
+            };
+        } else {
+            delete userCart.items[itemIndex].offer;
+        }
+
+        await userCart.save();
+        
+        // Recalculate subtotal
+        const subtotal = userCart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+        
+        return res.status(200).json({
+            cart: userCart,
+            subtotal: subtotal
+        });
+    } catch (error) {
+        console.error('Error updating cart:', error);
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+
+
+const removeFromCart = async (req, res) => {
+    try {
+        if (!req.session.user) {
+            return res.status(401).json({ message: 'Unauthorized' });
+        }
+
+        const { productId } = req.params; 
+        const { color, size, variantId } = req.query; 
+        const userId = req.session.user._id; 
+
+        const cart = await Cart.findOne({ userId });
+        
+        if (!cart) {
+            return res.status(404).json({ message: 'Cart not found' });
+        }
+
+        const initialItemsCount = cart.items.length;
+
+        // Remove item from cart items
+        cart.items = cart.items.filter(
+            item => !(
+                item.productId.toString() === productId &&
+                item.color === color &&
+                item.size === parseInt(size) &&
+                item.variantId.toString() === variantId
+            )
+        );
+
+        // Check if any item was removed
+        if (cart.items.length === initialItemsCount) {
+            return res.status(404).json({ message: 'Item not found in cart' });
+        }
+
+        // Save updated cart
+        await cart.save();
+
+        res.status(200).json({ message: 'Item removed from cart' });
+    } catch (error) {
+        console.error('Error removing item from cart:', error);
+        res.status(500).json({ message: 'Error removing item from cart' });
+    }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+    // In wishlistController.js
+const Wishlist = require('../../models/wishlistSchema');
+const Product = require('../../models/productSchema');
+const Cart = require('../../models/cartSchema');
+const Offer = require('../../models/offerSchema'); // Add this import
+
+const addAllToCart = async (req, res) => {
+    try {
+        const wishlist = await Wishlist.findOne({ userId: req.user._id })
+            .populate('items.productId');
+        
+        if (!wishlist || !wishlist.items.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'No items in wishlist'
+            });
+        }
+
+        let cart = await Cart.findOne({ userId: req.user._id });
+        if (!cart) {
+            cart = new Cart({ userId: req.user._id, items: [] });
+        }
+
+        let addedItems = 0;
+        let skippedItems = 0;
+        let notSelectedItems = 0;
+        let outOfStockItems = 0;
+        let existingItems = 0;
+
+        for (const item of wishlist.items) {
+            // Skip items without selected variant
+            if (!item.selectedVariant || !item.selectedVariant.size || !item.selectedVariant.color) {
+                notSelectedItems++;
+                continue;
+            }
+
+            // Check if item already exists in cart
+            const existingCartItem = cart.items.find(cartItem => 
+                cartItem.productId.toString() === item.productId._id.toString() &&
+                cartItem.color === item.selectedVariant.color &&
+                cartItem.size === item.selectedVariant.size
+            );
+
+            if (existingCartItem) {
+                existingItems++;
+                continue;
+            }
+
+            // Verify product and check stock
+            const product = await Product.findById(item.productId._id)
+                .populate('category');
+
+            if (!product) {
+                skippedItems++;
+                continue;
+            }
+
+            // Find variant and check stock
+            const variant = product.variants.find(v => 
+                v.color === item.selectedVariant.color
+            );
             
-            // Always include last page
-            range.push(totalPages);
-          }
-        %>
-  
-        <% range.forEach(page => { %>
-          <% if (page === '...') { %>
-            <li class="page-item disabled">
-              <span class="page-link">...</span>
-            </li>
-          <% } else { %>
-            <li class="page-item <%= (page === currentPage) ? 'active' : '' %>">
-              <a class="page-link" href="?page=<%= page %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-                <%= page %>
-              </a>
-            </li>
-          <% } %>
-        <% }); %>
-  
-        <% if (currentPage < totalPages) { %>
-          <li class="page-item">
-            <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-              Next
-            </a>
-          </li>
-        <% } %>
-      </ul>
-    </nav>
-  </div>
-  
-  <!-- Updated Status Cell for order-details.ejs -->
-  <td>
-    <% if (item.status === 'placed') { %>
-        <% if (order.status === 'pending') { %>
-            <span class="badge bg-label-warning">Pending</span>
-        <% } else if (order.status === 'processing') { %>
-            <span class="badge bg-label-info">Processing</span>
-        <% } else if (order.status === 'shipped') { %>
-            <span class="badge bg-label-primary">Shipped</span>
-        <% } else if (order.status === 'delivered') { %>
-            <span class="badge bg-label-success">Delivered</span>
-        <% } %>
-    <% } else if (item.status === 'return_requested') { %>
-        <span class="badge bg-label-warning">Return Requested</span>
-    <% } else if (item.status === 'returned') { %>
-        <span class="badge bg-label-info">Returned</span>
-    <% } else if (item.status === 'return_rejected') { %>
-        <span class="badge bg-label-danger">Return Rejected</span>
-    <% } else if (item.status === 'cancelled') { %>
-        <span class="badge bg-label-danger">Cancelled</span>
-    <% } %>
-  </td>
+            const sizeObj = variant?.sizes.find(s => 
+                s.size === item.selectedVariant.size
+            );
+
+            if (!variant || !sizeObj || sizeObj.quantity < 1) {
+                outOfStockItems++;
+                continue;
+            }
+
+            // Calculate price with any applicable offers
+            const offers = await Offer.find({
+                $or: [
+                    { offerType: 'product', productIds: product._id },
+                    { offerType: 'category', categoryIds: product.category._id }
+                ],
+                status: 'active',
+                expireDate: { $gte: new Date() }
+            });
+
+            let maxDiscount = 0;
+            let applicableOfferName = '';
+            
+            offers.forEach(offer => {
+                if (offer.discount > maxDiscount) {
+                    maxDiscount = offer.discount;
+                    applicableOfferName = offer.offerName;
+                }
+            });
+
+            const originalPrice = product.regularPrice;
+            const discountedPrice = originalPrice * (1 - maxDiscount / 100);
+
+            // Add to cart
+            cart.items.push({
+                productId: product._id,
+                variantId: variant._id,
+                size: item.selectedVariant.size,
+                color: item.selectedVariant.color,
+                quantity: 1,
+                originalPrice,
+                price: discountedPrice,
+                totalPrice: discountedPrice,
+                availableQuantity: sizeObj.quantity,
+                ...(maxDiscount > 0 && {
+                    offer: {
+                        discount: maxDiscount,
+                        offerName: applicableOfferName
+                    }
+                })
+            });
+
+            addedItems++;
+        }
+
+        await cart.save();
+
+        // Prepare detailed message
+        let message = `Added ${addedItems} items to cart.`;
+        if (notSelectedItems > 0) message += ` ${notSelectedItems} items skipped (no variant selected).`;
+        if (existingItems > 0) message += ` ${existingItems} items already in cart.`;
+        if (outOfStockItems > 0) message += ` ${outOfStockItems} items out of stock.`;
+        if (skippedItems > 0) message += ` ${skippedItems} items unavailable.`;
+        
+        res.status(200).json({
+            success: true,
+            message
+        });
+    } catch (error) {
+        console.error('Add all to cart error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error adding items to cart'
+        });
+    }
+};
+
+module.exports = {
+    addAllToCart,
+    // ... other exports
+};
+</script>

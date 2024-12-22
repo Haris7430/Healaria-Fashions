@@ -6,31 +6,6 @@
 
 <style>
 
-/* .offer-price {
-    color: #007bff;
-    font-weight: bold;
-}
-
-.regular-price {
-    color: #6c757d;
-    text-decoration: line-through;
-    margin-left: 10px;
-}
-
-.offer-badge {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background-color: #dc3545;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 5px;
-    font-weight: bold;
-    z-index: 10;
-} */
-
-
-
 	.sidebar-categories {
 		background: #fff;
 		padding: 20px;
@@ -145,6 +120,22 @@
 	</style>
 
 
+<style>
+	.add-to-wishlist {
+		cursor: pointer;
+		transition: all 0.3s ease;
+	}
+	
+	.add-to-wishlist:hover {
+		color: #ff0000;
+	}
+	
+	.in-wishlist {
+		color: #ff0000;
+	}
+	</style>
+
+
 
 
 
@@ -165,6 +156,8 @@
 	</section>
 	
 	<!-- End Banner Areas -->
+
+
 	<div class="container">
 		<div class="row">
 			<div class="col-xl-3 col-lg-4 col-md-5">
@@ -296,15 +289,16 @@
 												<% } %>
 											</div>
 											<div class="prd-bottom">
-												<a href="" class="social-info">
+												<a href="#" class="social-info add-to-cart" data-product-id="<%= product._id %>">
 													<span class="ti-bag"></span>
 													<p class="hover-text">add to cart</p>
 												</a>
-												<a href="" class="social-info">
+												<a href="#" class="social-info add-to-wishlist" data-product-id="<%= product._id %>">
 													<span class="lnr lnr-heart"></span>
 													<p class="hover-text">Wishlist</p>
 												</a>
 											</div>
+											
 										</div>
 									</div>
 								</div>
@@ -713,6 +707,7 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 	<script src="js/gmaps.min.js"></script>
 	<script src="js/main.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 
 
@@ -822,5 +817,66 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
             });
         });
     </script>
+
+
+
+<!-- This is for my wishlist add botton -->
+<script>
+    
+
+	// Update the add-to-wishlist click handler in shop-page.ejs
+	document.addEventListener('DOMContentLoaded', function() {
+    // Update wishlist click handler
+    document.querySelectorAll('.add-to-wishlist').forEach(button => {
+        button.addEventListener('click', async function(e) {
+            e.preventDefault();
+            const productId = this.dataset.productId;
+
+            try {
+                const response = await fetch('/add-to-wishlist', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
+                    },
+                    body: JSON.stringify({ productId })
+                });
+
+                const data = await response.json();
+
+                if (response.status === 401) {
+                    // Handle unauthorized/not logged in
+                    Swal.fire({
+                        title: 'Please Login',
+                        text: 'You need to login to add items to wishlist',
+                        icon: 'info',
+                        showCancelButton: true,
+                        confirmButtonText: 'Login Now',
+                        cancelButtonText: 'Cancel'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            window.location.href = '/login';
+                        }
+                    });
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to add to wishlist');
+                }
+
+                if (data.isExisting) {
+                    Swal.fire('Info', 'Product already in wishlist', 'info');
+                } else {
+                    Swal.fire('Success', 'Product added to wishlist', 'success');
+                }
+            } catch (error) {
+                Swal.fire('Error', error.message, 'error');
+            }
+        });
+    });
+});
+	</script>
+
 
 </html>
