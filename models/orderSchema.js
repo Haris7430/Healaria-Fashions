@@ -1,6 +1,37 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
+
+
+const returnRequestSchema = new Schema({
+    itemId: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    reason: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    adminResponse: {
+        type: String,
+        default: null
+    },
+    customReason: {
+        type: String,
+        default: null
+    },
+    refundAmount: {
+        type: Number,
+        required: true
+    }
+}, { timestamps: true });
+
+
 const orderSchema = new Schema({
     orderId: {
         type: String,
@@ -49,9 +80,10 @@ const orderSchema = new Schema({
         },
         status: {
             type: String,
-            enum: ['placed', 'cancelled'],
+            enum: ['placed', 'cancelled', 'returned', 'return_requested', 'return_rejected'],
             default: 'placed'
-        }
+        },
+        returnRequest: returnRequestSchema
     }],
     // Embedded shipping address details
     shippingAddress: {
@@ -108,7 +140,11 @@ const orderSchema = new Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['COD', 'RazorPay']  
+        enum: ['COD', 'RazorPay', 'Wallet']  // Added Wallet
+    },
+    walletAmountUsed: {
+        type: Number,
+        default: 0
     },
     subtotal: {
         type: Number,
@@ -155,6 +191,12 @@ const orderSchema = new Schema({
         razorpay_payment_id: String,
         razorpay_order_id: String,
         razorpay_signature: String
+    },
+
+    totalDiscount: {
+        type: Number,
+        default: 0,
+        comment: 'Total discount including product discount and coupon discount'
     }
 }, { timestamps: true });
 

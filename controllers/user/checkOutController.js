@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const Coupon = require('../../models/couponSchema');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const Wallet = require('../../models/walletSchema');
 
 
 
@@ -101,6 +102,28 @@ const updateProductVariantQuantities = async (order, isCancel = false) => {
 };
 
 
+
+const checkWalletBalance = async (req, res) => {
+    try {
+        const wallet = await Wallet.findOne({ userId: req.user._id });
+        const balance = wallet ? wallet.balance : 0;
+        
+        res.json({
+            success: true,
+            balance: balance
+        });
+    } catch (error) {
+        console.error('Error checking wallet balance:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error checking wallet balance'
+        });
+    }
+};
+
+
+
+
 const createOrder = async (req, res) => {
     try {
         const { addressId, paymentMethod, couponCode } = req.body;
@@ -134,6 +157,7 @@ const createOrder = async (req, res) => {
         const subtotal = Math.round(cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
         let discountAmount = 0;
         let couponDetails = null;
+        const shippingCost = 0;
 
         // Apply coupon if provided
         if (couponCode) {
@@ -154,7 +178,7 @@ const createOrder = async (req, res) => {
             }
         }
 
-        const shippingCost = 0;
+        // Calculate final total
         const total = Math.round(subtotal + shippingCost - discountAmount);
 
         // Create new order
@@ -191,26 +215,67 @@ const createOrder = async (req, res) => {
 
         await newOrder.save();
 
-        // Only update product quantities and clear cart after successful payment
+        // Handle wallet payment
+        if (paymentMethod === 'Wallet') {
+            const wallet = await Wallet.findOne({ userId: req.user._id });
+            if (!wallet || wallet.balance < total) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Insufficient wallet balance'
+                });
+            }
+
+            // Deduct amount from wallet
+            wallet.balance -= total;
+            wallet.transactions.push({
+                amount: total,
+                type: 'debit',
+                description: `Payment for order ${newOrder.orderId}`,
+                orderId: newOrder._id,
+                balance: wallet.balance
+            });
+            await wallet.save();
+
+            // Update order status
+            newOrder.paymentStatus = 'paid';
+            newOrder.status = 'processing';
+            newOrder.walletAmountUsed = total;
+            await newOrder.save();
+
+            // Update product quantities and clear cart
+            await updateProductVariantQuantities(newOrder);
+            await Cart.deleteOne({ userId: req.user._id });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Order placed successfully',
+                orderId: newOrder._id,
+                paymentMethod: 'Wallet'
+            });
+        }
+
+        // Handle other payment methods
         if (paymentMethod === 'COD') {
             await updateProductVariantQuantities(newOrder);
             await Cart.deleteOne({ userId: req.user._id });
             newOrder.status = 'processing';
             await newOrder.save();
-        }
-
-        // Create Razorpay order if payment method is RazorPay
-        let razorpayOrder = null;
-        if (paymentMethod === 'RazorPay') {
-            razorpayOrder = await createRazorpayOrder(newOrder);
+        } else if (paymentMethod === 'RazorPay') {
+            const razorpayOrder = await createRazorpayOrder(newOrder);
+            return res.status(200).json({
+                success: true,
+                message: 'Order placed successfully',
+                orderId: newOrder._id,
+                total: newOrder.total,
+                razorpayOrderId: razorpayOrder.id
+            });
         }
 
         res.status(200).json({
             success: true,
             message: 'Order placed successfully',
             orderId: newOrder._id,
-            total: newOrder.total,
-            razorpayOrderId: razorpayOrder ? razorpayOrder.id : null
+            total: newOrder.total
         });
     } catch (error) {
         console.error('Error creating order:', error);
@@ -503,4 +568,5 @@ module.exports = {
     getOrderSummary,
     validateCoupon,
     getAvailableCoupons,
+    checkWalletBalance,
 };

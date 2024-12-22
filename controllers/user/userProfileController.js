@@ -3,19 +3,14 @@ const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
 const mongoose = require('mongoose');
 const Product = require('../../models/productSchema');
-
-
 const bcrypt = require('bcrypt'); 
-
-
-
-
+const Wallet = require('../../models/walletSchema');
 
 
 const getUserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.session.user._id);
-        const section = req.params.section; // e.g., 'profile', 'orders', 'addresses'
+        const section = req.params.section; 
         
         let data = [];
         if (section === 'orders') {
@@ -27,7 +22,7 @@ const getUserProfile = async (req, res) => {
         // Render the profile page with activeSection and data
         res.render('userProfile', {
             user,
-            activeSection: section || 'profile', // Default to 'profile' if no section is provided
+            activeSection: section || 'profile', 
             data
         });
     } catch (err) {
@@ -678,8 +673,30 @@ const getOrderDetails = async (req, res) => {
 
  
 
+const handleRefundToWallet = async (userId, amount, description, orderId) => {
+    try {
+        let wallet = await Wallet.findOne({ userId });
+        if (!wallet) {
+            wallet = new Wallet({ userId });
+        }
 
+        // Add refund transaction
+        wallet.balance += amount;
+        wallet.transactions.push({
+            amount,
+            type: 'credit',
+            description,
+            orderId,
+            balance: wallet.balance
+        });
 
+        await wallet.save();
+        return true;
+    } catch (error) {
+        console.error('Refund to wallet error:', error);
+        return false;
+    }
+};
 
 const cancelOrderItem = async (req, res) => {
     try {
@@ -707,10 +724,36 @@ const cancelOrderItem = async (req, res) => {
         }
 
         // Check if item can be cancelled
-        if (order.status === 'delivered' || order.status === 'cancelled') {
+        if (order.status === 'delivered' || order.status === 'cancelled' || orderItem.status === 'cancelled') {
             return res.status(400).json({ 
                 success: false, 
                 message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Calculate refund amount for this item
+        let refundAmount = orderItem.totalPrice;
+        
+        // If coupon was applied, calculate proportional discount
+        if (order.couponApplied && order.couponApplied.discountAmount) {
+            const orderSubtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+            const itemDiscountProportion = orderItem.totalPrice / orderSubtotal;
+            const itemCouponDiscount = order.couponApplied.discountAmount * itemDiscountProportion;
+            refundAmount -= itemCouponDiscount;
+        }
+
+        // Process refund to wallet
+        const refundSuccess = await handleRefundToWallet(
+            order.userId,
+            refundAmount,
+            `Refund for cancelled item from order #${order.orderId}`,
+            order._id
+        );
+
+        if (!refundSuccess) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to process refund'
             });
         }
 
@@ -723,43 +766,27 @@ const cancelOrderItem = async (req, res) => {
             order.status = 'cancelled';
         }
 
-        // Find the specific product
+        // Restore product inventory
         const product = await Product.findById(orderItem.productId);
-        if (!product) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Product not found' 
-            });
+        if (product) {
+            const variant = product.variants.find(v => v.color === orderItem.color);
+            if (variant) {
+                const sizeVariant = variant.sizes.find(s => s.size === orderItem.size);
+                if (sizeVariant) {
+                    sizeVariant.quantity += orderItem.quantity;
+                    await product.save();
+                }
+            }
         }
 
-        // Find the specific variant
-        const variant = product.variants.find(v => 
-            v.color === orderItem.color
-        );
-
-        if (!variant) {
-            return res.status(404).json({ 
-                success: false, 
-                message: 'Variant not found' 
-            });
-        }
-
-        // Find and update the specific size variant
-        const sizeVariant = variant.sizes.find(s => s.size === orderItem.size);
-        
-        if (sizeVariant) {
-            sizeVariant.quantity += orderItem.quantity;
-        }
-
-        // Save changes
-        await product.save();
         await order.save();
 
         res.json({ 
             success: true, 
-            message: 'Item cancelled successfully',
+            message: 'Item cancelled successfully and refund processed',
             orderStatus: order.status,
-            itemStatus: orderItem.status
+            itemStatus: orderItem.status,
+            refundAmount
         });
     } catch (error) {
         console.error('Cancel Order Item Error:', error);
@@ -794,40 +821,50 @@ const cancelEntireOrder = async (req, res) => {
             });
         }
 
-        // Process each item for quantity restoration
-        for (const item of order.items) {
-            // Find the product
-            const product = await Product.findById(item.productId);
-            if (!product) continue;
+        // Calculate total refund amount
+        let refundAmount = order.total;
+        
+        // Process refund to wallet
+        const refundSuccess = await handleRefundToWallet(
+            order.userId,
+            refundAmount,
+            `Refund for cancelled order #${order.orderId}`,
+            order._id
+        );
 
-            // Find the specific variant
-            const variant = product.variants.find(v => v.color === item.color);
-            if (!variant) continue;
-
-            // Find and update the specific size variant
-            const sizeVariant = variant.sizes.find(s => s.size === item.size);
-            if (sizeVariant) {
-                sizeVariant.quantity += item.quantity;
-            }
-
-            // Save the product with updated quantities
-            await product.save();
+        if (!refundSuccess) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to process refund'
+            });
         }
 
-        // Cancel all items
-        order.items.forEach(item => {
-            item.status = 'cancelled';
-        });
-        
-        // Update order status
-        order.status = 'cancelled';
+        // Restore inventory for all items
+        for (const item of order.items) {
+            if (item.status !== 'cancelled') {
+                const product = await Product.findById(item.productId);
+                if (product) {
+                    const variant = product.variants.find(v => v.color === item.color);
+                    if (variant) {
+                        const sizeVariant = variant.sizes.find(s => s.size === item.size);
+                        if (sizeVariant) {
+                            sizeVariant.quantity += item.quantity;
+                            await product.save();
+                        }
+                    }
+                }
+                item.status = 'cancelled';
+            }
+        }
 
+        order.status = 'cancelled';
         await order.save();
 
         res.json({ 
             success: true, 
-            message: 'Order cancelled successfully',
-            orderStatus: order.status
+            message: 'Order cancelled successfully and refund processed',
+            orderStatus: order.status,
+            refundAmount
         });
     } catch (error) {
         console.error('Cancel Entire Order Error:', error);
@@ -839,7 +876,124 @@ const cancelEntireOrder = async (req, res) => {
 };
 
 
+const getWallet = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        let wallet = await Wallet.findOne({ userId: req.user._id });
+        if (!wallet) {
+            wallet = new Wallet({ userId: req.user._id });
+            await wallet.save();
+        }
+
+        // Get total count for pagination
+        const totalTransactions = wallet.transactions.length;
+        const totalPages = Math.ceil(totalTransactions / limit);
+
+        // Get paginated transactions
+        const transactions = wallet.transactions
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(skip, skip + limit);
+
+        res.render('userProfile', {
+            user: req.user,
+            activeSection: 'wallet',
+            wallet,
+            transactions,
+            currentPage: page,
+            totalPages,
+            totalTransactions
+        });
+    } catch (error) {
+        console.error('Error fetching wallet:', error);
+        res.status(500).render('error', { message: 'Error fetching wallet details' });
+    }
+};
   
+
+
+const returnOrderItem = async (req, res) => {
+    try {
+        const { orderId, itemId } = req.params;
+        const { reason, customReason } = req.body;
+
+        // Validate input
+        if (!reason) {
+            return res.status(400).json({
+                success: false,
+                message: 'Return reason is required'
+            });
+        }
+
+        const order = await Order.findOne({
+            _id: orderId,
+            userId: req.user._id
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        const orderItem = order.items.id(itemId);
+
+        if (!orderItem) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order item not found'
+            });
+        }
+
+        // Check if item is eligible for return
+        if (orderItem.status !== 'placed' || order.status !== 'delivered') {
+            return res.status(400).json({
+                success: false,
+                message: 'This item is not eligible for return'
+            });
+        }
+
+        // Calculate refund amount including proportional coupon discount
+        let refundAmount = orderItem.totalPrice;
+
+        if (order.couponApplied && order.couponApplied.discountAmount) {
+            const orderSubtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+            const itemDiscountProportion = orderItem.totalPrice / orderSubtotal;
+            const itemCouponDiscount = order.couponApplied.discountAmount * itemDiscountProportion;
+            refundAmount -= itemCouponDiscount;
+        }
+
+        // Create return request
+        orderItem.status = 'return_requested';
+        orderItem.returnRequest = {
+            itemId: orderItem._id,
+            reason: reason,
+            customReason: reason === 'other' ? customReason : null,
+            status: 'pending',
+            refundAmount: refundAmount
+        };
+
+        await order.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Return request submitted successfully',
+            itemStatus: orderItem.status,
+            refundAmount: refundAmount
+        });
+
+    } catch (error) {
+        console.error('Return Order Item Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to submit return request'
+        });
+    }
+};
+
 
 
 module.exports = {
@@ -860,7 +1014,8 @@ module.exports = {
     getOrderDetails,
     cancelOrderItem,
     cancelEntireOrder,
-
+    getWallet,
+    returnOrderItem,
 
 
 

@@ -574,6 +574,7 @@
                     <li><a href="/profile/addresses" class="<%= activeSection === 'addresses' ? 'active' : '' %>">Addresses</a></li>
                     <li><a href="/profile/add-address" class="<%= activeSection === 'add-address' ? 'active' : '' %>">Add New Address</a></li>
                     <li><a href="/profile/orders" class="<%= activeSection === 'order-details' ? 'active' : '' %>">Order Details</a></li>
+                    <li><a href="/profile/wallet" class="<%= activeSection === 'wallet' ? 'active' : '' %>">My Wallet</a></li>
                     <li><a href="/logout">Sign Out</a></li>
                 </ul>
             </div>
@@ -877,6 +878,108 @@
                 <% if (activeSection === 'account-details') { %>
                     <h2>Account Details</h2>
                     <p>Change your personal information here.</p>
+                <% } %>
+
+
+
+
+                <% if (activeSection === 'wallet') { %>
+                    <div class="wallet-section">
+                        <div class="wallet-balance">
+                            <h2>Wallet Balance</h2>
+                            <div class="balance-amount">
+                                ₹<%= wallet.balance.toFixed(2) %>
+                            </div>
+                        </div>
+                
+                        <div class="transaction-history">
+                            <h3>Transaction History</h3>
+                            <div class="table-responsive">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th>Type</th>
+                                            <th>Amount</th>
+                                            <th>Balance</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% transactions.forEach(transaction => { %>
+                                            <tr>
+                                                <td><%= new Date(transaction.createdAt).toLocaleDateString('en-IN', { 
+                                                    year: 'numeric', 
+                                                    month: 'short', 
+                                                    day: 'numeric',
+                                                    hour: '2-digit',
+                                                    minute: '2-digit'
+                                                }) %></td>
+                                                <td><%= transaction.description %></td>
+                                                <td>
+                                                    <span class="status-badge badge-<%= transaction.type === 'credit' ? 'success' : 'danger' %>">
+                                                        <%= transaction.type %>
+                                                    </span>
+                                                </td>
+                                                <td class="<%= transaction.type === 'credit' ? 'text-success' : 'text-danger' %>">
+                                                    <%= transaction.type === 'credit' ? '+' : '-' %>₹<%= transaction.amount.toFixed(2) %>
+                                                </td>
+                                                <td>₹<%= transaction.balance.toFixed(2) %></td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                
+                            <!-- Pagination -->
+                            <% if (totalPages > 1) { %>
+                                <div class="pagination-container">
+                                    <ul class="pagination">
+                                        <% for(let i = 1; i <= totalPages; i++) { %>
+                                            <li class="page-item <%= currentPage === i ? 'active' : '' %>">
+                                                <a class="page-link" href="/profile/wallet?page=<%= i %>"><%= i %></a>
+                                            </li>
+                                        <% } %>
+                                    </ul>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                
+                    <style>
+                        .wallet-section {
+                            padding: 2rem;
+                        }
+                
+                        .wallet-balance {
+                            background: linear-gradient(135deg, #0066cc, #0044aa);
+                            color: white;
+                            padding: 2rem;
+                            border-radius: 10px;
+                            margin-bottom: 2rem;
+                            text-align: center;
+                        }
+                
+                        .balance-amount {
+                            font-size: 2.5rem;
+                            font-weight: bold;
+                            margin-top: 1rem;
+                        }
+                
+                        .transaction-history {
+                            background: white;
+                            padding: 1rem;
+                            border-radius: 10px;
+                        }
+                
+                        .text-success {
+                            color: #28a745;
+                        }
+                
+                        .text-danger {
+                            color: #dc3545;
+                        }
+                    </style>
                 <% } %>
 
                 

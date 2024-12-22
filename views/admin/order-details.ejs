@@ -170,12 +170,29 @@
                   <td><%= item.quantity %></td>
                   <td>₹<%= item.price.toFixed(2) %></td>
                   <td>₹<%= item.totalPrice.toFixed(2) %></td>
+
                   <td>
-                    <span class="badge 
-                      <%= item.status === 'cancelled' ? 'bg-label-danger' : 'bg-label-success' %>">
-                      <%= item.status === 'cancelled' ? 'Cancelled' : 'Placed' %>
-                    </span>
+                    <% if (item.status === 'placed') { %>
+                        <% if (order.status === 'pending') { %>
+                            <span class="badge bg-label-warning">Pending</span>
+                        <% } else if (order.status === 'processing') { %>
+                            <span class="badge bg-label-info">Processing</span>
+                        <% } else if (order.status === 'shipped') { %>
+                            <span class="badge bg-label-primary">Shipped</span>
+                        <% } else if (order.status === 'delivered') { %>
+                            <span class="badge bg-label-success">Delivered</span>
+                        <% } %>
+                    <% } else if (item.status === 'return_requested') { %>
+                        <span class="badge bg-label-warning">Return Requested</span>
+                    <% } else if (item.status === 'returned') { %>
+                        <span class="badge bg-label-info">Returned</span>
+                    <% } else if (item.status === 'return_rejected') { %>
+                        <span class="badge bg-label-danger">Return Rejected</span>
+                    <% } else if (item.status === 'cancelled') { %>
+                        <span class="badge bg-label-danger">Cancelled</span>
+                    <% } %>
                   </td>
+
                   <td>
                     <% if (isItemCancellable) { %>
                       <button class="btn btn-sm btn-danger cancel-item" 
@@ -199,6 +216,18 @@
                 <td colspan="4" class="text-end"><strong>Shipping Cost</strong></td>
                 <td colspan="4">₹<%= order.shippingCost.toFixed(2) %></td>
               </tr>
+
+              <% if (order.couponApplied && order.couponApplied.code) { %>
+                <tr>
+                  <td colspan="4" class="text-end"><strong>Coupon Applied</strong></td>
+                  <td colspan="4">
+                    Code: <%= order.couponApplied.code %><br>
+                    Discount: ₹<%= order.couponApplied.discountAmount.toFixed(2) %>
+                    (<%= order.couponApplied.discountPercentage %>%)
+                  </td>
+                </tr>
+              <% } %>
+
               <tr>
                 <td colspan="4" class="text-end"><strong>Total</strong></td>
                 <td colspan="4" class="text-danger">₹<%= order.total.toFixed(2) %></td>
@@ -338,197 +367,100 @@ fetch('/admin/update-order-status/<%= order._id %>', {
     });
   
     // Cancel Individual Item
-    document.querySelectorAll('.cancel-item').forEach(button => {
-      button.addEventListener('click', function() {
-        const orderId = this.getAttribute('data-order-id');
-        const itemIndex = this.getAttribute('data-item-index');
-  
-        // Cancel Reason Options
-        const cancelReasonOptions = [
-          'Changed my mind',
-          'Ordered wrong product',
-          'Shipping time too long',
-          'Ordered by mistake',
-          'Payment issues',
-          'Other'
-        ];
-  
-        Swal.fire({
-          title: 'Cancel Item',
-          text: 'Please select a reason for cancellation:',
-          input: 'select',
-          inputOptions: cancelReasonOptions.reduce((acc, reason) => {
-            acc[reason] = reason;
-            return acc;
-          }, {}),
-          inputPlaceholder: 'Select a reason',
-          showCancelButton: true,
-          confirmButtonText: 'Confirm Cancellation',
-          cancelButtonText: 'Cancel',
-          inputValidator: (value) => {
-            if (!value) {
-              return 'You need to select a reason';
-            }
-            
-            // If 'Other' is selected, show another prompt for custom reason
-            if (value === 'Other') {
-              return Swal.fire({
-                title: 'Enter Your Reason',
-                input: 'text',
-                inputPlaceholder: 'Please specify your reason',
-                showCancelButton: true,
-                inputValidator: (customReason) => {
-                  if (!customReason) {
-                    return 'You need to enter a reason';
-                  }
-                }
-              }).then((customReasonResult) => {
-                if (customReasonResult.isConfirmed) {
-                  return cancelItem(orderId, itemIndex, customReasonResult.value);
-                }
-              });
-            }
-            
-            return cancelItem(orderId, itemIndex, value);
-          }
-        });
-  
-        // Function to handle item cancellation
-        function cancelItem(orderId, itemIndex, cancelReason) {
-          return fetch(`/admin/cancel-order-item/${orderId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({ 
-              itemIndex, 
-              cancelReason 
-            })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              Swal.fire(
-                'Cancelled!', 
-                'Item has been cancelled successfully.', 
-                'success'
-              ).then(() => {
-                window.location.reload();
-              });
-            } else {
-              Swal.fire(
-                'Error!', 
-                data.message || 'Failed to cancel item', 
-                'error'
-              );
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            Swal.fire(
-              'Error!', 
-              'An error occurred while cancelling the item', 
-              'error'
-            );
-          });
-        }
-      });
+
+document.querySelectorAll('.cancel-item').forEach(button => {
+  button.addEventListener('click', function() {
+    const orderId = this.getAttribute('data-order-id');
+    const itemIndex = this.getAttribute('data-item-index');
+
+    Swal.fire({
+      title: 'Cancel Item',
+      text: 'Are you sure you want to cancel this item?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, cancel it',
+      cancelButtonText: 'No, keep it'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        cancelItem(orderId, itemIndex);
+      }
     });
+  });
+});
+
+function cancelItem(orderId, itemIndex) {
+  fetch(`/admin/cancel-order-item/${orderId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ itemIndex })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Cancelled!', 'Item has been cancelled.', 'success')
+      .then(() => window.location.reload());
+    } else {
+      Swal.fire('Error!', data.message || 'Failed to cancel item', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'An error occurred while cancelling the item', 'error');
+  });
+}
   
     // Cancel Entire Order
     const cancelEntireOrderBtn = document.getElementById('cancelEntireOrder');
-    if (cancelEntireOrderBtn) {
-      cancelEntireOrderBtn.addEventListener('click', function() {
-        // Cancel Reason Options
-        const cancelReasonOptions = [
-          'Changed my mind',
-          'Ordered wrong items',
-          'Shipping time too long',
-          'Ordered by mistake',
-          'Payment issues',
-          'Other'
-        ];
-  
+if (cancelEntireOrderBtn) {
+    cancelEntireOrderBtn.addEventListener('click', function() {
         Swal.fire({
-          title: 'Cancel Entire Order',
-          text: 'Please select a reason for cancellation:',
-          input: 'select',
-          inputOptions: cancelReasonOptions.reduce((acc, reason) => {
-            acc[reason] = reason;
-            return acc;
-          }, {}),
-          inputPlaceholder: 'Select a reason',
-          showCancelButton: true,
-          confirmButtonText: 'Confirm Cancellation',
-          cancelButtonText: 'Cancel',
-          inputValidator: (value) => {
-            if (!value) {
-              return 'You need to select a reason';
+            title: 'Cancel Entire Order',
+            text: 'Are you sure you want to cancel this order? The amount will be refunded to the customer\'s wallet.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/admin/cancel-order/<%= order._id %>`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            'Cancelled!', 
+                            'Order has been cancelled and refund has been processed.', 
+                            'success'
+                        ).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Failed to cancel order');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire(
+                        'Error!', 
+                        'An error occurred while cancelling the order', 
+                        'error'
+                    );
+                });
             }
-            
-            // If 'Other' is selected, show another prompt for custom reason
-            if (value === 'Other') {
-              return Swal.fire({
-                title: 'Enter Your Reason',
-                input: 'text',
-                inputPlaceholder: 'Please specify your reason',
-                showCancelButton: true,
-                inputValidator: (customReason) => {
-                  if (!customReason) {
-                    return 'You need to enter a reason';
-                  }
-                }
-              }).then((customReasonResult) => {
-                if (customReasonResult.isConfirmed) {
-                  return cancelOrder(customReasonResult.value);
-                }
-              });
-            }
-            
-            return cancelOrder(value);
-          }
         });
-  
-        // Function to handle order cancellation
-        function cancelOrder(cancelReason) {
-          fetch(`/admin/cancel-order/<%= order._id %>`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify({ cancelReason })
-          })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              Swal.fire(
-                'Cancelled!', 
-                'Order has been cancelled successfully.', 
-                'success'
-              ).then(() => {
-                window.location.reload();
-              });
-            } else {
-              Swal.fire(
-                'Error!', 
-                data.message || 'Failed to cancel order', 
-                'error'
-              );
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            Swal.fire(
-              'Error!', 
-              'An error occurred while cancelling the order', 
-              'error'
-            );
-          });
-        }
-      });
-    }
+    });
+}
   });
   </script>
 

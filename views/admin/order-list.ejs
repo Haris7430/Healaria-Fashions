@@ -63,6 +63,7 @@
                 <th>Payment Method</th>
                 <th>Payment Status</th>
                 <th>Order Status</th>
+                <th>Return Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -92,6 +93,43 @@
                       <%= order.status.toUpperCase() %>
                     </span>
                   </td>
+
+                  <td>
+                    <% 
+                      const totalItems = order.items.length;
+                      const returnedItems = order.items.filter(item => 
+                        item.status === 'returned' || item.status === 'return_requested'
+                      ).length;
+                      const hasReturnRequest = order.items.some(item => 
+                        item.status === 'return_requested'
+                      );
+                    %>
+                    
+                    <% if (hasReturnRequest) { %>
+                      <button 
+                        class="btn btn-sm btn-warning view-return-request position-relative" 
+                        data-order-id="<%= order.orderId %>"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#returnRequestModal">
+                        View Return Request
+                        <% if (returnedItems > 0) { %>
+                          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <%= returnedItems %>
+                          </span>
+                        <% } %>
+                      </button>
+                    <% } else if (returnedItems > 0) { %>
+                      <span class="badge bg-success position-relative">
+                        Returned
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">
+                          <%= returnedItems %>/<%= totalItems %>
+                        </span>
+                      </span>
+                    <% } else { %>
+                      <span class="text-muted">No Returns</span>
+                    <% } %>
+                  </td>
+
                   <td>
                     <a href="/admin/order-details/<%= order.orderId %>" class="btn btn-sm btn-info">
                       View Details
@@ -110,6 +148,39 @@
       </div>
     </div>
 
+
+
+    <!-- Return Request Modal -->
+    <div class="modal fade" id="returnRequestModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Return Request Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="returnRequestDetails">
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Product Image</th>
+                      <th>Product Details</th>
+                      <th>Return Reason</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="returnRequestTableBody">
+                    <!-- Will be populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Pagination -->
     <div class="container mt-3">
       <nav aria-label="Page navigation">
@@ -121,15 +192,56 @@
               </a>
             </li>
           <% } %>
-
-          <% for(let i=1; i<=totalPages; i++) { %>
-            <li class="page-item <%= (i === currentPage) ? 'active' : '' %>">
-              <a class="page-link" href="?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
-                <%= i %>
-              </a>
-            </li>
-          <% } %>
-
+    
+          <%
+            const delta = 2; // Pages to show before and after current page
+            let range = [];
+            
+            if (totalPages <= 5) {
+              // If total pages are 5 or less, show all pages
+              range = [...Array(totalPages)].map((_, i) => i + 1);
+            } else {
+              // Always include first page
+              range.push(1);
+              
+              // Calculate range around current page
+              let start = Math.max(2, currentPage - delta);
+              let end = Math.min(totalPages - 1, currentPage + delta);
+              
+              // Add dots after first page if needed
+              if (start > 2) {
+                range.push('...');
+              }
+              
+              // Add pages around current page
+              for (let i = start; i <= end; i++) {
+                range.push(i);
+              }
+              
+              // Add dots before last page if needed
+              if (end < totalPages - 1) {
+                range.push('...');
+              }
+              
+              // Always include last page
+              range.push(totalPages);
+            }
+          %>
+    
+          <% range.forEach(page => { %>
+            <% if (page === '...') { %>
+              <li class="page-item disabled">
+                <span class="page-link">...</span>
+              </li>
+            <% } else { %>
+              <li class="page-item <%= (page === currentPage) ? 'active' : '' %>">
+                <a class="page-link" href="?page=<%= page %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                  <%= page %>
+                </a>
+              </li>
+            <% } %>
+          <% }); %>
+    
           <% if (currentPage < totalPages) { %>
             <li class="page-item">
               <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
@@ -144,3 +256,158 @@
 </div>
 
 <%- include("../../views/partials/admin/footer/") %>
+
+
+
+
+<script>
+ document.querySelectorAll('.view-return-request').forEach(button => {
+    button.addEventListener('click', async function() {
+        const orderId = this.getAttribute('data-order-id');
+        try {
+            const response = await fetch(`/admin/return-request-details/${orderId}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message);
+            }
+            
+            const tableBody = document.getElementById('returnRequestTableBody');
+            tableBody.innerHTML = '';
+
+            data.items.forEach(item => {
+                const row = document.createElement('tr');
+                const variant = item.productId.variants.find(v => v.color === item.color);
+                
+                // Calculate the discounted price if coupon was applied
+                const originalPrice = item.price * item.quantity;
+                const couponDiscount = item.couponDiscount || 0;
+                const finalPrice = originalPrice - couponDiscount;
+
+                row.innerHTML = `
+                    <td>
+                        <img src="/uploads/product-images/${variant?.images[0]?.filename || 'placeholder.jpg'}"
+                             alt="${item.productId.productName}"
+                             style="width: 50px; height: 50px; object-fit: cover;">
+                    </td>
+                    <td>
+                        <strong>${item.productId.productName}</strong><br>
+                        Color: ${item.color}<br>
+                        Size: ${item.size}<br>
+                        Quantity: ${item.quantity}<br>
+                        <div class="price-details mt-2">
+                            <small class="d-block">Original Price: ₹${originalPrice.toFixed(2)}</small>
+                            ${couponDiscount > 0 ? `<small class="d-block text-danger">Coupon Discount: -₹${couponDiscount.toFixed(2)}</small>` : ''}
+                            <strong class="d-block">Final Price: ₹${finalPrice.toFixed(2)}</strong>
+                        </div>
+                    </td>
+                    <td>${item.returnRequest.reason}
+                        ${item.returnRequest.customReason ? `<br><small>(${item.returnRequest.customReason})</small>` : ''}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm approve-return"
+                                    data-order-id="${orderId}"
+                                    data-item-id="${item._id}"
+                                    data-refund-amount="${finalPrice}">
+                                Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm reject-return"
+                                    data-order-id="${orderId}"
+                                    data-item-id="${item._id}">
+                                Reject
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire('Error!', 'Failed to load return request details', 'error');
+        }
+    });
+});
+  
+  // Handle approve/reject actions
+  document.addEventListener('click', async function(e) {
+    if (e.target.matches('.approve-return, .reject-return')) {
+        const action = e.target.classList.contains('approve-return') ? 'approve' : 'reject';
+        const orderId = e.target.getAttribute('data-order-id');
+        const itemId = e.target.getAttribute('data-item-id');
+        const refundAmount = e.target.getAttribute('data-refund-amount');
+
+        // Hide modal before showing Swal
+        const returnModal = bootstrap.Modal.getInstance(document.getElementById('returnRequestModal'));
+        if (returnModal) {
+            returnModal.hide();
+        }
+
+        // Show loading message
+        Swal.fire({
+            title: 'Processing...',
+            text: `Processing ${action} request`,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            const response = await fetch('/admin/handle-return-request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+    orderId,
+    itemId,
+    action,
+    refundAmount: parseFloat(refundAmount),
+    adminResponse: action === 'approve' ? 'Return request approved' : 'Return request rejected',
+    status: action === 'approve' ? 'returned' : 'return_rejected' 
+})
+            });
+
+            const data = await response.json();
+            
+            // Close loading message
+            Swal.close();
+
+            if (data.success) {
+    await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: action === 'approve' 
+            ? `Return request approved and ₹${parseFloat(refundAmount).toFixed(2)} refunded to wallet`
+            : 'Return request rejected successfully',
+        showConfirmButton: true,
+        confirmButtonText: 'OK',
+        allowOutsideClick: false
+    });
+    
+    // Reload page after user clicks OK
+    window.location.reload();
+} else {
+                throw new Error(data.message || 'Failed to process return request');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.message || 'Failed to process return request',
+                showConfirmButton: true,
+                confirmButtonText: 'OK',
+                allowOutsideClick: false
+            });
+            
+            // Reopen modal after error
+            if (returnModal) {
+                returnModal.show();
+            }
+        }
+    }
+});
+  </script>

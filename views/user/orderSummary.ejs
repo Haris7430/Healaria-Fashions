@@ -81,6 +81,7 @@
                                         <th>Quantity</th>
                                         <th>Price</th>
                                         <th>Total Price</th>
+                                        <th>Coupon Savings</th>
                                         <th>Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -110,24 +111,52 @@
                                             <td><%= item.quantity %></td>
                                             <td>₹<%= item.price %></td>
                                             <td>₹<%= item.totalPrice %></td>
+
                                             <td>
-                                                <span class="badge bg-<%= 
-                                                    item.status === 'placed' ? 'primary' :
-                                                    item.status === 'cancelled' ? 'danger' : 'success'
-                                                %>">
-                                                    <%= item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Unknown' %>
-                                                </span>
+                                                <% if (order.couponApplied && order.couponApplied.discountAmount) { 
+                                                    const orderSubtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+                                                    const itemDiscountProportion = item.totalPrice / orderSubtotal;
+                                                    const itemCouponDiscount = order.couponApplied.discountAmount * itemDiscountProportion;
+                                                %>
+                                                    ₹<%= itemCouponDiscount.toFixed(2) %>
+                                                <% } else { %>
+                                                    <span class="text-muted">No coupon applied</span>
+                                                <% } %>
                                             </td>
-                                            <td>
-                                                <button 
-                                                    class="btn btn-sm btn-<%= item.status === 'cancelled' ? 'secondary' : 'danger' %> cancel-order-item"
-                                                    data-order-id="<%= order._id %>"
-                                                    data-item-id="<%= item._id %>"
-                                                    <%= item.status === 'cancelled' ? 'disabled' : '' %>
-                                                >
-                                                    Cancel
-                                                </button>
-                                            </td>
+
+                                             <td>
+                <span class="badge bg-<%= 
+                    item.status === 'placed' ? 'primary' :
+                    item.status === 'cancelled' ? 'danger' :
+                    item.status === 'return_requested' ? 'warning' :
+                    item.status === 'returned' ? 'info' : 'success'
+                %>">
+                    <%= item.status ? (item.status.charAt(0).toUpperCase() + item.status.slice(1)) : 'Unknown' %>
+                </span>
+            </td>
+            <td>
+                <% if (item.status === 'placed' && order.status === 'delivered') { %>
+                    <button 
+                        class="btn btn-sm btn-warning return-order-item"
+                        data-order-id="<%= order._id %>"
+                        data-item-id="<%= item._id %>"
+                    >
+                        Return
+                    </button>
+                <% } else if (item.status === 'return_requested') { %>
+                    <span class="badge bg-info">Return Requested</span>
+                <% } else if (item.status === 'returned') { %>
+                    <span class="badge bg-success">Returned</span>
+                <% } else if (item.status === 'placed' && order.status !== 'delivered') { %>
+                    <button 
+                        class="btn btn-sm btn-danger cancel-order-item"
+                        data-order-id="<%= order._id %>"
+                        data-item-id="<%= item._id %>"
+                    >
+                        Cancel
+                    </button>
+                <% } %>
+            </td>
                                         </tr>
                                     <% }); %>
                                 </tbody>
@@ -144,6 +173,22 @@
                                     <span>Subtotal:</span>
                                     <span>₹<%= order.subtotal %></span>
                                 </div>
+
+                                <div class="d-flex justify-content-between">
+                                    <span>Product Discount:</span>
+                                    <span>-₹<%= order.discountAmount || 0 %></span>
+                                </div>
+                                <% if (order.couponApplied && order.couponApplied.discountAmount) { %>
+                                <div class="d-flex justify-content-between">
+                                    <span>Coupon Discount:</span>
+                                    <span>-₹<%= order.couponApplied.discountAmount %></span>
+                                </div>
+                                <% } %>
+                                <div class="d-flex justify-content-between">
+                                    <span>Total Discount:</span>
+                                    <span>-₹<%= order.totalDiscount %></span>
+                                </div>
+
                                 <div class="d-flex justify-content-between">
                                     <span>Shipping:</span>
                                     <span>₹<%= order.shippingCost %></span>
@@ -167,16 +212,65 @@
             </div>
         </div>
     </div>
+
+
+    <div class="modal fade" id="returnModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Return Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="returnForm">
+                        <input type="hidden" id="returnItemId" name="itemId">
+                        <div class="mb-3">
+                            <label class="form-label">Return Reason</label>
+                            <select class="form-select" id="returnReason" name="reason" required>
+                                <option value="">Select a reason</option>
+                                <option value="wrong_size">Wrong Size</option>
+                                <option value="damaged">Product Damaged</option>
+                                <option value="quality_issue">Quality Issue</option>
+                                <option value="not_as_described">Not as Described</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 d-none" id="customReasonDiv">
+                            <label class="form-label">Please specify your reason</label>
+                            <textarea class="form-control" id="customReason" name="customReason" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="submitReturn">Submit Return Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 
-
+<!-- Add these scripts before your closing </body> tag -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
 <script>
    document.addEventListener('DOMContentLoaded', () => {
     const cancelButtons = document.querySelectorAll('.cancel-order-item');
     const cancelEntireOrderButton = document.getElementById('cancel-entire-order');
     
+    const returnButtons = document.querySelectorAll('.return-order-item');
+    const returnModal = new bootstrap.Modal(document.getElementById('returnModal'));
+    const returnReasonSelect = document.getElementById('returnReason');
+    const customReasonDiv = document.getElementById('customReasonDiv');
+    const submitReturnBtn = document.getElementById('submitReturn');
+    let currentItemId = null;
+    let currentOrderId = null;
+
     cancelButtons.forEach(button => {
         button.addEventListener('click', async () => {
             const orderId = button.getAttribute('data-order-id');
@@ -256,7 +350,93 @@
                 }
             });
         }
+
+
+        returnReasonSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'other') {
+            customReasonDiv.classList.remove('d-none');
+        } else {
+            customReasonDiv.classList.add('d-none');
+        }
     });
+
+    returnButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            currentItemId = button.getAttribute('data-item-id');
+            currentOrderId = button.getAttribute('data-order-id');
+            document.getElementById('returnItemId').value = currentItemId;
+            returnModal.show();
+        });
+    });
+
+    
+
+    submitReturnBtn.addEventListener('click', async () => {
+    const reason = returnReasonSelect.value;
+    const customReason = document.getElementById('customReason').value;
+
+    if (!reason) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please select a return reason'
+        });
+        return;
+    }
+
+    if (reason === 'other' && !customReason.trim()) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Please specify your return reason'
+        });
+        return;
+    }
+
+    try {
+        const response = await fetch(`/order/${currentOrderId}/return-item/${currentItemId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                // Add CSRF token if you're using it
+                // 'CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            },
+            body: JSON.stringify({
+                reason: reason,
+                customReason: reason === 'other' ? customReason : undefined
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            returnModal.hide();
+            Swal.fire({
+                icon: 'success',
+                title: 'Return Requested',
+                text: 'Your return request has been submitted successfully.',
+                showConfirmButton: false,
+                timer: 2000
+            }).then(() => {
+                window.location.reload();
+            });
+        } else {
+            throw new Error(result.message || 'Failed to submit return request');
+        }
+    } catch (error) {
+        console.error('Return Request Error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to submit return request'
+        });
+    }
+});
+});
     </script>
 
 </html>

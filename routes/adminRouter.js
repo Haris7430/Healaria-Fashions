@@ -61,7 +61,6 @@ router.post('/variant/list/:productId/:variantId', productController.listVariant
 router.post('/variant/unlist/:productId/:variantId', productController.unlistVariant);
 router.delete('/variant/delete/:productId/:variantId', productController.deleteVariant);
 router.get('/editVariant/:id', adminAuth, productController.editVariantForm);
-
 router.post('/colorVariant/edit/:id', adminAuth, upload, productController.updateVariant);  
 
 
@@ -70,11 +69,12 @@ router.get('/order-details/:id',adminAuth, orderController.orderDetails);
 router.post('/update-order-status/:id',adminAuth, orderController.updateOrderStatus);
 router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
 router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
+router.get('/return-request-details/:orderId', adminAuth, orderController.getReturnRequestDetails);
+router.post('/handle-return-request', adminAuth, orderController.handleReturnRequest);
 
 
 router.get('/offers',adminAuth, offerController.renderOffersPage);
 router.get('/offers/check-existing', adminAuth, offerController.checkExistingOffers);
-
 router.get('/offers/create',adminAuth, offerController.renderCreateOfferPage);
 router.post('/offers/create',adminAuth, offerController.createOffer);
 router.get('/offers/edit/:id',adminAuth, offerController.renderEditOfferPage);

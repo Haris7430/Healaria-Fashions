@@ -63,6 +63,8 @@ router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
 router.get('/checkout/available-coupons', userAuth, checkoutController.getAvailableCoupons);
 router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCoupon);
 router.post('/verify-payment',userAuth,checkoutController.verifyPayment);
+router.get('/checkout/wallet-balance', userAuth, checkoutController.checkWalletBalance);
+
 
 router.get('/userProfile/:section?', userAuth, userProfileController.getUserProfile);
 router.get('/profile/addresses', userAuth, userProfileController.getAddressPage);
@@ -70,20 +72,19 @@ router.get('/profile/add-address', userAuth, userProfileController.getAddAddress
 router.post('/profile/add-address', userAuth, userProfileController.addAddress);
 router.get('/profile/get-address/:id', userAuth, userProfileController.getAddressById);
 router.put('/profile/edit-address/:id', userAuth, userProfileController.updateAddress);
-// In your userRouter.js 
 router.delete('/profile/delete-address/:id', userAuth, userProfileController.deleteAddress);
 router.get('/dashboard', userAuth, userProfileController.getDashboard);
 router.get('/edit-profile', userAuth, userProfileController.getEditProfile);
 router.post('/update-profile', userAuth, userProfileController.updateProfile);
-
 router.get('/change-password', userAuth, userProfileController.getChangePasswordPage);
 router.post('/change-password', userAuth, userProfileController.changePassword);
 router.get('/profile/orders', userAuth,userProfileController.getUserOrders);
-
 router.get('/order/:orderId', userAuth,userProfileController.getOrderDetails);
 router.post('/order/:orderId/cancel-item/:itemId', userAuth, userProfileController.cancelOrderItem);
 router.post('/order/:orderId/cancel-order', userAuth, userProfileController.cancelEntireOrder);
-
+// Add to your routes
+router.get('/profile/wallet', userAuth, userProfileController.getWallet);
+router.post('/order/:orderId/return-item/:itemId', userAuth, userProfileController.returnOrderItem);
 
 
 

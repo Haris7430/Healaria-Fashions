@@ -173,7 +173,7 @@ body {
     <!-- Order Header -->
     <div class="order-header">
         <h3>Order Summary</h3>
-        <p>Order #<span class="order-id"><%= order._id %></span></p>
+        <p>Order ID: <span class="order-id"><%= order.orderId %></span></p>
         <p class="order-date">Placed on <%= new Date(order.createdAt).toLocaleDateString() %></p>
         <span class="status-badge status-<%= order.status.toLowerCase() %>"><%= order.status %></span>
     </div>
@@ -221,8 +221,19 @@ body {
     <!-- Payment Information -->
     <div class="payment-info">
         <h5>Payment Information</h5>
-        <p><strong>Method:</strong> <%= order.paymentMethod === 'COD' ? 'Cash on Delivery' : 'Online Payment' %></p>
-        <p><strong>Status:</strong> <%= order.paymentStatus || 'Pending' %></p>
+        <p><strong>Method:</strong> 
+            <% if (order.paymentMethod === 'COD') { %>
+                Cash on Delivery
+            <% } else if (order.paymentMethod === 'RazorPay') { %>
+                Razorpay Online Payment
+            <% } else if (order.paymentMethod === 'Wallet') { %>
+                Wallet Payment
+            <% } %>
+        </p>
+        <p><strong>Status:</strong> <%= order.paymentStatus %></p>
+        <% if (order.walletAmountUsed > 0) { %>
+            <p><strong>Wallet Amount Used:</strong> ₹<%= order.walletAmountUsed.toFixed(2) %></p>
+        <% } %>
     </div>
 
     <!-- Order Total -->
@@ -235,9 +246,15 @@ body {
             <span>Shipping:</span>
             <span>₹<%= order.shippingCost.toFixed(2) %></span>
         </div>
+        <% if (order.couponApplied && order.couponApplied.code) { %>
+        <div class="total-row">
+            <span>Coupon Applied:</span>
+            <span><%= order.couponApplied.code %> (<%= order.couponApplied.discountPercentage %>% off)</span>
+        </div>
+        <% } %>
         <% if (order.discountAmount > 0) { %>
         <div class="total-row">
-            <span>Discount:</span>
+            <span>Coupon Discount:</span>
             <span>-₹<%= order.discountAmount.toFixed(2) %></span>
         </div>
         <% } %>
@@ -246,7 +263,6 @@ body {
             <span>₹<%= order.total.toFixed(2) %></span>
         </div>
     </div>
-
     <!-- Action Buttons -->
     <div class="action-buttons">
         <a href="/profile/orders" class="primary-btn">View All Orders</a>

@@ -293,6 +293,23 @@
   }
 </style>
 
+
+// Add some CSS for disabled wallet option
+<style>
+.payment_item.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.payment_item.disabled input[type="radio"] {
+    cursor: not-allowed;
+}
+
+.payment_item.disabled label {
+    cursor: not-allowed;
+}
+</style>
+
 <!-- Start Banner Area -->
 <section class="banner-area organic-breadcrumb">
   <div class="container">
@@ -456,6 +473,15 @@
               </div>
               <p>Pay via RazorPay; you can pay with your credit card if you don't have a Razorpay account.</p>
             </div>
+
+            <div class="payment_item" id="walletPaymentOption">
+              <div class="radion_btn">
+                  <input type="radio" id="wallet" name="payment_method" value="Wallet">
+                  <label for="wallet">Pay with Wallet</label>
+                  <div class="check"></div>
+              </div>
+              <p>Available Balance: ₹<span id="walletBalance">0.00</span></p>
+          </div>
 
             <div class="creat_account">
               <input type="checkbox" id="terms" name="selector">
@@ -772,6 +798,36 @@ function createSaveAmountSpan(item) {
           addressDetails.style.display = 'none';
       }
   }
+
+
+  async function checkWalletBalance() {
+    try {
+        const response = await fetch('/checkout/wallet-balance');
+        const data = await response.json();
+        
+        if (data.success) {
+            const walletBalance = parseFloat(data.balance);
+            const total = parseFloat(document.getElementById('totalDisplay').textContent.replace('₹', ''));
+            
+            document.getElementById('walletBalance').textContent = walletBalance.toFixed(2);
+            
+            const walletPaymentOption = document.getElementById('walletPaymentOption');
+            const walletRadio = document.getElementById('wallet');
+            
+            if (walletBalance < total) {
+                walletRadio.disabled = true;
+                walletPaymentOption.classList.add('disabled');
+                walletPaymentOption.title = 'Insufficient wallet balance';
+            } else {
+                walletRadio.disabled = false;
+                walletPaymentOption.classList.remove('disabled');
+                walletPaymentOption.title = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error checking wallet balance:', error);
+    }
+}
   
   // Place order function
   async function placeOrder() {
@@ -815,6 +871,23 @@ function createSaveAmountSpan(item) {
     }
 
     const paymentMethod = document.querySelector('input[name="payment_method"]:checked')?.value;
+    if (paymentMethod === 'Wallet') {
+        // Show confirmation dialog for wallet payment
+        const result = await Swal.fire({
+            title: 'Confirm Wallet Payment',
+            text: 'Are you sure you want to pay using your wallet balance?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, proceed',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!result.isConfirmed) {
+            return;
+        }
+    }
+   
+   
     if (!paymentMethod) {
         Swal.fire({
             icon: 'error',
@@ -850,9 +923,9 @@ function createSaveAmountSpan(item) {
 
         const data = await response.json();
         if (data.success) {
-            if (paymentMethod === 'COD') {
-                window.location.href = `/orders/${data.orderId}`;
-            } else {
+    if (paymentMethod === 'COD' || paymentMethod === 'Wallet') {
+        window.location.href = `/orders/${data.orderId}`;
+    } else if (paymentMethod === 'RazorPay') {
                 const options = {
                     key: 'rzp_test_kGARsyFFRtqEHR',
                     amount: data.total * 100,
@@ -960,6 +1033,15 @@ async function handlePaymentFailure(orderId) {
   document.addEventListener('DOMContentLoaded', () => {
       // Fetch available coupons
       fetchAvailableCoupons();
+    checkWalletBalance();
+    
+    // Add event listener for total amount changes
+    const observer = new MutationObserver(checkWalletBalance);
+    observer.observe(document.getElementById('totalDisplay'), {
+        characterData: true,
+        childList: true,
+        subtree: true
+    });
   
       // Add event listener for coupon removal
       const removeCouponBtn = document.getElementById('removeCouponBtn');

@@ -1,49 +1,53 @@
 
-This is my productSchema.js code:- 
-const mongoose = require("mongoose");
+This is my walletSchema.js code:- 
+
+const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const productSchema = new Schema({
-    productName: {
+const walletTransactionSchema = new Schema({
+    amount: {
+        type: Number,
+        required: true
+    },
+    type: {
         type: String,
+        enum: ['credit', 'debit'],
         required: true
     },
     description: {
         type: String,
-        default: ''
-    },
-    category: {
-        type: Schema.Types.ObjectId,
-        ref: "Category",
         required: true
     },
-    regularPrice: {
+    orderId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Order',
+        default: null
+    },
+    balance: {
         type: Number,
         required: true
-    },
-    
-    variants: [{
-        color: { type: String, required: true },
-        sizes: [{
-            size: { type: Number, required: true },
-            quantity: { type: Number, required: true }
-        }],
-        images: [{
-            filename: { type: String, required: true },
-            contentType: { type: String, default: 'image/jpeg' }
-        }],
-        isListed: { type: Boolean, default: true },
-        mainImage: { type: Boolean, default: false }  
-    }],
-    
-    isBlocked: {
-        type: Boolean,
-        default: false
-    },
-   
+    }
 }, { timestamps: true });
-const Product = mongoose.model("Product", productSchema);
-module.exports = Product;
+
+const walletSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique: true
+    },
+    balance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    transactions: [walletTransactionSchema]
+});
+
+const Wallet = mongoose.model('Wallet', walletSchema);
+module.exports = Wallet;
+
+
 This is my couponSchema.js code:- 
 const mongoose = require('mongoose');
 
@@ -111,64 +115,42 @@ const Coupon = mongoose.model('Coupon', couponSchema);
 
 module.exports = Coupon;
 
-This is my cartSchema.js code:- 
-const mongoose= require('mongoose');
-const {Schema}= mongoose;
-
-
-const cartSchema = new mongoose.Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
-    items: [{
-        productId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Product',
-            required: true
-        },
-        variantId: {  // Add this for variant reference
-            type: Schema.Types.ObjectId,
-            default: null
-        },
-        size: {  // Add this for size
-            type: Number,
-            required: true
-        },
-        color: {  // Add this for color
-            type: String,
-            required: true
-        },
-        quantity: {
-            type: Number,
-            default: 1
-        },
-        price: {
-            type: Number,
-            required: true
-        },
-        totalPrice: {
-            type: Number,
-            required: true
-        },
-        status: {
-            type: String,
-            default: 'placed'
-        },
-        cancellationReason: {
-            type: String,
-            default: 'none'
-        }
-    }]
-});
-const Cart= mongoose.model('Cart',cartSchema)
-module.exports= Cart
-
 
 This is my orderSchema.js code:- 
+
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+
+
+
+const returnRequestSchema = new Schema({
+    itemId: {
+        type: Schema.Types.ObjectId,
+        required: true
+    },
+    reason: {
+        type: String,
+        required: true
+    },
+    status: {
+        type: String,
+        enum: ['pending', 'approved', 'rejected'],
+        default: 'pending'
+    },
+    adminResponse: {
+        type: String,
+        default: null
+    },
+    customReason: {
+        type: String,
+        default: null
+    },
+    refundAmount: {
+        type: Number,
+        required: true
+    }
+}, { timestamps: true });
+
 
 const orderSchema = new Schema({
     orderId: {
@@ -218,9 +200,10 @@ const orderSchema = new Schema({
         },
         status: {
             type: String,
-            enum: ['placed', 'cancelled'],
+            enum: ['placed', 'cancelled', 'returned', 'return_requested'],
             default: 'placed'
-        }
+        },
+        returnRequest: returnRequestSchema
     }],
     // Embedded shipping address details
     shippingAddress: {
@@ -277,7 +260,11 @@ const orderSchema = new Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['COD', 'RazorPay']  
+        enum: ['COD', 'RazorPay', 'Wallet']  // Added Wallet
+    },
+    walletAmountUsed: {
+        type: Number,
+        default: 0
     },
     subtotal: {
         type: Number,
@@ -324,21 +311,1608 @@ const orderSchema = new Schema({
         razorpay_payment_id: String,
         razorpay_order_id: String,
         razorpay_signature: String
+    },
+
+    totalDiscount: {
+        type: Number,
+        default: 0,
+        comment: 'Total discount including product discount and coupon discount'
     }
 }, { timestamps: true });
 
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;
 
-This is my userRouter.js code:- 
-router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
-router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
-router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
-router.get('/checkout/available-coupons', userAuth, checkoutController.getAvailableCoupons);
-router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCoupon);
-router.post('/verify-payment',userAuth,checkoutController.verifyPayment);
+This is my adminRouter.js code:- 
 
-This is my checkoutController.js code:- 
+router.get('/orders',adminAuth, orderController.listOrders);
+router.get('/order-details/:id',adminAuth, orderController.orderDetails);
+router.post('/update-order-status/:id',adminAuth, orderController.updateOrderStatus);
+router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
+router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
+router.get('/return-request-details/:orderId', adminAuth, orderController.getReturnRequestDetails);
+router.post('/handle-return-request', adminAuth, orderController.handleReturnRequest);
+
+This is my orderController.js code:- 
 
 
-This is my userCheckout.ejs page code:- 
+
+// controllers/orderController.js
+const Order = require('../../models/orderSchema');
+const User = require('../../models/userSchema');
+const Product= require('../../models/productSchema')
+const Address= require('../../models/addressSchema')
+const Wallet = require('../../models/walletSchema');
+
+/// controllers/orderController.js
+const listOrders = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        // Search and filter options
+        const search = req.query.search ? req.query.search.trim() : '';
+        const status = req.query.status || '';
+        const paymentStatus = req.query.paymentStatus || '';
+
+        // Build query
+        const query = {};
+        let noResultsMessage = '';
+        let searchApplied = false;
+
+        // Enhanced search logic
+        if (search) {
+            searchApplied = true;
+            query.$or = [
+                { orderId: { $regex: search, $options: 'i' } },
+                // Perform a lookup on the User collection for name search
+                { 'userId': await getUserIdsByName(search) }
+            ];
+        }
+
+        if (status) {
+            searchApplied = true;
+            query.status = status;
+        }
+
+        if (paymentStatus) {
+            searchApplied = true;
+            query.paymentStatus = paymentStatus;
+        }
+
+        // Fetch orders with pagination and populate
+        const orders = await Order.find(query)
+            .populate('userId', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        // Count total documents for pagination
+        const totalOrders = await Order.countDocuments(query);
+        const totalPages = Math.ceil(totalOrders / limit);
+
+        // Determine no results message
+        if (searchApplied && orders.length === 0) {
+            if (search) {
+                // Check if search term exists in any field
+                const orderIdExists = await Order.findOne({ orderId: { $regex: search, $options: 'i' } });
+                const userExists = await User.findOne({ name: { $regex: search, $options: 'i' } });
+
+                if (!orderIdExists && !userExists) {
+                    noResultsMessage = `No orders found for "${search}". The order ID or customer name does not exist.`;
+                }
+            }
+
+            if (status) {
+                const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+                if (!validStatuses.includes(status)) {
+                    noResultsMessage = `Invalid order status "${status}". Please select a valid status.`;
+                } else {
+                    noResultsMessage = `No orders found with status "${status}".`;
+                }
+            }
+
+            if (paymentStatus) {
+                const validPaymentStatuses = ['pending', 'paid', 'failed'];
+                if (!validPaymentStatuses.includes(paymentStatus)) {
+                    noResultsMessage = `Invalid payment status "${paymentStatus}". Please select a valid payment status.`;
+                } else {
+                    noResultsMessage = `No orders found with payment status "${paymentStatus}".`;
+                }
+            }
+
+            // Combination search message
+            if (search && status) {
+                noResultsMessage = `No orders found for "${search}" with status "${status}".`;
+            }
+
+            if (search && paymentStatus) {
+                noResultsMessage = `No orders found for "${search}" with payment status "${paymentStatus}".`;
+            }
+        }
+
+        res.render('order-list', {
+            orders,
+            currentPage: page,
+            totalPages,
+            search,
+            status,
+            paymentStatus,
+            noResultsMessage
+        });
+    } catch (error) {
+        console.error('Error in listing orders:', error);
+        res.status(500).render('error', { 
+            message: 'Internal Server Error',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+
+// Helper function to get user IDs by name
+async function getUserIdsByName(searchTerm) {
+    try {
+        const users = await User.find({ 
+            name: { $regex: searchTerm, $options: 'i' } 
+        }, '_id');
+        return { $in: users.map(user => user._id) };
+    } catch (error) {
+        console.error('Error finding users:', error);
+        return [];
+    }
+}
+
+
+
+
+
+
+const orderDetails = async (req, res) => {
+    try {
+        const orderId = req.params.id;
+        const order = await Order.findOne({ orderId: orderId })
+            .populate({
+                path: 'userId',
+                model: 'User'
+            })
+            .populate({
+                path: 'items.productId',
+                populate: {
+                    path: 'category',
+                    model: 'Category'
+                }
+            });
+
+        if (!order) {
+            return res.status(404).render('pageerror', { 
+                message: 'Order not found' 
+            });
+        }
+
+        // Optional: Fetch user's address details
+        const userAddress = await Address.findOne({ userId: order.userId._id });
+
+        res.render('order-details', { 
+            order, 
+            userAddress 
+        });
+    } catch (error) {
+        console.error('Error in order details:', error);
+        res.status(500).render('pageerror', { 
+            message: 'Internal Server Error',
+            error: process.env.NODE_ENV === 'development' ? error : {}
+        });
+    }
+};
+
+
+
+const updateOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, paymentStatus } = req.body;
+
+        // Log incoming request details for debugging
+        console.log('Update Order Status Request:', {
+            orderId: id,
+            newStatus: status
+        });
+
+        // Validate input
+        if (!status) {
+            console.error('Status is undefined');
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Status is required',
+                error: 'Status parameter cannot be empty or undefined'
+            });
+        }
+
+        // Predefined status flow
+        const STATUS_FLOW = {
+            'pending': ['processing', 'shipped'],  // Added 'shipped' as a direct option from pending
+            'processing': ['shipped'],
+            'shipped': ['delivered'],
+            'delivered': [],
+            'cancelled': []
+        };
+
+        // Find the order
+        const order = await Order.findById(id);
+        if (!order) {
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found',
+                error: `No order exists with ID ${id}`
+            });
+        }
+
+        // Get current status
+        const currentStatus = order.status;
+
+        // Validate status transition
+        const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+
+        console.log('Status Transition Check:', {
+            currentStatus,
+            requestedStatus: status,
+            allowedNextStatuses
+        });
+
+        if (!allowedNextStatuses.includes(status)) {
+            console.error('Invalid Status Transition', {
+                from: currentStatus,
+                to: status,
+                allowed: allowedNextStatuses
+            });
+
+            return res.status(400).json({ 
+                success: false, 
+                message: `Invalid status transition from ${currentStatus} to ${status}`,
+                error: 'Status transition not allowed',
+                currentStatus,
+                allowedStatuses: allowedNextStatuses
+            });
+        }
+
+        // Update order status
+        order.status = status;
+
+        if (paymentStatus) {
+            order.paymentStatus = paymentStatus;
+        }
+
+        await order.save();
+
+        console.log('Order Status Successfully Updated', {
+            orderId: id,
+            newStatus: status
+        });
+
+        res.json({ 
+            success: true, 
+            message: 'Order status updated successfully',
+            order 
+        });
+    } catch (error) {
+        
+            console.error('Comprehensive Error in Update Order Status:', {
+                error: error.message,
+                stack: error.stack
+            });
+    
+            res.status(500).json({ 
+                success: false, 
+                message: 'Internal Server Error',
+                error: process.env.NODE_ENV === 'development' 
+                    ? { 
+                        message: error.message, 
+                        stack: error.stack 
+                    } 
+                    : 'An unexpected error occurred'
+            });
+        }
+};
+
+
+
+
+const cancelEntireOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const order = await Order.findById(id)
+            .populate('items.productId')
+            .populate('userId');
+
+        if (!order) { 
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Order not found' 
+            });
+        }
+
+        // Check if order can be cancelled
+        if (order.status === 'delivered' || order.status === 'cancelled') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Cannot cancel this order' 
+            });
+        }
+
+        // Calculate total refund amount
+        const refundAmount = order.items.reduce((total, item) => {
+            if (item.status !== 'cancelled') {
+                return total + item.totalPrice;
+            }
+            return total;
+        }, 0);
+
+        // Process each item for quantity restoration
+        for (const item of order.items) {
+            if (item.status !== 'cancelled') {
+                const product = await Product.findById(item.productId);
+                if (!product) continue;
+
+                const variant = product.variants.find(v => v.color === item.color);
+                if (!variant) continue;
+
+                const sizeVariant = variant.sizes.find(s => s.size === item.size);
+                if (sizeVariant) {
+                    sizeVariant.quantity += item.quantity;
+                }
+
+                await product.save();
+                item.status = 'cancelled';
+            }
+        }
+        
+        // Update order status
+        order.status = 'cancelled';
+
+        // Process refund to wallet
+        let wallet = await Wallet.findOne({ userId: order.userId._id });
+        if (!wallet) {
+            wallet = new Wallet({ userId: order.userId._id });
+        }
+
+        // Add refund transaction
+        wallet.balance += refundAmount;
+        wallet.transactions.push({
+            amount: refundAmount,
+            type: 'credit',
+            description: `Refund for cancelled order ${order.orderId}`,
+            orderId: order._id,
+            balance: wallet.balance
+        });
+
+        await Promise.all([
+            order.save(),
+            wallet.save()
+        ]);
+
+        res.json({ 
+            success: true, 
+            message: 'Order cancelled successfully and amount refunded to wallet',
+            orderStatus: order.status
+        });
+    } catch (error) {
+        console.error('Cancel Entire Order Error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Failed to cancel order' 
+        });
+    }
+};
+
+
+// Update the handleReturnRequest function in orderController.js
+const handleReturnRequest = async (req, res) => {
+    try {
+        const { orderId, itemId, action, adminResponse, refundAmount } = req.body;
+
+        if (!orderId || !itemId || !action || (action === 'approve' && !refundAmount)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required parameters'
+            });
+        }
+
+        const order = await Order.findOne({ orderId })
+            .populate('items.productId')
+            .populate('userId');
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        const orderItem = order.items.find(item => 
+            item._id.toString() === itemId.toString()
+        );
+
+        if (!orderItem) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order item not found'
+            });
+        }
+
+        if (action === 'approve') {
+            // Update item status to returned
+            orderItem.status = 'returned';
+            orderItem.returnRequest.status = 'approved';
+            orderItem.returnRequest.adminResponse = adminResponse;
+            orderItem.returnRequest.refundAmount = refundAmount;
+
+            // Process refund
+            let wallet = await Wallet.findOne({ userId: order.userId });
+            if (!wallet) {
+                wallet = new Wallet({ userId: order.userId });
+            }
+
+            wallet.balance += refundAmount;
+            wallet.transactions.push({
+                amount: refundAmount,
+                type: 'credit',
+                description: `Refund for returned item from order ${order.orderId}`,
+                orderId: order._id,
+                balance: wallet.balance
+            });
+
+            await wallet.save();
+
+            // Restore inventory
+            const product = await Product.findById(orderItem.productId);
+            if (product) {
+                const variant = product.variants.find(v => v.color === orderItem.color);
+                if (variant) {
+                    const sizeVariant = variant.sizes.find(s => s.size === orderItem.size);
+                    if (sizeVariant) {
+                        sizeVariant.quantity += orderItem.quantity;
+                        await product.save();
+                    }
+                }
+            }
+        } else if (action === 'reject') {
+            orderItem.status = 'return_rejected';  // Updated status
+            orderItem.returnRequest.status = 'rejected';
+            orderItem.returnRequest.adminResponse = adminResponse;
+        }
+
+        await order.save();
+
+        res.json({
+            success: true,
+            message: `Return request ${action}ed successfully`
+        });
+    } catch (error) {
+        console.error('Error handling return request:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to process return request'
+        });
+    }
+};
+
+
+
+// Add this function for wallet refunds on order cancellation
+const handleOrderRefund = async (order, items) => {
+    try {
+        let refundAmount = 0;
+        
+        // Calculate refund amount for specified items or all items
+        const itemsToRefund = items || order.items;
+        itemsToRefund.forEach(item => {
+            refundAmount += item.totalPrice;
+        });
+
+        // Create or update wallet
+        let wallet = await Wallet.findOne({ userId: order.userId });
+        if (!wallet) {
+            wallet = new Wallet({ userId: order.userId });
+        }
+
+        // Add refund transaction
+        wallet.balance += refundAmount;
+        wallet.transactions.push({
+            amount: refundAmount,
+            type: 'credit',
+            description: `Refund for cancelled items from order ${order.orderId}`,
+            orderId: order._id,
+            balance: wallet.balance
+        });
+
+        await wallet.save();
+        return true;
+    } catch (error) {
+        console.error('Error processing refund:', error);
+        return false;
+    }
+};
+
+// Modify existing cancel functions to include refund
+const cancelOrderItem = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        const { itemIndex } = req.body;
+
+        const order = await Order.findById(orderId)
+            .populate('items.productId');
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        const item = order.items[itemIndex];
+        if (!item) {
+            return res.status(404).json({
+                success: false,
+                message: 'Item not found'
+            });
+        }
+
+        item.status = 'cancelled';
+        await handleOrderRefund(order, [item]);
+        await order.save();
+
+        res.json({
+            success: true,
+            message: 'Item cancelled and refunded successfully'
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to cancel item'
+        });
+    }
+};
+
+
+
+
+const getReturnRequestDetails = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+
+        const order = await Order.findOne({ orderId })
+            .populate({
+                path: 'items.productId',
+                select: 'productName variants'
+            });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        // Filter only items with return requests
+        const returnRequestItems = order.items.filter(item => 
+            item.status === 'return_requested' && item.returnRequest
+        );
+
+        if (returnRequestItems.length === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'No return requests found for this order'
+            });
+        }
+
+        // Calculate coupon discount proportion for each item if applicable
+        const totalOrderValue = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+        
+        // Format the response data
+        const items = returnRequestItems.map(item => {
+            let couponDiscount = 0;
+            if (order.couponApplied && order.couponApplied.discountAmount) {
+                const itemProportion = item.totalPrice / totalOrderValue;
+                couponDiscount = order.couponApplied.discountAmount * itemProportion;
+            }
+
+            return {
+                _id: item._id,
+                productId: item.productId,
+                color: item.color,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                totalPrice: item.totalPrice,
+                couponDiscount: couponDiscount,
+                returnRequest: {
+                    reason: item.returnRequest.reason,
+                    customReason: item.returnRequest.customReason,
+                    status: item.returnRequest.status,
+                    createdAt: item.returnRequest.createdAt
+                }
+            };
+        });
+
+        res.json({
+            success: true,
+            items
+        });
+    } catch (error) {
+        console.error('Error fetching return request details:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch return request details',
+            error: error.message
+        });
+    }
+};
+
+This is my order-list.ejs page code:- 
+
+<!-- views/admin/order-list.ejs -->
+<%- include("../../views/partials/admin/header/") %>
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Order Management</h5>
+        
+        <!-- Search and Filter Section -->
+        <div class="row my-3">
+          <div class="col-md-12">
+            <form action="/admin/orders" method="GET" class="row g-3">
+              <div class="col-md-4">
+                <input 
+                  type="text" 
+                  name="search" 
+                  class="form-control" 
+                  placeholder="Search by Order ID or Customer Name" 
+                  value="<%= search || '' %>"
+                >
+              </div>
+              <div class="col-md-3">
+                <select name="status" class="form-select">
+                  <option value="">All Order Status</option>
+                  <option value="pending" <%= status === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="processing" <%= status === 'processing' ? 'selected' : '' %>>Processing</option>
+                  <option value="shipped" <%= status === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                  <option value="delivered" <%= status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                  <option value="cancelled" <%= status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="paymentStatus" class="form-select">
+                  <option value="">All Payment Status</option>
+                  <option value="paid" <%= paymentStatus === 'paid' ? 'selected' : '' %>>Paid</option>
+                  <option value="pending" <%= paymentStatus === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="failed" <%= paymentStatus === 'failed' ? 'selected' : '' %>>Failed</option>
+                </select>
+              </div>
+              <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">Search</button>
+              </div>
+            </form>
+            <% if (noResultsMessage) { %>
+              <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <%= noResultsMessage %>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            <% } %>
+          </div>
+        </div>
+
+        <div class="card-datatable table-responsive">
+          <% if (orders.length > 0) { %>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order ID</th>
+                <th>Order Date</th>
+                <th>Customer Name</th>
+                <th>Total Price</th>
+                <th>Payment Method</th>
+                <th>Payment Status</th>
+                <th>Order Status</th>
+                <th>Return Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% orders.forEach(order => { %>
+                <tr>
+                  <td><%= order.orderId %></td>
+                  <td><%= order.createdAt.toLocaleDateString() %></td>
+                  <td><%= order.userId.name %></td>
+                  <td>₹<%= order.total.toFixed(2) %></td>
+                  <td><%= order.paymentMethod.toUpperCase() %></td>
+                  <td>
+                    <span class="badge 
+                      <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
+                          order.paymentStatus === 'pending' ? 'bg-label-warning' : 
+                          'bg-label-danger' %>">
+                      <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
+                    </span>
+                  </td>
+                  <td>
+                    <span class="badge 
+                      <%= order.status === 'pending' ? 'bg-label-warning' : 
+                          order.status === 'processing' ? 'bg-label-info' : 
+                          order.status === 'shipped' ? 'bg-label-primary' : 
+                          order.status === 'delivered' ? 'bg-label-success' : 
+                          'bg-label-danger' %>">
+                      <%= order.status.toUpperCase() %>
+                    </span>
+                  </td>
+
+                  <td>
+                    <% 
+                      const totalItems = order.items.length;
+                      const returnedItems = order.items.filter(item => 
+                        item.status === 'returned' || item.status === 'return_requested'
+                      ).length;
+                      const hasReturnRequest = order.items.some(item => 
+                        item.status === 'return_requested'
+                      );
+                    %>
+                    
+                    <% if (hasReturnRequest) { %>
+                      <button 
+                        class="btn btn-sm btn-warning view-return-request position-relative" 
+                        data-order-id="<%= order.orderId %>"
+                        data-bs-toggle="modal" 
+                        data-bs-target="#returnRequestModal">
+                        View Return Request
+                        <% if (returnedItems > 0) { %>
+                          <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                            <%= returnedItems %>
+                          </span>
+                        <% } %>
+                      </button>
+                    <% } else if (returnedItems > 0) { %>
+                      <span class="badge bg-success position-relative">
+                        Returned
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-secondary">
+                          <%= returnedItems %>/<%= totalItems %>
+                        </span>
+                      </span>
+                    <% } else { %>
+                      <span class="text-muted">No Returns</span>
+                    <% } %>
+                  </td>
+
+                  <td>
+                    <a href="/admin/order-details/<%= order.orderId %>" class="btn btn-sm btn-info">
+                      View Details
+                    </a>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+          </table>
+          <% } else if (!noResultsMessage) { %>
+            <div class="alert alert-info text-center">
+              No orders found. Try adjusting your search criteria.
+            </div>
+          <% } %>
+        </div>
+      </div>
+    </div>
+
+
+
+    <!-- Return Request Modal -->
+    <div class="modal fade" id="returnRequestModal" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Return Request Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div id="returnRequestDetails">
+              <div class="table-responsive">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th>Product Image</th>
+                      <th>Product Details</th>
+                      <th>Return Reason</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="returnRequestTableBody">
+                    <!-- Will be populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="container mt-3">
+      <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+          <% if (currentPage > 1) { %>
+            <li class="page-item">
+              <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                Previous
+              </a>
+            </li>
+          <% } %>
+
+          <% for(let i=1; i<=totalPages; i++) { %>
+            <li class="page-item <%= (i === currentPage) ? 'active' : '' %>">
+              <a class="page-link" href="?page=<%= i %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                <%= i %>
+              </a>
+            </li>
+          <% } %>
+
+          <% if (currentPage < totalPages) { %>
+            <li class="page-item">
+              <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                Next
+              </a>
+            </li>
+          <% } %>
+        </ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<%- include("../../views/partials/admin/footer/") %>
+
+
+
+
+<script>
+ document.querySelectorAll('.view-return-request').forEach(button => {
+    button.addEventListener('click', async function() {
+        const orderId = this.getAttribute('data-order-id');
+        try {
+            const response = await fetch(`/admin/return-request-details/${orderId}`);
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message);
+            }
+            
+            const tableBody = document.getElementById('returnRequestTableBody');
+            tableBody.innerHTML = '';
+
+            data.items.forEach(item => {
+                const row = document.createElement('tr');
+                const variant = item.productId.variants.find(v => v.color === item.color);
+                
+                // Calculate the discounted price if coupon was applied
+                const originalPrice = item.price * item.quantity;
+                const couponDiscount = item.couponDiscount || 0;
+                const finalPrice = originalPrice - couponDiscount;
+
+                row.innerHTML = `
+                    <td>
+                        <img src="/uploads/product-images/${variant?.images[0]?.filename || 'placeholder.jpg'}"
+                             alt="${item.productId.productName}"
+                             style="width: 50px; height: 50px; object-fit: cover;">
+                    </td>
+                    <td>
+                        <strong>${item.productId.productName}</strong><br>
+                        Color: ${item.color}<br>
+                        Size: ${item.size}<br>
+                        Quantity: ${item.quantity}<br>
+                        <div class="price-details mt-2">
+                            <small class="d-block">Original Price: ₹${originalPrice.toFixed(2)}</small>
+                            ${couponDiscount > 0 ? `<small class="d-block text-danger">Coupon Discount: -₹${couponDiscount.toFixed(2)}</small>` : ''}
+                            <strong class="d-block">Final Price: ₹${finalPrice.toFixed(2)}</strong>
+                        </div>
+                    </td>
+                    <td>${item.returnRequest.reason}
+                        ${item.returnRequest.customReason ? `<br><small>(${item.returnRequest.customReason})</small>` : ''}
+                    </td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-success btn-sm approve-return"
+                                    data-order-id="${orderId}"
+                                    data-item-id="${item._id}"
+                                    data-refund-amount="${finalPrice}">
+                                Approve
+                            </button>
+                            <button class="btn btn-danger btn-sm reject-return"
+                                    data-order-id="${orderId}"
+                                    data-item-id="${item._id}">
+                                Reject
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire('Error!', 'Failed to load return request details', 'error');
+        }
+    });
+});
+  
+  // Handle approve/reject actions
+  document.addEventListener('click', async function(e) {
+    if (e.target.matches('.approve-return, .reject-return')) {
+        const action = e.target.classList.contains('approve-return') ? 'approve' : 'reject';
+        const orderId = e.target.getAttribute('data-order-id');
+        const itemId = e.target.getAttribute('data-item-id');
+        const refundAmount = e.target.getAttribute('data-refund-amount');
+
+        // Hide modal before showing Swal
+        const returnModal = bootstrap.Modal.getInstance(document.getElementById('returnRequestModal'));
+        if (returnModal) {
+            returnModal.hide();
+        }
+
+        // Show loading message
+        Swal.fire({
+            title: 'Processing...',
+            text: `Processing ${action} request`,
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            const response = await fetch('/admin/handle-return-request', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+    orderId,
+    itemId,
+    action,
+    refundAmount: parseFloat(refundAmount),
+    adminResponse: action === 'approve' ? 'Return request approved' : 'Return request rejected',
+    status: action === 'approve' ? 'returned' : 'return_rejected' 
+})
+            });
+
+            const data = await response.json();
+            
+            // Close loading message
+            Swal.close();
+
+            if (data.success) {
+    await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: action === 'approve' 
+            ? `Return request approved and ₹${parseFloat(refundAmount).toFixed(2)} refunded to wallet`
+            : 'Return request rejected successfully',
+        showConfirmButton: true,
+        confirmButtonText: 'OK',
+        allowOutsideClick: false
+    });
+    
+    // Reload page after user clicks OK
+    window.location.reload();
+} else {
+                throw new Error(data.message || 'Failed to process return request');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            await Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.message || 'Failed to process return request',
+                showConfirmButton: true,
+                confirmButtonText: 'OK',
+                allowOutsideClick: false
+            });
+            
+            // Reopen modal after error
+            if (returnModal) {
+                returnModal.show();
+            }
+        }
+    }
+});
+  </script>
+
+
+This is my order-details.ejs page code:- 
+<!-- views/admin/order-details.ejs -->
+<%- include("../../views/partials/admin/header/") %>
+
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y">
+    <div class="row">
+      <!-- Order Summary and Shipping Address in a 12/2 layout -->
+      <div class="col-lg-8 col-md-12">
+        <div class="card mb-4">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Order Summary</h5>
+            <div>
+              <a href="/admin/orders" class="btn btn-secondary me-2">Back to Orders</a>
+              <% if (order.status !== 'delivered' && order.status !== 'cancelled') { %>
+                <button id="cancelEntireOrder" class="btn btn-danger">Cancel Entire Order</button>
+              <% } %>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Order ID</strong>
+                  <p class="text-dark"><%= order.orderId %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Order Date</strong>
+                  <p class="text-dark"><%= order.createdAt.toLocaleString() %></p>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Total Amount</strong>
+                  <p class="text-dark">₹<%= order.total.toFixed(2) %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Payment Status</strong>
+                  <span class="badge 
+                    <%= order.paymentStatus === 'paid' ? 'bg-label-success' : 
+                        order.paymentStatus === 'pending' ? 'bg-label-warning' : 
+                        'bg-label-danger' %>">
+                    <%= order.paymentStatus ? order.paymentStatus.toUpperCase() : 'N/A' %>
+                  </span>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Customer Name</strong>
+                  <p class="text-dark"><%= order.userId.name %></p>
+                </div>
+                <div>
+                  <strong class="d-block text-muted mb-1">Order Status</strong>
+                  <form id="orderStatusForm" method="POST" action="/admin/update-order-status/<%= order._id %>">
+                    <select name="status" class="form-select form-select-sm" id="orderStatusSelect">
+                      <% 
+                      const STATUS_FLOW = {
+                        'pending': ['processing'],
+                        'processing': ['shipped'],
+                        'shipped': ['delivered'],
+                        'delivered': [],
+                        'cancelled': []
+                      };
+                    
+                      const currentStatus = order.status;
+                      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+                      const allStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+                      %>
+                    
+                      <% allStatuses.forEach(status => { 
+                        const isCurrentStatus = status === currentStatus;
+                        const isAllowedTransition = allowedNextStatuses.includes(status);
+                      %>
+                        <option value="<%= status %>" 
+                                <%= isCurrentStatus ? 'selected' : '' %>>
+                          <%= status.charAt(0).toUpperCase() + status.slice(1) %>
+                        </option>
+                      <% }); %>
+                    </select>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-lg-4 col-md-12">
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">Shipping Address</h5>
+          </div>
+          <div class="card-body">
+            <div class="row">
+              <div class="col-12">
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Name</strong>
+                  <p class="text-dark"><%= order.shippingAddress.name %></p>
+                </div>
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Contact</strong>
+                  <p class="text-dark">
+                    <%= order.shippingAddress.phone %>
+                    <% if (order.shippingAddress.altPhone) { %>
+                      | Alt: <%= order.shippingAddress.altPhone %>
+                    <% } %>
+                  </p>
+                </div>
+                <div class="mb-3">
+                  <strong class="d-block text-muted mb-1">Full Address</strong>
+                  <p class="text-dark">
+                    <%= order.shippingAddress.address %>, 
+                    <%= order.shippingAddress.landmark %><br>
+                    <%= order.shippingAddress.city %>, 
+                    <%= order.shippingAddress.state %> - 
+                    <%= order.shippingAddress.pincode %>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Items -->
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">Order Items</h5>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th>Product Details</th>
+                <th>Color</th>
+                <th>Size</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Total Price</th>
+                <th>Item Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% order.items.forEach((item, index) => { 
+                const variant = item.productId.variants.find(v => v.color === item.color);
+                const isItemCancellable = order.status !== 'delivered' && order.status !== 'cancelled' && item.status !== 'cancelled';
+              %>
+                <tr>
+                  <td class="d-flex align-items-center">
+                    <img 
+                      src="/uploads/product-images/<%= 
+                          variant?.images && variant.images.length > 0 
+                              ? variant.images[0].filename 
+                              : 'placeholder.jpg' 
+                      %>" 
+                      alt="<%= item.productId.productName %>" 
+                      style="width: 50px; height: 50px; object-fit: cover; margin-right: 10px;"
+                    >
+                    <div>
+                      <strong><%= item.productId.productName %></strong><br>
+                      <small class="text-muted">
+                        Category: <%= item.productId.category ? item.productId.category.name : 'N/A' %>
+                      </small>
+                    </div>
+                  </td>
+                  <td><%= item.color %></td>
+                  <td><%= item.size %></td>
+                  <td><%= item.quantity %></td>
+                  <td>₹<%= item.price.toFixed(2) %></td>
+                  <td>₹<%= item.totalPrice.toFixed(2) %></td>
+
+                  <td>
+                    <% if (item.status === 'placed') { %>
+                        <% if (order.status === 'pending') { %>
+                            <span class="badge bg-label-warning">Pending</span>
+                        <% } else if (order.status === 'processing') { %>
+                            <span class="badge bg-label-info">Processing</span>
+                        <% } else if (order.status === 'shipped') { %>
+                            <span class="badge bg-label-primary">Shipped</span>
+                        <% } else if (order.status === 'delivered') { %>
+                            <span class="badge bg-label-success">Delivered</span>
+                        <% } %>
+                    <% } else if (item.status === 'return_requested') { %>
+                        <span class="badge bg-label-warning">Return Requested</span>
+                    <% } else if (item.status === 'returned') { %>
+                        <span class="badge bg-label-info">Returned</span>
+                    <% } else if (item.status === 'cancelled') { %>
+                        <span class="badge bg-label-danger">Cancelled</span>
+                    <% } %>
+                </td>
+
+                  <td>
+                    <% if (isItemCancellable) { %>
+                      <button class="btn btn-sm btn-danger cancel-item" 
+                              data-order-id="<%= order._id %>" 
+                              data-item-index="<%= index %>">
+                        Cancel Item
+                      </button>
+                    <% } else { %>
+                      <span class="text-muted">Not Cancellable</span>
+                    <% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="4" class="text-end"><strong>Subtotal</strong></td>
+                <td colspan="4">₹<%= order.subtotal.toFixed(2) %></td>
+              </tr>
+              <tr>
+                <td colspan="4" class="text-end"><strong>Shipping Cost</strong></td>
+                <td colspan="4">₹<%= order.shippingCost.toFixed(2) %></td>
+              </tr>
+
+              <% if (order.couponApplied && order.couponApplied.code) { %>
+                <tr>
+                  <td colspan="4" class="text-end"><strong>Coupon Applied</strong></td>
+                  <td colspan="4">
+                    Code: <%= order.couponApplied.code %><br>
+                    Discount: ₹<%= order.couponApplied.discountAmount.toFixed(2) %>
+                    (<%= order.couponApplied.discountPercentage %>%)
+                  </td>
+                </tr>
+              <% } %>
+
+              <tr>
+                <td colspan="4" class="text-end"><strong>Total</strong></td>
+                <td colspan="4" class="text-danger">₹<%= order.total.toFixed(2) %></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SweetAlert2 CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const STATUS_FLOW = {
+    'pending': ['processing', 'shipped'],
+    'processing': ['shipped'],
+    'shipped': ['delivered']
+};
+  
+    const orderStatusSelect = document.getElementById('orderStatusSelect');
+    const currentStatus = '<%= order.status %>';
+  
+    // Function to validate and control status dropdown
+    function setupStatusDropdown() {
+    const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+    
+    // Disable/enable options based on current status
+    Array.from(orderStatusSelect.options).forEach(option => {
+        const optionValue = option.value;
+        
+        // Remove 'Cancelled' option entirely
+        if (optionValue === 'cancelled') {
+            option.remove();
+        }
+        
+        // Disable all options except current status and allowed next statuses
+        if (optionValue !== currentStatus && !allowedNextStatuses.includes(optionValue)) {
+            option.disabled = true;
+        } else {
+            option.disabled = false;
+        }
+    });
+
+    // Always keep the current status selected
+    orderStatusSelect.value = currentStatus;
+}
+  
+    // Initial setup of dropdown
+    setupStatusDropdown();
+  
+    orderStatusSelect.addEventListener('change', function() {
+      const newStatus = this.value;
+      
+      // Validate status transition
+      const allowedNextStatuses = STATUS_FLOW[currentStatus] || [];
+      if (newStatus !== currentStatus && !allowedNextStatuses.includes(newStatus)) {
+        Swal.fire({
+          title: 'Invalid Status Transition',
+          text: `You cannot change the order status from ${currentStatus} to ${newStatus}. 
+                 Allowed transitions are: ${allowedNextStatuses.join(', ')}`,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
+        
+        // Reset to current status
+        setupStatusDropdown();
+        return;
+      }
+  
+      // Confirmation and update logic
+      Swal.fire({
+        title: 'Update Order Status',
+        text: `Are you sure you want to update the order status from ${currentStatus} to ${newStatus}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, update it!'
+      }).then((result) => {
+        if (result.isConfirmed) {
+          // Special handling for delivered status to update payment status
+          // In the fetch call for updating order status
+const updateData = newStatus === 'delivered' 
+  ? { status: newStatus, paymentStatus: 'paid' }
+  : { status: newStatus };
+
+fetch('/admin/update-order-status/<%= order._id %>', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+  },
+  body: JSON.stringify(updateData)
+})
+          .then(response => {
+            if (!response.ok) {
+              return response.json().then(errorData => {
+                throw new Error(errorData.message || 'Failed to update order status');
+              });
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success) {
+              Swal.fire(
+                'Updated!', 
+                'Order status has been updated.', 
+                'success'
+              ).then(() => {
+                window.location.reload();
+              });
+            } else {
+              throw new Error(data.message || 'Failed to update order status');
+            }
+          })
+          .catch(error => {
+            console.error('Comprehensive Error:', error);
+  
+            Swal.fire(
+              'Error!', 
+              `Status Update Failed: ${error.message}`, 
+              'error'
+            );
+  
+            // Reset to current status
+            setupStatusDropdown();
+          });
+        } else {
+          // Reset to current status if cancelled
+          setupStatusDropdown();
+        }
+      });
+    });
+  
+    // Cancel Individual Item
+
+document.querySelectorAll('.cancel-item').forEach(button => {
+  button.addEventListener('click', function() {
+    const orderId = this.getAttribute('data-order-id');
+    const itemIndex = this.getAttribute('data-item-index');
+
+    Swal.fire({
+      title: 'Cancel Item',
+      text: 'Are you sure you want to cancel this item?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, cancel it',
+      cancelButtonText: 'No, keep it'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        cancelItem(orderId, itemIndex);
+      }
+    });
+  });
+});
+
+function cancelItem(orderId, itemIndex) {
+  fetch(`/admin/cancel-order-item/${orderId}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    },
+    body: JSON.stringify({ itemIndex })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      Swal.fire('Cancelled!', 'Item has been cancelled.', 'success')
+      .then(() => window.location.reload());
+    } else {
+      Swal.fire('Error!', data.message || 'Failed to cancel item', 'error');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    Swal.fire('Error!', 'An error occurred while cancelling the item', 'error');
+  });
+}
+  
+    // Cancel Entire Order
+    const cancelEntireOrderBtn = document.getElementById('cancelEntireOrder');
+if (cancelEntireOrderBtn) {
+    cancelEntireOrderBtn.addEventListener('click', function() {
+        Swal.fire({
+            title: 'Cancel Entire Order',
+            text: 'Are you sure you want to cancel this order? The amount will be refunded to the customer\'s wallet.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, cancel it!',
+            cancelButtonText: 'No, keep it'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/admin/cancel-order/<%= order._id %>`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire(
+                            'Cancelled!', 
+                            'Order has been cancelled and refund has been processed.', 
+                            'success'
+                        ).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(data.message || 'Failed to cancel order');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire(
+                        'Error!', 
+                        'An error occurred while cancelling the order', 
+                        'error'
+                    );
+                });
+            }
+        });
+    });
+}
+  });
+  </script>
+
+<%- include("../../views/partials/admin/footer/") %>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<!-- Updated Pagination Section for order-list.ejs -->
+<div class="container mt-3">
+    <nav aria-label="Page navigation">
+      <ul class="pagination justify-content-center">
+        <% if (currentPage > 1) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage - 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+              Previous
+            </a>
+          </li>
+        <% } %>
+  
+        <%
+          const delta = 2; // Pages to show before and after current page
+          let range = [];
+          
+          if (totalPages <= 5) {
+            // If total pages are 5 or less, show all pages
+            range = [...Array(totalPages)].map((_, i) => i + 1);
+          } else {
+            // Always include first page
+            range.push(1);
+            
+            // Calculate range around current page
+            let start = Math.max(2, currentPage - delta);
+            let end = Math.min(totalPages - 1, currentPage + delta);
+            
+            // Add dots after first page if needed
+            if (start > 2) {
+              range.push('...');
+            }
+            
+            // Add pages around current page
+            for (let i = start; i <= end; i++) {
+              range.push(i);
+            }
+            
+            // Add dots before last page if needed
+            if (end < totalPages - 1) {
+              range.push('...');
+            }
+            
+            // Always include last page
+            range.push(totalPages);
+          }
+        %>
+  
+        <% range.forEach(page => { %>
+          <% if (page === '...') { %>
+            <li class="page-item disabled">
+              <span class="page-link">...</span>
+            </li>
+          <% } else { %>
+            <li class="page-item <%= (page === currentPage) ? 'active' : '' %>">
+              <a class="page-link" href="?page=<%= page %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+                <%= page %>
+              </a>
+            </li>
+          <% } %>
+        <% }); %>
+  
+        <% if (currentPage < totalPages) { %>
+          <li class="page-item">
+            <a class="page-link" href="?page=<%= currentPage + 1 %>&search=<%= search || '' %>&status=<%= status || '' %>&paymentStatus=<%= paymentStatus || '' %>">
+              Next
+            </a>
+          </li>
+        <% } %>
+      </ul>
+    </nav>
+  </div>
+  
+  <!-- Updated Status Cell for order-details.ejs -->
+  <td>
+    <% if (item.status === 'placed') { %>
+        <% if (order.status === 'pending') { %>
+            <span class="badge bg-label-warning">Pending</span>
+        <% } else if (order.status === 'processing') { %>
+            <span class="badge bg-label-info">Processing</span>
+        <% } else if (order.status === 'shipped') { %>
+            <span class="badge bg-label-primary">Shipped</span>
+        <% } else if (order.status === 'delivered') { %>
+            <span class="badge bg-label-success">Delivered</span>
+        <% } %>
+    <% } else if (item.status === 'return_requested') { %>
+        <span class="badge bg-label-warning">Return Requested</span>
+    <% } else if (item.status === 'returned') { %>
+        <span class="badge bg-label-info">Returned</span>
+    <% } else if (item.status === 'return_rejected') { %>
+        <span class="badge bg-label-danger">Return Rejected</span>
+    <% } else if (item.status === 'cancelled') { %>
+        <span class="badge bg-label-danger">Cancelled</span>
+    <% } %>
+  </td>
