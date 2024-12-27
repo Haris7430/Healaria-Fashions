@@ -17,12 +17,16 @@
                     <div class="form-floating form-floating-outline mb-4">
                         <input type="text" class="form-control" id="edit-category-name" name="name" placeholder="Enter category name" value="<%= category.name %>">
                         <label for="edit-category-name">Name</label>
+                        <div id="name-error" class="error-message" style="display:none;color:red;"></div>
+
                     </div>
                 
                     <!-- Simple Textarea for Description -->
                     <div class="form-floating form-floating-outline mb-4">
                         <textarea id="edit-category-description" name="description" class="form-control" placeholder="Enter description" rows="5"><%= category.description %></textarea>
                         <label for="edit-category-description">Description</label>
+                        <div id="description-error" class="error-message" style="display:none;color:red;"></div>
+
                     </div>
                 
                     <!-- Submit and Reset -->
@@ -37,52 +41,118 @@
 </div>
 
 <script>
-  function handleEditFormSubmit(event) {
-      event.preventDefault();  // Prevent default form submission
-      
-      const id = document.getElementById('edit-category-id').value;
-      const name = document.getElementById('edit-category-name').value.trim();
-      const description = document.getElementById('edit-category-description').value.trim();
+  function validateEditForm() {
+    clearErrorMessages();
+    
+    const name = document.getElementById('edit-category-name').value.trim();
+    const description = document.getElementById('edit-category-description').value.trim();
+    let isValid = true;
 
-      if (!name || !description) {
-          Swal.fire({
-              icon: 'error',
-              title: 'Validation Error',
-              text: 'Both name and description are required!',
-          });
-          return;
-      }
+    // Name validation
+    if (name === '') {
+        displayErrorMessage('name-error', 'Category name is required');
+        isValid = false;
+    } else if (!/^[a-zA-Z\s]+$/.test(name)) {
+        displayErrorMessage('name-error', 'Category name should contain only alphabetic characters');
+        isValid = false;
+    } else if (name.length < 3) {
+        displayErrorMessage('name-error', 'Category name should be at least 3 characters long');
+        isValid = false;
+    }
 
-      fetch(`/admin/editCategory/${id}`, {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ name, description })
-      })
-      .then(response => response.json())
-      .then(data => {
-          if (data.message) {
-              Swal.fire({
-                  icon: 'success',
-                  title: 'Category Updated!',
-                  text: data.message,
-              }).then(() => {
-                  window.location.href = '/admin/categories';
-              });
-          } else {
-              throw new Error(data.error || 'Unexpected error occurred');
-          }
-      })
-      .catch(error => {
-          console.error('Fetch Error:', error);
-          Swal.fire({
-              icon: 'error',
-              title: 'Oops...',
-              text: error.message || 'An error occurred while updating the category',
-          });
-      });
-  }
+    // Description validation
+    if (description === '') {
+        displayErrorMessage('description-error', 'Description is required');
+        isValid = false;
+    } else if (description.length < 10) {
+        displayErrorMessage('description-error', 'Description should be at least 10 characters long');
+        isValid = false;
+    }
+
+    return isValid;
+}
+
+function displayErrorMessage(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    errorElement.innerText = message;
+    errorElement.style.display = 'block';
+}
+
+function clearErrorMessages() {
+    const errorElements = document.getElementsByClassName('error-message');
+    Array.from(errorElements).forEach(element => {
+        element.innerText = '';
+        element.style.display = 'none';
+    });
+}
+
+// Real-time validation
+document.getElementById('edit-category-name').addEventListener('input', function() {
+    const name = this.value.trim();
+    if (name === '') {
+        displayErrorMessage('name-error', 'Category name is required');
+    } else if (!/^[a-zA-Z\s]+$/.test(name)) {
+        displayErrorMessage('name-error', 'Category name should contain only alphabetic characters');
+    } else if (name.length < 3) {
+        displayErrorMessage('name-error', 'Category name should be at least 3 characters long');
+    } else {
+        document.getElementById('name-error').style.display = 'none';
+    }
+});
+
+document.getElementById('edit-category-description').addEventListener('input', function() {
+    const description = this.value.trim();
+    if (description === '') {
+        displayErrorMessage('description-error', 'Description is required');
+    } else if (description.length < 10) {
+        displayErrorMessage('description-error', 'Description should be at least 10 characters long');
+    } else {
+        document.getElementById('description-error').style.display = 'none';
+    }
+});
+
+function handleEditFormSubmit(event) {
+    event.preventDefault();
+    
+    if (!validateEditForm()) {
+        return;
+    }
+
+    const id = document.getElementById('edit-category-id').value;
+    const name = document.getElementById('edit-category-name').value.trim();
+    const description = document.getElementById('edit-category-description').value.trim();
+
+    fetch(`/admin/editCategory/${id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, description })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.message) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message,
+                showConfirmButton: false,
+                timer: 1500
+            }).then(() => {
+                window.location.href = '/admin/category';
+            });
+        } else {
+            throw new Error(data.error || 'Unexpected error occurred');
+        }
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: error.message || 'An error occurred while updating the category'
+        });
+    });
+}
 </script>
 
 <%- include("../../views/partials/admin/footer") %>

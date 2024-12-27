@@ -11,6 +11,11 @@
             <h5 class="mb-0">Order Summary</h5>
             <div>
               <a href="/admin/orders" class="btn btn-secondary me-2">Back to Orders</a>
+              <% if (order.status === 'delivered') { %>
+                <a href="/admin/download-invoice/<%= order.orderId %>" class="btn btn-primary me-2">
+                  <i class="bx bx-download me-1"></i>Download Invoice
+                </a>
+              <% } %>
               <% if (order.status !== 'delivered' && order.status !== 'cancelled') { %>
                 <button id="cancelEntireOrder" class="btn btn-danger">Cancel Entire Order</button>
               <% } %>

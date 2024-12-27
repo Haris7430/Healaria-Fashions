@@ -5,6 +5,11 @@ const mongoose = require('mongoose');
 const Product = require('../../models/productSchema');
 const bcrypt = require('bcrypt'); 
 const Wallet = require('../../models/walletSchema');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
 
 
 const getUserProfile = async (req, res) => {
@@ -586,12 +591,6 @@ const getChangePasswordPage = async (req, res) => {
 
 
 
-
-
-
-
-
-
 const getUserOrders = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
@@ -666,6 +665,357 @@ const getOrderDetails = async (req, res) => {
     } catch (error) {
         console.error('Error fetching order details:', error);
         res.status(500).render('page-404', { message: 'Error fetching order details', error: error.message });
+    }
+};
+
+
+
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
+
+const retryPayment = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        const order = await Order.findOne({ 
+            _id: orderId,
+            userId: req.user._id,
+            paymentMethod: 'RazorPay',
+            paymentStatus: { $ne: 'paid' }
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found or not eligible for payment retry'
+            });
+        }
+
+        // Create Razorpay order
+        const razorpayOrder = await razorpay.orders.create({
+            amount: Math.round(order.total * 100), // Convert to paise
+            currency: 'INR',
+            receipt: order._id.toString(),
+            notes: {
+                orderId: order._id.toString()
+            }
+        });
+
+        res.json({
+            success: true,
+            orderId: razorpayOrder.id,
+            amount: razorpayOrder.amount,
+            currency: razorpayOrder.currency
+        });
+
+    } catch (error) {
+        console.error('Retry Payment Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to initiate payment'
+        });
+    }
+};
+
+const verifyPayment = async (req, res) => {
+    try {
+        const {
+            orderId,
+            razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature
+        } = req.body;
+
+        // Verify signature
+        const body = razorpay_order_id + "|" + razorpay_payment_id;
+        const expectedSignature = crypto
+            .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+            .update(body.toString())
+            .digest("hex");
+
+        if (expectedSignature !== razorpay_signature) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid payment signature'
+            });
+        }
+
+        // Update order
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        order.paymentStatus = 'paid';
+        order.paymentDetails = {
+            razorpay_payment_id,
+            razorpay_order_id,
+            razorpay_signature
+        };
+
+        await order.save();
+
+        res.json({
+            success: true,
+            message: 'Payment verified successfully'
+        });
+
+    } catch (error) {
+        console.error('Payment Verification Error:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Payment verification failed'
+        });
+    }
+};
+
+
+
+const generateOrderPDF = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        const order = await Order.findOne({
+            $or: [{ _id: orderId }, { orderId: orderId }],
+            userId: req.user._id
+        }).populate({
+            path: 'items.productId',
+            select: 'productName variants category',
+            populate: { path: 'category', select: 'name' }
+        });
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        const doc = new PDFDocument({
+            size: 'A4',
+            margins: { top: 50, bottom: 50, left: 50, right: 50 },
+            bufferPages: true
+        });
+
+        const filename = `order-${order.orderId}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        doc.pipe(res);
+
+        // Header
+        doc.fontSize(24)
+           .fillColor('#333333')
+           .text('E-Commerce Store', { align: 'center' })
+           .moveDown(0.5);
+
+        doc.fontSize(18)
+           .fillColor('#0066cc')
+           .text('Order Summary', { align: 'center' })
+           .moveDown(1);
+
+        const startY = doc.y;
+
+        // Payment Details Box (First Box)
+        doc.rect(50, startY, 512, 80)
+           .stroke('#cccccc');
+
+        doc.fillColor('#f0f0f0')
+           .rect(50, startY, 512, 30)
+           .fill();
+
+        doc.fillColor('#000000')
+           .fontSize(12)
+           .text('Payment Details', 60, startY + 8);
+
+        doc.fontSize(10)
+           .text(`Payment Method: ${order.paymentMethod}`, 60, startY + 40)
+           .text(`Payment Status: ${order.paymentStatus.toUpperCase()}`, 60, startY + 60);
+
+        // Order Details Box (Second Box)
+        const orderStartY = startY + 100;
+        doc.rect(50, orderStartY, 512, 80)
+           .stroke('#cccccc');
+
+        doc.fillColor('#f0f0f0')
+           .rect(50, orderStartY, 512, 30)
+           .fill();
+
+        doc.fillColor('#000000')
+           .fontSize(12)
+           .text('Order Details', 60, orderStartY + 8);
+
+        doc.fontSize(10)
+           .text(`Order Number: #${order.orderId}`, 60, orderStartY + 40)
+           .text(`Order Date: ${new Date(order.createdAt).toLocaleString()}`, 60, orderStartY + 60);
+
+        // Shipping Information Box
+        const shippingY = orderStartY + 100;
+        doc.rect(50, shippingY, 512, 120)
+           .stroke('#cccccc');
+
+        doc.fillColor('#f0f0f0')
+           .rect(50, shippingY, 512, 30)
+           .fill();
+
+        doc.fillColor('#000000')
+           .fontSize(12)
+           .text('Shipping Information', 60, shippingY + 8);
+
+        doc.fontSize(10)
+           .text(`Name: ${order.shippingAddress.name}`, 60, shippingY + 40)
+           .text(`Address Type: ${order.shippingAddress.addressType}`, 60, shippingY + 55)
+           .text(`Phone: ${order.shippingAddress.phone}`, 60, shippingY + 70)
+           .text(`Landmark: ${order.shippingAddress.landmark}`, 60, shippingY + 85)
+           .text(`${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}`, 60, shippingY + 100);
+
+        // Products table
+        doc.moveDown(4);
+        const tableTop = shippingY + 140;
+        const tableHeaders = ['Product Image', 'Product Details', 'Price', 'Quantity', 'Total'];
+        const columnWidths = [100, 200, 70, 70, 80];
+
+        // Table header background
+        doc.fillColor('#f0f0f0')
+           .rect(50, tableTop - 5, doc.page.width - 100, 25)
+           .fill();
+
+        // Table headers
+        let xPos = 50;
+        doc.fillColor('#000000');
+        tableHeaders.forEach((header, i) => {
+            doc.fontSize(10)
+               .text(header, xPos, tableTop, {
+                   width: columnWidths[i],
+                   align: 'left'
+               });
+            xPos += columnWidths[i];
+        });
+
+        // Draw items
+        let yPos = tableTop + 30;
+        for (const item of order.items) {
+            const itemHeight = 80;
+
+            if (yPos + itemHeight > doc.page.height - 150) {
+                doc.addPage();
+                yPos = 50;
+            }
+
+            try {
+                const imagePath = path.join(__dirname, '../../public/uploads/product-images/',
+                    item.productId.variants.find(v => v.color === item.color)?.images[0]?.filename || 'placeholder.jpg'
+                );
+                if (fs.existsSync(imagePath)) {
+                    doc.image(imagePath, 50, yPos, {
+                        width: 60,
+                        height: 60,
+                        fit: [60, 60]
+                    });
+                }
+            } catch (error) {
+                console.error('Error adding image:', error);
+            }
+
+            doc.fontSize(10)
+               .text(item.productId.productName,
+                    150, yPos, { width: columnWidths[1] })
+               .text(`Color: ${item.color}`,
+                    150, yPos + 20)
+               .text(`Size: ${item.size}`,
+                    150, yPos + 35)
+               .text(`Category: ${item.productId.category?.name || 'Uncategorized'}`,
+                    150, yPos + 50);
+
+            doc.text(item.price.toString(),
+                    350, yPos, { width: columnWidths[2] })
+               .text(item.quantity.toString(),
+                    420, yPos, { width: columnWidths[3] })
+               .text(item.totalPrice.toString(),
+                    490, yPos, { width: columnWidths[4] });
+
+            yPos += itemHeight;
+        }
+
+        // Order summary box
+        doc.moveDown(2);
+        const summaryStartY = doc.y;
+        doc.rect(400, summaryStartY, 150, 120)
+           .fillAndStroke('#f8f9fa', '#dee2e6');
+
+        doc.fontSize(12)
+           .fillColor('#000000')
+           .text('Order Summary', 410, summaryStartY + 10);
+
+        const summaryItems = [
+            { label: 'Subtotal:', value: order.subtotal },
+            { label: 'Shipping:', value: order.shippingCost }
+        ];
+
+        if (order.couponApplied && order.couponApplied.discountAmount) {
+            summaryItems.push({
+                label: 'Coupon Discount:',
+                value: -order.couponApplied.discountAmount
+            });
+        }
+
+        summaryItems.push({ 
+            label: 'Total Amount:', 
+            value: order.total,
+            isBold: true
+        });
+
+        let summaryY = summaryStartY + 40;
+        summaryItems.forEach(item => {
+            if (item.isBold) {
+                doc.fontSize(12).font('Helvetica-Bold');
+            } else {
+                doc.fontSize(10).font('Helvetica');
+            }
+
+            doc.text(item.label, 410, summaryY)
+               .text(item.value.toString(), 490, summaryY, { align: 'right' });
+            
+            summaryY += 20;
+        });
+
+        // Footer
+        const pageCount = doc.bufferedPageRange().count;
+        for (let i = 0; i < pageCount; i++) {
+            doc.switchToPage(i);
+            
+            doc.moveTo(50, doc.page.height - 70)
+               .lineTo(doc.page.width - 50, doc.page.height - 70)
+               .stroke('#cccccc');
+
+            doc.fontSize(8)
+               .fillColor('#666666')
+               .text(
+                   `Generated on ${new Date().toLocaleString()}`,
+                   50,
+                   doc.page.height - 50,
+                   { align: 'center' }
+               )
+               .text(
+                   `Page ${i + 1} of ${pageCount}`,
+                   50,
+                   doc.page.height - 35,
+                   { align: 'center' }
+               );
+        }
+
+        doc.end();
+
+    } catch (error) {
+        console.error('PDF Generation Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating PDF'
+        });
     }
 };
 
@@ -876,43 +1226,6 @@ const cancelEntireOrder = async (req, res) => {
 };
 
 
-const getWallet = async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 10;
-        const skip = (page - 1) * limit;
-
-        let wallet = await Wallet.findOne({ userId: req.user._id });
-        if (!wallet) {
-            wallet = new Wallet({ userId: req.user._id });
-            await wallet.save();
-        }
-
-        // Get total count for pagination
-        const totalTransactions = wallet.transactions.length;
-        const totalPages = Math.ceil(totalTransactions / limit);
-
-        // Get paginated transactions
-        const transactions = wallet.transactions
-            .sort((a, b) => b.createdAt - a.createdAt)
-            .slice(skip, skip + limit);
-
-        res.render('userProfile', {
-            user: req.user,
-            activeSection: 'wallet',
-            wallet,
-            transactions,
-            currentPage: page,
-            totalPages,
-            totalTransactions
-        });
-    } catch (error) {
-        console.error('Error fetching wallet:', error);
-        res.status(500).render('error', { message: 'Error fetching wallet details' });
-    }
-};
-  
-
 
 const returnOrderItem = async (req, res) => {
     try {
@@ -995,6 +1308,46 @@ const returnOrderItem = async (req, res) => {
 };
 
 
+const getWallet = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = 10;
+        const skip = (page - 1) * limit;
+
+        let wallet = await Wallet.findOne({ userId: req.user._id });
+        if (!wallet) {
+            wallet = new Wallet({ userId: req.user._id });
+            await wallet.save();
+        }
+
+        // Get total count for pagination
+        const totalTransactions = wallet.transactions.length;
+        const totalPages = Math.ceil(totalTransactions / limit);
+
+        // Get paginated transactions
+        const transactions = wallet.transactions
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .slice(skip, skip + limit);
+
+        res.render('userProfile', {
+            user: req.user,
+            activeSection: 'wallet',
+            wallet,
+            transactions,
+            currentPage: page,
+            totalPages,
+            totalTransactions
+        });
+    } catch (error) {
+        console.error('Error fetching wallet:', error);
+        res.status(500).render('error', { message: 'Error fetching wallet details' });
+    }
+};
+  
+
+
+
+
 
 module.exports = {
     getUserProfile,
@@ -1011,12 +1364,14 @@ module.exports = {
     getEditProfile,
     getChangePasswordPage,
     getUserOrders,
+    generateOrderPDF,
+    retryPayment,
+    verifyPayment,
     getOrderDetails,
     cancelOrderItem,
     cancelEntireOrder,
-    getWallet,
     returnOrderItem,
-
-
+    getWallet,
+    
 
 };

@@ -1403,6 +1403,10 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
     const addAddressForm = document.querySelector('.address-form');
     
     if (addAddressForm) {
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const fromCheckout = urlParams.get('from') === 'checkout';
+
         // Validation functions
         const validators = {
             name: (value) => {
@@ -1516,24 +1520,20 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
             }
         });
 
-        addAddressForm.addEventListener('submit', async (e) => {
+         addAddressForm.addEventListener('submit', async (e) => {
             e.preventDefault();
 
-            // Validate all fields before submission
+            // Validate all fields
             let isFormValid = true;
             fields.forEach(field => {
                 const input = document.getElementById(field.id);
                 if (input) {
-                    // Check if field is empty
                     if (!input.value.trim()) {
                         input.classList.add('is-invalid');
                         createErrorMessage(input, `${input.labels[0].textContent} is required`);
                         isFormValid = false;
-                    } else {
-                        // If not empty, run normal validator
-                        if (!validateField(input, field.validator)) {
-                            isFormValid = false;
-                        }
+                    } else if (!validateField(input, field.validator)) {
+                        isFormValid = false;
                     }
                 }
             });
@@ -1592,7 +1592,12 @@ document.getElementById('changePasswordForm')?.addEventListener('submit', async 
                         showConfirmButton: false,
                         timer: 1500
                     }).then(() => {
-                        window.location.href = '/profile/addresses';
+                        // Redirect based on where the user came from
+                        if (fromCheckout) {
+                            window.location.href = '/checkout';
+                        } else {
+                            window.location.href = '/profile/addresses';
+                        }
                     });
                 } else {
                     Swal.fire({

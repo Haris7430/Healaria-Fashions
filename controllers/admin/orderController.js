@@ -6,6 +6,10 @@ const User = require('../../models/userSchema');
 const Product= require('../../models/productSchema')
 const Address= require('../../models/addressSchema')
 const Wallet = require('../../models/walletSchema');
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+
 
 /// controllers/orderController.js
 const listOrders = async (req, res) => {
@@ -615,6 +619,162 @@ const getReturnRequestDetails = async (req, res) => {
 };
 
 
+
+
+
+
+const downloadInvoice = async (req, res) => {
+    try {
+        const { orderId } = req.params;
+        
+        const order = await Order.findOne({ orderId })
+            .populate('userId')
+            .populate({
+                path: 'items.productId',
+                populate: {
+                    path: 'category',
+                    model: 'Category'
+                }
+            });
+
+        if (!order) {
+            return res.status(404).send('Order not found');
+        }
+
+        // Create PDF document with adjusted margins
+        const doc = new PDFDocument({ margin: 50 });
+
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice-${orderId}.pdf`);
+
+        // Pipe PDF to response
+        doc.pipe(res);
+
+        // Helper function to format currency (without the small number)
+        const formatCurrency = (amount) => {
+            return `Rs ${amount.toFixed(2)}`;
+        };
+
+        // Helper function to truncate product name
+        const formatProductName = (name) => {
+            if (name.length > 30) {
+                return name.substring(0, 30) + '...';
+            }
+            return name;
+        };
+
+        // Add company info with adjusted positioning
+        doc.fontSize(20).text('Helaria Fashions', 50, 50);
+        doc.fontSize(10)
+           .text('123 Business Street', 50, 80)
+           .text('Palakkad, Kerala, 678342', 50, 95)
+           .text('Phone: (123) 456-7890', 50, 110)
+           .text('Email: helariafashions@gmail.com', 50, 125);
+
+        // Add invoice title and details with adjusted positioning
+        doc.fontSize(20)
+           .text('INVOICE', 350, 50);
+
+        doc.fontSize(10)
+           .text(`Invoice Number: ${order.orderId}`, 350, 80)
+           .text(`Date: ${order.createdAt.toLocaleDateString()}`, 350, 95)
+           .text(`Payment Status: ${order.paymentStatus.toUpperCase()}`, 350, 110);
+
+        // Add customer info
+        doc.fontSize(14)
+           .text('Bill To:', 50, 170);
+        
+        doc.fontSize(10)
+           .text(order.shippingAddress.name, 50, 190)
+           .text(order.shippingAddress.landmark, 50, 205)
+           .text(`${order.shippingAddress.city}, ${order.shippingAddress.state}`, 50, 220)
+           .text(`PIN: ${order.shippingAddress.pincode}`, 50, 235)
+           .text(`Phone: ${order.shippingAddress.phone}`, 50, 250);
+
+        // Table header with adjusted column spacing
+        let y = 300;
+        const columns = {
+            item: { x: 50, width: 200 },
+            color: { x: 250, width: 80 },
+            size: { x: 330, width: 40 },
+            qty: { x: 370, width: 40 },
+            price: { x: 410, width: 70 },
+            total: { x: 480, width: 70 }
+        };
+
+        // Table headers
+        doc.fontSize(10)
+           .text('Item', columns.item.x, y)
+           .text('Color', columns.color.x, y)
+           .text('Size', columns.size.x, y)
+           .text('Qty', columns.qty.x, y)
+           .text('Price', columns.price.x, y)
+           .text('Total', columns.total.x, y);
+
+        // Add line below headers
+        y += 15;
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        y += 15;
+
+        // Add items
+        for (const item of order.items) {
+            const productName = formatProductName(item.productId.productName);
+            
+            doc.text(productName, columns.item.x, y, { width: columns.item.width })
+               .text(item.color, columns.color.x, y)
+               .text(item.size.toString(), columns.size.x, y)
+               .text(item.quantity.toString(), columns.qty.x, y)
+               .text(formatCurrency(item.price), columns.price.x, y)
+               .text(formatCurrency(item.totalPrice), columns.total.x, y);
+
+            y += 40;
+        }
+
+        // Add line after items
+        doc.moveTo(50, y).lineTo(550, y).stroke();
+        y += 20;
+
+        // Add totals with adjusted positioning
+        const totalStartX = 350;
+        const valueStartX = 480;
+
+        doc.text('Subtotal:', totalStartX, y)
+           .text(formatCurrency(order.subtotal), valueStartX, y);
+        y += 20;
+
+        doc.text('Shipping:', totalStartX, y)
+           .text(formatCurrency(order.shippingCost), valueStartX, y);
+        y += 20;
+
+        if (order.couponApplied && order.couponApplied.code) {
+            doc.text(`Discount (${order.couponApplied.code}):`, totalStartX, y)
+               .text(`-${formatCurrency(order.couponApplied.discountAmount)}`, valueStartX, y);
+            y += 20;
+        }
+
+        // Total with bold formatting
+        doc.fontSize(12)
+           .font('Helvetica-Bold')
+           .text('Total:', totalStartX, y)
+           .text(formatCurrency(order.total), valueStartX, y);
+
+        // Add footer
+        doc.fontSize(10)
+           .font('Helvetica')
+           .text('Thank you for your business!', 50, y + 50)
+           .text('For any queries, please contact our support team.', 50, y + 65);
+
+        // Finalize PDF
+        doc.end();
+
+    } catch (error) {
+        console.error('Error generating invoice:', error);
+        res.status(500).send('Error generating invoice');
+    }
+};
+
+
 module.exports= {
     listOrders,
     orderDetails,
@@ -625,4 +785,5 @@ module.exports= {
     handleReturnRequest,
     cancelOrderItem,
     getReturnRequestDetails,
+    downloadInvoice
 }

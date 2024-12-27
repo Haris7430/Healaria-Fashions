@@ -12,11 +12,9 @@ const Wallet = require('../../models/walletSchema');
 
 const getCheckoutPage = async (req, res) => {
     try {
-        // Fetch user's addresses
         const userAddress = await Address.findOne({ userId: req.user._id });
         const addresses = userAddress ? userAddress.address : [];
 
-        // Get cart items from database with full product details
         const cart = await Cart.findOne({ userId: req.user._id })
             .populate({
                 path: 'items.productId',
@@ -28,7 +26,6 @@ const getCheckoutPage = async (req, res) => {
             });
 
         const cartItems = cart ? cart.items.map(item => {
-            // Find the specific variant for the cart item
             const product = item.productId;
             const variant = product.variants.find(v => 
                 v._id.toString() === item.variantId.toString()
@@ -50,9 +47,9 @@ const getCheckoutPage = async (req, res) => {
             };
         }) : [];
 
-        // Calculate totals
+        // Update shipping cost to ₹50
+        const shippingCost = 50;
         const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const shippingCost = 0; // Free shipping
         const total = subtotal + shippingCost;
 
         res.render('userCheckout', {
@@ -61,6 +58,7 @@ const getCheckoutPage = async (req, res) => {
             subtotal,
             shippingCost,
             total,
+            codLimit: 1000, // Add COD limit
             user: req.user
         });
     } catch (error) {
@@ -127,6 +125,7 @@ const checkWalletBalance = async (req, res) => {
 const createOrder = async (req, res) => {
     try {
         const { addressId, paymentMethod, couponCode } = req.body;
+        const shippingCost = 50;
 
         // Validate address
         const userAddress = await Address.findOne({ userId: req.user._id });
@@ -157,7 +156,7 @@ const createOrder = async (req, res) => {
         const subtotal = Math.round(cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0));
         let discountAmount = 0;
         let couponDetails = null;
-        const shippingCost = 0;
+        
 
         // Apply coupon if provided
         if (couponCode) {
@@ -181,6 +180,8 @@ const createOrder = async (req, res) => {
         // Calculate final total
         const total = Math.round(subtotal + shippingCost - discountAmount);
 
+        
+        
         // Create new order
         const newOrder = new Order({
             userId: req.user._id,
@@ -451,6 +452,44 @@ const getOrderSummary = async (req, res) => {
 };
 
 
+
+const initiatePayment = async (req, res) => {
+    try {
+        const { orderId, amount } = req.body;
+
+        // Create Razorpay order
+        const instance = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET
+        });
+
+        const options = {
+            amount: Math.round(amount * 100), // Convert to paise
+            currency: 'INR',
+            receipt: orderId,
+            notes: {
+                orderId: orderId
+            }
+        };
+
+        const razorpayOrder = await instance.orders.create(options);
+
+        res.status(200).json({
+            success: true,
+            razorpayOrderId: razorpayOrder.id
+        });
+
+    } catch (error) {
+        console.error('Error initiating payment:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error initiating payment'
+        });
+    }
+};
+
+
+
 const validateCoupon = async (req, res) => {
     try {
         const { couponCode, subtotal } = req.body;
@@ -566,6 +605,7 @@ module.exports = {
     createOrder,
     verifyPayment,
     getOrderSummary,
+    initiatePayment,
     validateCoupon,
     getAvailableCoupons,
     checkWalletBalance,

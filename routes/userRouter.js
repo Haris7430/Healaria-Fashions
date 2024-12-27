@@ -63,6 +63,7 @@ router.post('/check-cart-item', userAuth, userCartController.checkCartItem);
 router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
 router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
 router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
+router.post('/checkout/initiate-payment', userAuth, checkoutController.initiatePayment);
 router.get('/checkout/available-coupons', userAuth, checkoutController.getAvailableCoupons);
 router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCoupon);
 router.post('/verify-payment',userAuth,checkoutController.verifyPayment);
@@ -85,9 +86,10 @@ router.get('/profile/orders', userAuth,userProfileController.getUserOrders);
 router.get('/order/:orderId', userAuth,userProfileController.getOrderDetails);
 router.post('/order/:orderId/cancel-item/:itemId', userAuth, userProfileController.cancelOrderItem);
 router.post('/order/:orderId/cancel-order', userAuth, userProfileController.cancelEntireOrder);
-// Add to your routes
-router.get('/profile/wallet', userAuth, userProfileController.getWallet);
+router.get('/order/:orderId/download-pdf', userAuth, userProfileController.generateOrderPDF);
+router.post('/order/:orderId/retry-payment', userAuth, userProfileController.retryPayment);
 router.post('/order/:orderId/return-item/:itemId', userAuth, userProfileController.returnOrderItem);
+router.get('/profile/wallet', userAuth, userProfileController.getWallet);
 
 
 

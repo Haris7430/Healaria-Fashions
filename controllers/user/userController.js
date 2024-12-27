@@ -522,8 +522,8 @@ const searchProducts = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = 9;
         const skip = (page - 1) * limit;
-        const categoryFilter = req.query.category; // Get category filter
-        const globalSearch = req.query.globalSearch === 'true'; // Check if global search is enabled
+        const categoryFilter = req.query.category;
+        const globalSearch = req.query.globalSearch === 'true';
 
         // Create a base query
         const query = {
@@ -531,17 +531,13 @@ const searchProducts = async (req, res) => {
             productName: { $regex: searchTerm, $options: 'i' }
         };
 
-        // If a specific category is selected
-        if (categoryFilter) {
+        // Handle category filtering
+        if (categoryFilter && categoryFilter !== '') {
             const selectedCategory = await Category.findOne({ name: categoryFilter });
             if (selectedCategory) {
-                // If not global search, strictly match the selected category
                 if (!globalSearch) {
+                    // If not global search, strictly match the selected category
                     query.category = selectedCategory._id;
-                } else {
-                    // If global search, include all categories
-                    const categories = await Category.find({ isListed: true });
-                    query.category = { $in: categories.map(cat => cat._id) };
                 }
             }
         }
@@ -550,66 +546,69 @@ const searchProducts = async (req, res) => {
         const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Find products matching the search term
+        // Find products matching the criteria
         let products = await Product.find(query)
             .populate('category')
             .skip(skip)
             .limit(limit)
             .lean();
 
-        // Process products to get first image
-        products = products.map(product => {
-            const firstImage = product.variants.reduce((img, variant) => {
-                if (!img && variant.images && variant.images.length > 0) {
-                    return variant.images[0].filename;
-                }
-                return img;
-            }, null);
+        // Process products to include necessary information
+        products = await Promise.all(products.map(async (product) => {
+            // Find applicable offers
+            const offers = await Offer.find({
+                $or: [
+                    { offerType: 'product', productIds: product._id },
+                    { offerType: 'category', categoryIds: product.category._id }
+                ],
+                status: 'active',
+                expireDate: { $gte: new Date() }
+            });
+
+            // Calculate best offer
+            let bestOffer = null;
+            let offerPercentage = 0;
+
+            if (offers.length > 0) {
+                bestOffer = offers.reduce((max, offer) => 
+                    offer.discount > max.discount ? offer : max
+                );
+                offerPercentage = bestOffer.discount;
+            }
 
             return {
                 ...product,
-                productImages: [firstImage || 'default-image.jpg']
+                offerPercentage
             };
-        });
+        }));
 
-        // Get all categories for the filter
-        const categories = await Category.find({ isListed: true });
-
-        // Prepare pagination data
-        const pagination = {
-            currentPage: page,
-            totalPages: totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-            pages: Array.from({ length: totalPages }, (_, i) => i + 1)
-        };
-
-        // Determine no products message
+        // Prepare the response message
         let noProductsMessage = '';
         if (products.length === 0) {
             if (categoryFilter && !globalSearch) {
                 noProductsMessage = `No products found for "${searchTerm}" in the "${categoryFilter}" category. 
-                Check the global search option to search across all categories.`;
+                    Check the global search option to search across all categories.`;
             } else {
                 noProductsMessage = `No products found for "${searchTerm}".`;
             }
         }
 
-        // Render search results
-        res.render('shop-page', {
-            products: products,
-            pagination: pagination,
-            currentSort: 'default',
-            searchTerm: searchTerm,
-            currentCategory: categoryFilter || '',
-            categories: categories,
-            globalSearch: globalSearch,
-            noProductsMessage: noProductsMessage
+        // Send JSON response
+        res.json({
+            products,
+            pagination: {
+                currentPage: page,
+                totalPages,
+                hasNext: page < totalPages,
+                hasPrev: page > 1
+            },
+            noProductsMessage,
+            searchTerm
         });
 
     } catch (error) {
         console.error('Search Products Error:', error);
-        res.status(500).send('Server Error during search');
+        res.status(500).json({ error: 'Server Error during search' });
     }
 };
 

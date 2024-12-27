@@ -37,8 +37,16 @@
                             <div class="card-body">
                                 <p><strong>Payment Method:</strong> <%= order.paymentMethod.toUpperCase() %></p>
                                 <p><strong>Payment Status:</strong> 
-                                    <span class="badge bg-success">Completed</span>
+                                    <span class="badge bg-<%= order.paymentStatus === 'paid' ? 'success' : 
+                                                            order.paymentStatus === 'pending' ? 'warning' : 'danger' %>">
+                                        <%= order.paymentStatus.charAt(0).toUpperCase() + order.paymentStatus.slice(1) %>
+                                    </span>
                                 </p>
+                                <% if (order.paymentStatus === 'failed' && order.paymentMethod === 'RazorPay') { %>
+                                    <button class="btn btn-primary mt-2" id="retry-payment">
+                                        Try Payment Again
+                                    </button>
+                                <% } %>
                             </div>
                         </div>
                     </div>
@@ -88,23 +96,29 @@
                                 </thead>
                                 <tbody>
                                     <% orderItems.forEach(item => { %>
-                                        <tr>
-                                            <td>
-                                                <a href="/productDetails?id=<%= item.productId %>">
-                                                    <img
-                                                        src="/uploads/product-images/<%= 
-                                                            item.product.variants.find(v => 
-                                                                v.color === item.color && 
-                                                                v.images && v.images.length > 0
-                                                            )?.images[0]?.filename || 'placeholder.jpg' 
-                                                        %>"
-                                                        alt="<%= item.product.productName %>"
-                                                        class="img-thumbnail"
-                                                        style="width: 50px; height: 50px; object-fit: cover;"
-                                                    />
-                                                </a>
-                                            </td>
-                                            <td><%= item.product.productName %></td>
+                                        <tr> <td>
+                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-link" 
+                                               data-product-id="<%= item.productId._id %>">
+                                                <img
+                                                    src="/uploads/product-images/<%= 
+                                                        item.product.variants.find(v => 
+                                                            v.color === item.color && 
+                                                            v.images && v.images.length > 0
+                                                        )?.images[0]?.filename || 'placeholder.jpg' 
+                                                    %>"
+                                                    alt="<%= item.product.productName %>"
+                                                    class="img-thumbnail product-image"
+                                                    style="width: 50px; height: 50px; object-fit: cover;"
+                                                    data-product-id="<%= item.productId._id %>"
+                                                />
+                                            </a>
+                                        </td>
+                                        <td>
+                                            <a href="/productDetails?id=<%= item.productId._id %>" class="product-link"
+                                               data-product-id="<%= item.productId._id %>">
+                                                <%= item.product.productName %>
+                                            </a>
+                                        </td>
                                             <td><%= item.color %></td>
                                             <td><%= item.size %></td>
                                             <td><%= item.product.category?.name || 'Uncategorized' %></td>
@@ -173,11 +187,6 @@
                                     <span>Subtotal:</span>
                                     <span>₹<%= order.subtotal %></span>
                                 </div>
-
-                                <div class="d-flex justify-content-between">
-                                    <span>Product Discount:</span>
-                                    <span>-₹<%= order.discountAmount || 0 %></span>
-                                </div>
                                 <% if (order.couponApplied && order.couponApplied.discountAmount) { %>
                                 <div class="d-flex justify-content-between">
                                     <span>Coupon Discount:</span>
@@ -185,17 +194,16 @@
                                 </div>
                                 <% } %>
                                 <div class="d-flex justify-content-between">
-                                    <span>Total Discount:</span>
-                                    <span>-₹<%= order.totalDiscount %></span>
-                                </div>
-
-                                <div class="d-flex justify-content-between">
                                     <span>Shipping:</span>
-                                    <span>₹<%= order.shippingCost %></span>
+                                    <span>₹50</span>
                                 </div>
                                 <div class="d-flex justify-content-between fw-bold">
                                     <span>Total:</span>
-                                    <span>₹<%= order.total %></span>
+                                    <span>₹<%= 
+                                        (order.subtotal - 
+                                        (order.couponApplied ? order.couponApplied.discountAmount : 0) + 
+                                        50).toFixed(2) 
+                                    %></span>
                                 </div>
                             </div>
                         </div>
@@ -205,6 +213,9 @@
                 
                 <div class="mt-3 d-flex justify-content-between">
                     <a href="/profile/orders" class="btn btn-secondary">Back to Orders</a>
+                    <% if (order.status === 'delivered') { %>
+                        <button id="downloadPDF" class="btn btn-primary">Download Order Summary</button>
+                    <% } %>
                     <% if (order.status !== 'cancelled' && order.status !== 'delivered') { %>
                         <button id="cancel-entire-order" class="btn btn-danger">Cancel Entire Order</button>
                     <% } %>
@@ -256,6 +267,8 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
 
 
 <script>
@@ -436,6 +449,116 @@
         });
     }
 });
+
+
+
+ // Add click handler for product images and names
+ document.querySelectorAll('.product-link, .product-image').forEach(element => {
+            element.addEventListener('click', (e) => {
+                if (!e.target.closest('.pdf-view')) {
+                    const productId = e.currentTarget.getAttribute('data-product-id');
+                    window.location.href = `/productDetails?id=${productId}`;
+                }
+            });
+        });
+
+
+
+        document.getElementById('retry-payment')?.addEventListener('click', async () => {
+    try {
+        const orderId = '<%= order._id %>';
+        const response = await fetch(`/order/${orderId}/retry-payment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.message);
+        }
+
+        const options = {
+            key: '<%= process.env.RAZORPAY_KEY_ID %>',
+            amount: data.amount,
+            currency: data.currency,
+            name: 'Your Store Name',
+            description: 'Order Payment',
+            order_id: data.orderId,
+            handler: async function (response) {
+                try {
+                    const verifyResponse = await fetch('/verify-payment', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            orderId: orderId,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature
+                        })
+                    });
+
+                    const verifyData = await verifyResponse.json();
+                    if (verifyData.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Payment Successful',
+                            text: 'Your payment has been processed successfully!'
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        throw new Error(verifyData.message);
+                    }
+                } catch (error) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Payment Verification Failed',
+                        text: error.message
+                    });
+                }
+            },
+            prefill: {
+                name: '<%= order.shippingAddress.name %>',
+                contact: '<%= order.shippingAddress.phone %>'
+            },
+            theme: {
+                color: '#3399cc'
+            }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Failed to initiate payment'
+        });
+    }
+});
+
+
+
+ // Add PDF download functionality
+ document.getElementById('downloadPDF')?.addEventListener('click', async () => {
+    try {
+        const orderId = '<%= order._id %>';
+        window.location.href = `/order/${orderId}/download-pdf`;
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to download PDF'
+        });
+    }
+});
+
+
 });
     </script>
 

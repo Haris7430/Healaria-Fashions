@@ -1,6 +1,42 @@
+
+<style>
+    .retry-payment-btn {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-top: 10px;
+        transition: background-color 0.3s ease;
+    }
+
+    .retry-payment-btn:hover {
+        background-color: #218838;
+    }
+
+    .payment-status {
+        text-transform: uppercase;
+        font-weight: bold;
+    }
+
+    .payment-status:contains('failed') {
+        color: #dc3545;
+    }
+
+    .payment-status:contains('paid') {
+        color: #28a745;
+    }
+
+    .payment-status:contains('pending') {
+        color: #ffc107;
+    }
+</style>
+
+
+
 <style>
 
-    
 /* General Styles */
 body {
     background-color: #f7f8fc;
@@ -168,6 +204,33 @@ body {
 }
 </style>
 
+
+<style>
+    /* Add these styles for the payment status badge */
+    .status-failed {
+        background-color: #dc3545;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+    
+    #retryPayment {
+        background-color: #28a745;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+    }
+    
+    #retryPayment:hover {
+        background-color: #218838;
+    }
+    </style>
+    
+
 <!-- Order Summary Section -->
 <div class="order-summary-container">
     <!-- Order Header -->
@@ -230,42 +293,157 @@ body {
                 Wallet Payment
             <% } %>
         </p>
-        <p><strong>Status:</strong> <%= order.paymentStatus %></p>
+        <p><strong>Status:</strong> <span class="payment-status"><%= order.paymentStatus %></span></p>
         <% if (order.walletAmountUsed > 0) { %>
             <p><strong>Wallet Amount Used:</strong> ₹<%= order.walletAmountUsed.toFixed(2) %></p>
         <% } %>
+        
+        <% if (order.paymentStatus === 'failed' && order.paymentMethod === 'RazorPay') { %>
+            <button onclick="retryPayment()" class="retry-payment-btn">
+                Try Payment Again
+            </button>
+        <% } %>
     </div>
 
-    <!-- Order Total -->
-    <div class="total-section">
-        <div class="total-row">
-            <span>Subtotal:</span>
-            <span>₹<%= order.subtotal.toFixed(2) %></span>
-        </div>
-        <div class="total-row">
-            <span>Shipping:</span>
-            <span>₹<%= order.shippingCost.toFixed(2) %></span>
-        </div>
-        <% if (order.couponApplied && order.couponApplied.code) { %>
-        <div class="total-row">
-            <span>Coupon Applied:</span>
-            <span><%= order.couponApplied.code %> (<%= order.couponApplied.discountPercentage %>% off)</span>
-        </div>
-        <% } %>
-        <% if (order.discountAmount > 0) { %>
-        <div class="total-row">
-            <span>Coupon Discount:</span>
-            <span>-₹<%= order.discountAmount.toFixed(2) %></span>
-        </div>
-        <% } %>
-        <div class="total-row final">
-            <span>Total:</span>
-            <span>₹<%= order.total.toFixed(2) %></span>
-        </div>
+   <!-- Order Total -->
+<div class="total-section">
+    <div class="total-row">
+        <span>Subtotal:</span>
+        <span>₹<%= order.subtotal.toFixed(2) %></span>
     </div>
+    <div class="total-row">
+        <span>Shipping:</span>
+        <span>₹50.00</span><!-- Fixed shipping cost -->
+    </div>
+    <% if (order.couponApplied && order.couponApplied.code) { %>
+    <div class="total-row">
+        <span>Coupon Applied:</span>
+        <span><%= order.couponApplied.code %> (<%= order.couponApplied.discountPercentage %>% off)</span>
+    </div>
+    <% } %>
+    <% if (order.discountAmount > 0) { %>
+    <div class="total-row">
+        <span>Coupon Discount:</span>
+        <span>-₹<%= order.discountAmount.toFixed(2) %></span>
+    </div>
+    <% } %>
+    <div class="total-row final">
+        <span>Total:</span>
+        <span>₹<%= (order.subtotal + 50 - (order.discountAmount || 0)).toFixed(2) %></span>
+    </div>
+</div>
     <!-- Action Buttons -->
     <div class="action-buttons">
         <a href="/profile/orders" class="primary-btn">View All Orders</a>
         <a href="/shop-page" class="primary-btn">Continue Shopping</a>
     </div>
 </div>
+
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    async function retryPayment() {
+        try {
+            const orderId = '<%= order._id %>';
+            const amount = "<%= order.total %>";
+            
+            // Initialize payment
+            const response = await fetch('/checkout/initiate-payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    orderId: orderId,
+                    amount: amount
+                })
+            });
+    
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.message);
+            }
+    
+            // Configure Razorpay options
+            const options = {
+                key: '<%= process.env.RAZORPAY_KEY_ID %>', // This should be passed from your backend
+                amount: amount * 100, // Amount in paise
+                currency: 'INR',
+                name: 'Your Store Name',
+                description: 'Order Payment',
+                order_id: data.razorpayOrderId,
+                handler: async function (response) {
+                    try {
+                        // Verify payment
+                        const verifyResponse = await fetch('/verify-payment', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                orderId: orderId,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_signature: response.razorpay_signature
+                            })
+                        });
+    
+                        const verifyData = await verifyResponse.json();
+    
+                        if (verifyData.success) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Payment completed successfully',
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.reload();
+                            });
+                        } else {
+                            throw new Error(verifyData.message);
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            title: 'Error!',
+                            text: error.message || 'Payment verification failed',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                prefill: {
+                    name: '<%= order.shippingAddress.name %>',
+                    contact: '<%= order.shippingAddress.phone %>'
+                },
+                theme: {
+                    color: '#3399cc'
+                },
+                modal: {
+                    ondismiss: function() {
+                        Swal.fire({
+                            title: 'Payment Cancelled',
+                            text: 'You cancelled the payment process',
+                            icon: 'info',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                }
+            };
+    
+            // Initialize Razorpay
+            const razorpayInstance = new Razorpay(options);
+            razorpayInstance.open();
+    
+        } catch (error) {
+            Swal.fire({
+                title: 'Error!',
+                text: error.message || 'Failed to initiate payment',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+        }
+    }
+    </script>

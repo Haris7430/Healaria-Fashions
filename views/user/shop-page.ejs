@@ -712,110 +712,119 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 
 
 	<script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Axios-based search functionality
-            const searchForm = document.getElementById('search_input_box');
-            const searchInput = document.getElementById('search_input');
-            const resultsContainer = document.querySelector('.category-list .row');
+        // Add this code at the bottom of your shop-page.ejs file, replacing the existing search-related JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const searchForm = document.querySelector('#search_input_box form');
+    const searchInput = document.getElementById('search_input');
+    const globalSearchToggle = document.getElementById('globalSearchToggle');
+    const resultsContainer = document.querySelector('.category-list .row');
+    const currentCategory = document.querySelector('input[name="category"]:checked')?.value || '';
 
-            if (searchForm) {
-                searchForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    
-                    try {
-                        const searchTerm = searchInput.value;
-                        const response = await axios.get('/search', {
-                            params: {
-                                q: searchTerm,
-                                globalSearch: document.getElementById('globalSearchToggle')?.checked || false
+    if (searchForm) {
+        searchForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            try {
+                const searchTerm = searchInput.value;
+                const isGlobalSearch = globalSearchToggle.checked;
+                
+                // Get the current selected category
+                const selectedCategory = document.querySelector('input[name="category"]:checked')?.value || '';
+                
+                // Make the search request
+                const response = await fetch(`/search?q=${encodeURIComponent(searchTerm)}&category=${encodeURIComponent(selectedCategory)}&globalSearch=${isGlobalSearch}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('Search request failed');
+                }
+
+                const data = await response.json();
+
+                // Update the products display
+                if (data.products.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="col-12">
+                            <div class="alert alert-warning text-center">
+                                ${data.noProductsMessage || 'No products found matching your search criteria.'}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultsContainer.innerHTML = data.products.map(product => {
+                        const firstImage = product.variants.reduce((img, variant) => {
+                            if (!img && variant.images && variant.images.length > 0) {
+                                return variant.images[0].filename;
                             }
-                        });
+                            return img;
+                        }, null);
 
-                        // Update products container
-                        resultsContainer.innerHTML = response.data.products.map(product => `
+                        const offerPrice = product.offerPercentage ? 
+                            product.regularPrice * (1 - product.offerPercentage / 100) : null;
+
+                        return `
                             <div class="col-lg-4 col-md-6">
                                 <div class="single-product">
                                     <a href="/productDetails?id=${product._id}">
-                                        <img class="img-fluid" src="/uploads/product-images/${product.productImages[0]}" alt="${product.productName}">
-                                        
-                                        ${product.offerPercentage ? `
-                                            <div class="offer-badge">
-                                                ${product.offerPercentage}% OFF
-                                            </div>
-                                        ` : ''}
+                                        <div class="product-image-container" style="position: relative;">
+                                            <img class="img-fluid" 
+                                                src="/uploads/product-images/${firstImage || 'placeholder.jpg'}" 
+                                                alt="${product.productName}">
+                                            ${product.offerPercentage ? `
+                                                <div style="position: absolute; top: 10px; right: 10px; background-color: red; color: white; padding: 5px; border-radius: 3px;">
+                                                    ${product.offerPercentage}% OFF
+                                                </div>
+                                            ` : ''}
+                                        </div>
                                     </a>
                                     <div class="product-details">
-                                        ${product.productName.length > 20 
-                                            ? product.productName.substring(0, 20) + '...' 
-                                            : product.productName}
+                                        <h6>${product.productName.length > 20 ? product.productName.substring(0, 20) + '...' : product.productName}</h6>
                                         <div class="price">
-                                            ${product.offerPrice ? `
-                                                <h6 class="offer-price">$ ${product.offerPrice.toFixed(2)}</h6>
-                                                <h6 class="l-through regular-price">$ ${product.regularPrice.toFixed(2)}</h6>
+                                            ${offerPrice ? `
+                                                <h6>₹ ${Math.round(offerPrice)}</h6>
+                                                <h6 class="l-through text-muted">₹ ${product.regularPrice}</h6>
                                             ` : `
-                                                <h6>$ ${product.regularPrice.toFixed(2)}</h6>
+                                                <h6>₹ ${product.regularPrice}</h6>
                                             `}
+                                        </div>
+                                        <div class="prd-bottom">
+                                            <a href="#" class="social-info add-to-cart" data-product-id="${product._id}">
+                                                <span class="ti-bag"></span>
+                                                <p class="hover-text">add to cart</p>
+                                            </a>
+                                            <a href="#" class="social-info add-to-wishlist" data-product-id="${product._id}">
+                                                <span class="lnr lnr-heart"></span>
+                                                <p class="hover-text">Wishlist</p>
+                                            </a>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                        `).join('');
+                        `;
+                    }).join('');
+                }
 
-                        // Update pagination if needed
-                        // You might want to add logic to update pagination here
-                    } catch (error) {
-                        console.error('Search error:', error);
-                        alert('An error occurred while searching');
-                    }
+                // Update pagination if provided
+                const paginationContainer = document.querySelector('.pagination');
+                if (paginationContainer && data.pagination) {
+                    // Update pagination HTML here if needed
+                }
+
+            } catch (error) {
+                console.error('Search error:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Search Error',
+                    text: 'An error occurred while searching. Please try again.'
                 });
             }
-
-            // Axios-based sorting and filtering
-            const sortSelect = document.querySelector('select[name="sort"]');
-            const categoryRadios = document.querySelectorAll('input[name="category"]');
-
-            // Sorting handler
-            if (sortSelect) {
-                sortSelect.addEventListener('change', async function() {
-                    try {
-                        const response = await axios.get('/shop-page', {
-                            params: {
-                                sort: this.value,
-                                category: document.querySelector('input[name="category"]:checked')?.value || ''
-                            }
-                        });
-
-                        // Update products and pagination similar to search
-                        resultsContainer.innerHTML = response.data.products.map(product => `
-                            <!-- Same product rendering logic as above -->
-                        `).join('');
-                    } catch (error) {
-                        console.error('Sorting error:', error);
-                    }
-                });
-            }
-
-            // Category filtering handler
-            categoryRadios.forEach(radio => {
-                radio.addEventListener('change', async function() {
-                    try {
-                        const response = await axios.get('/shop-page', {
-                            params: {
-                                category: this.value,
-                                sort: document.querySelector('select[name="sort"]')?.value || 'default'
-                            }
-                        });
-
-                        // Update products and pagination similar to search
-                        resultsContainer.innerHTML = response.data.products.map(product => `
-                            <!-- Same product rendering logic as above -->
-                        `).join('');
-                    } catch (error) {
-                        console.error('Category filtering error:', error);
-                    }
-                });
-            });
         });
+    }
+});
     </script>
 
 

@@ -285,7 +285,7 @@ const deleteOffer = async (req, res) => {
             });
         }
 
-        res.json({ 
+        res.status(200).json({ // Added status code
             success: true, 
             message: 'Offer deleted successfully' 
         });

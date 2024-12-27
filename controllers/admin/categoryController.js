@@ -1,9 +1,10 @@
 const Category = require('../../models/categorySchema');
+const Product = require('../../models/productSchema')
 
 const categoryInfo = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 4;
+        const limit = 8;
         const skip = (page - 1) * limit;
 
         const categoryData = await Category.find({})
@@ -88,32 +89,80 @@ const editCategory = async (req, res) => {
         const id = req.params.id;
         const { name, description } = req.body;
 
+        // Validation
+        if (!name || !description) {
+            return res.status(400).json({ 
+                error: 'Name and description are required' 
+            });
+        }
+
+        if (!/^[a-zA-Z\s]+$/.test(name)) {
+            return res.status(400).json({ 
+                error: 'Category name should contain only alphabetic characters' 
+            });
+        }
+
         // Check if category name already exists (exclude the current one)
-        const existingCategory = await Category.findOne({ name, _id: { $ne: id } });
+        const existingCategory = await Category.findOne({ 
+            name: { $regex: new RegExp(`^${name}$`, 'i') }, 
+            _id: { $ne: id } 
+        });
+        
         if (existingCategory) {
-            return res.status(400).render('editCategory', { error: 'Category already exists', category: { _id: id, name, description } });
+            return res.status(400).json({ 
+                error: 'Category name already exists' 
+            });
         }
 
         // Update category
-        const updatedCategory = await Category.findByIdAndUpdate(id, {
-            name: name,
-            description: description,
-        }, { new: true });
+        const updatedCategory = await Category.findByIdAndUpdate(
+            id,
+            {
+                name: name.trim(),
+                description: description.trim(),
+            },
+            { new: true }
+        );
 
-        if (updatedCategory) {
-            // Redirect to the categories page
-            return res.redirect('/admin/category');
-        } else {
-            return res.status(404).render('editCategory', { error: 'Category not found', category: { _id: id, name, description } });
+        if (!updatedCategory) {
+            return res.status(404).json({ error: 'Category not found' });
         }
+
+        res.status(200).json({ 
+            message: 'Category updated successfully',
+            category: updatedCategory 
+        });
     } catch (error) {
-        console.log(error);
-        return res.status(500).render('editCategory', { error: 'Internal server error', category: { _id: req.params.id, name: req.body.name, description: req.body.description } });
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
     }
 };
 
 
 
+const deleteCategory = async (req, res) => {
+    try {
+        const id = req.params.id;
+        
+        // Check if category is used in any products
+        const products = await Product.find({ category: id });
+        if (products.length > 0) {
+            return res.status(400).json({ 
+                error: 'Cannot delete category as it is associated with existing products' 
+            });
+        }
+
+        const result = await Category.findByIdAndDelete(id);
+        if (!result) {
+            return res.status(404).json({ error: 'Category not found' });
+        }
+        
+        res.status(200).json({ message: 'Category deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
 
 module.exports = {
     categoryInfo,
@@ -122,6 +171,7 @@ module.exports = {
     getUnlistCategory,
     getEditCategory,
     editCategory,
+    deleteCategory,
 
 
 };

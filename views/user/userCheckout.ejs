@@ -350,68 +350,73 @@
             </button>
         </div>
 
-          <h3>Shipping Address</h3>
-          <!-- Address Selection -->
-          <div class="mb-4">
-            <select class="form-control" id="addressSelect" onchange="displayAddressDetails(this.value)">
-              <option value="">Select an existing address</option>
-              <% addresses.forEach(function(address) { %>
-              <option value="<%= address._id %>">
-                <%= address.name %> - <%= address.landmark %>, <%= address.city %>
-              </option>
-              <% }); %>
-            </select>
-
-            <!-- Enhanced Address Details Display -->
-            <div id="addressDetails" class="mt-3" style="display: none;">
-              <div class="address-details-card">
-                <div class="d-flex justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <span class="badge" id="addressType"></span>
-                    <h5 class="card-title mb-3" id="addressName"></h5>
-
-                    <div class="contact-info">
-                      <div>
-                        <span class="address-label">Phone:</span>
-                        <span id="addressPhone"></span>
-                      </div>
-                      <div>
-                        <span class="address-label">Alt Phone:</span>
-                        <span id="addressAltPhone"></span>
-                      </div>
-                    </div>
-
-                    <div class="divider"></div>
-
-                    <div class="address-info">
-                      <span class="address-label">Landmark:</span>
-                      <span id="addressLandmark"></span>
-                    </div>
-
-                    <div class="address-info">
-                      <span class="address-label">City:</span>
-                      <span id="addressCity"></span>
-                    </div>
-
-                    <div class="address-info">
-                      <span class="address-label">State:</span>
-                      <span id="addressState"></span>
-                    </div>
-
-                    <div class="address-info">
-                      <span class="address-label">Pincode:</span>
-                      <span id="addressPincode"></span>
-                    </div>
-                  </div>
+        <div class="col-lg-8">
+            <h3>Shipping Address</h3>
+            <div class="mb-4">
+                <select class="form-control" id="addressSelect" onchange="displayAddressDetails(this.value)">
+                    <option value="">Select an existing address</option>
+                    <% addresses.forEach(function(address) { %>
+                    <option value="<%= address._id %>">
+                        <%= address.name %> - <%= address.landmark %>, <%= address.city %>
+                    </option>
+                    <% }); %>
+                </select>
                 </div>
-              </div>
             </div>
-          </div>
+            <br>
+        
+                <!-- Move address details here, under the dropdown -->
+                <div id="addressDetails" class="mt-3" style="display: none;">
+                    <div class="address-details-card border rounded p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <span class="badge bg-primary" id="addressType"></span>
+                                <h5 class="card-title mb-3" id="addressName"></h5>
+        
+                                <div class="contact-info mb-2">
+                                    <div>
+                                        <span class="address-label fw-bold">Phone:</span>
+                                        <span id="addressPhone"></span>
+                                    </div>
+                                    <div>
+                                        <span class="address-label fw-bold">Alt Phone:</span>
+                                        <span id="addressAltPhone"></span>
+                                    </div>
+                                </div>
+        
+                                <div class="divider border-bottom mb-2"></div>
+        
+                                <div class="address-info mb-1">
+                                    <span class="address-label fw-bold">Landmark:</span>
+                                    <span id="addressLandmark"></span>
+                                </div>
+        
+                                <div class="address-info mb-1">
+                                    <span class="address-label fw-bold">City:</span>
+                                    <span id="addressCity"></span>
+                                </div>
+        
+                                <div class="address-info mb-1">
+                                    <span class="address-label fw-bold">State:</span>
+                                    <span id="addressState"></span>
+                                </div>
+        
+                                <div class="address-info">
+                                    <span class="address-label fw-bold">Pincode:</span>
+                                    <span id="addressPincode"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            <br> <br>
+      
 
           <!-- Add New Address Button -->
           <div class="mb-4">
             <button type="button" class="primary-btn">
-              <a href="/profile/add-address" class="add-address-btn">Add New Address</a>
+                <a href="/profile/add-address?from=checkout" class="add-address-btn">Add New Address</a>
             </button>
           </div>
         </div>
@@ -458,12 +463,19 @@
 
             <!-- Payment Options -->
             <div class="payment_item">
-              <div class="radion_btn">
-                <input type="radio" id="cod" name="payment_method" value="COD">
-                <label for="cod">Cash on Delivery</label>
-                <div class="check"></div>
-              </div>
-              <p>Pay when you receive your order.</p>
+                <div class="radion_btn">
+                    <input type="radio" id="cod" name="payment_method" value="COD" 
+                           <% if (total > 1000) { %>disabled<% } %>>
+                    <label for="cod">Cash on Delivery</label>
+                    <div class="check"></div>
+                </div>
+                <p id="codMessage">
+                    <% if (total > 1000) { %>
+                        Cash on Delivery is not available for orders above ₹1,000. Please choose another payment method.
+                    <% } else { %>
+                        Pay when you receive your order.
+                    <% } %>
+                </p>
             </div>
             <div class="payment_item">
               <div class="radion_btn">
@@ -1049,6 +1061,46 @@ async function handlePaymentFailure(orderId) {
           removeCouponBtn.addEventListener('click', removeCoupon);
       }
   });
+
+  function updateCODAvailability(total) {
+    const codInput = document.getElementById('cod');
+    const codMessage = document.getElementById('codMessage');
+    const codLimit = 1000;
+
+    if (total > codLimit) {
+        codInput.disabled = true;
+        codMessage.textContent = 'Cash on Delivery is not available for orders above ₹1,000. Please choose another payment method.';
+        
+        // If COD was selected, unselect it
+        if (codInput.checked) {
+            codInput.checked = false;
+        }
+    } else {
+        codInput.disabled = false;
+        codMessage.textContent = 'Pay when you receive your order.';
+    }
+}
+
+// Add observer for total changes
+document.addEventListener('DOMContentLoaded', () => {
+    const totalDisplay = document.getElementById('totalDisplay');
+    
+    // Initial check
+    const initialTotal = parseFloat(totalDisplay.textContent.replace('₹', ''));
+    updateCODAvailability(initialTotal);
+
+    // Observer for future changes
+    const observer = new MutationObserver(() => {
+        const newTotal = parseFloat(totalDisplay.textContent.replace('₹', ''));
+        updateCODAvailability(newTotal);
+    });
+
+    observer.observe(totalDisplay, {
+        characterData: true,
+        childList: true,
+        subtree: true
+    });
+});
   </script>
 
 <%- include("../../views/partials/user/footer/") %>

@@ -287,27 +287,12 @@ const deleteProduct = async (req, res) => {
 const getEditProduct = async (req, res) => {
     try {
         const id = req.params.id;
-        const product = await Product.findOne({_id: id}).populate('category');
-        const categories = await Category.find({}); // Change 'cat' to 'categories'
-        
-        // Create initial size-quantity pair from main product fields
-        const mainSizeQuantity = {
-            size: product.size,
-            quantity: product.quantity
-        };
-        
-        // Prepare the sizes array for the template
-        let sizesArray = [mainSizeQuantity];
-        
-        // Add variant sizes if they exist
-        if (product.variants && product.variants.length > 0) {
-            sizesArray = [...sizesArray, ...product.variants[0].sizes];
-        }
+        const product = await Product.findOne({ _id: id }).populate('category');
+        const categories = await Category.find({});
         
         res.render('editProduct', {
             product: product,
-            categories: categories, // Changed from 'cat' to 'categories'
-            sizesArray: sizesArray
+            categories: categories
         });
     } catch (error) {
         console.log(error);
@@ -316,69 +301,44 @@ const getEditProduct = async (req, res) => {
 }
 
 
+
 const editProduct = async (req, res) => {
     try {
         const id = req.params.id;
         const data = req.body;
         
-        // Convert sizes and quantities to arrays if they're not already
-        const sizes = Array.isArray(data.sizes) ? data.sizes : [data.sizes];
-        const quantities = Array.isArray(data.quantities) ? data.quantities : [data.quantities];
+        // Validate required fields
+        if (!data.productName || !data.description || !data.category || !data.regularPrice) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'All fields are required'
+            });
+        }
 
-        // The first size-quantity pair will be the main product size/quantity
-        const mainSize = Number(sizes[0]);
-        const mainQuantity = Number(quantities[0]);
-
-        // Create size-quantity pairs for variants (excluding the first pair)
-        const variantSizePairs = sizes.slice(1).map((size, index) => ({
-            size: Number(size),
-            quantity: Number(quantities[index + 1] || 0)
-        })).filter(pair => pair.size && !isNaN(pair.quantity));
+        // Validate price is a positive number
+        if (isNaN(data.regularPrice) || Number(data.regularPrice) <= 0) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Please enter a valid price'
+            });
+        }
 
         // Get category
-const category = await Category.findById(data.category);
-if (!category) {
-    return res.status(400).json({ error: 'Invalid category' });
-}
+        const category = await Category.findById(data.category);
+        if (!category) {
+            return res.status(400).json({ 
+                success: false,
+                error: 'Invalid category'
+            });
+        }
 
         // Create update fields
         const updateFields = {
-            productName: data.productName,
-            description: data.description,
+            productName: data.productName.trim(),
+            description: data.description.trim(),
             category: category._id,
-            regularPrice: data.regularPrice,
-            salesPrice: data.salePrice,
-            color: data.color,
-            size: mainSize,
-            quantity: mainQuantity
+            regularPrice: Number(data.regularPrice)
         };
-
-        // Only add variants if there are additional sizes
-        if (variantSizePairs.length > 0) {
-            updateFields.variants = [{
-                color: data.color,
-                sizes: variantSizePairs,
-                isListed: true
-            }];
-        }
-
-        // Handle image uploads
-        if (req.files && req.files.length > 0) {
-            const newImages = await Promise.all(req.files.map(async file => {
-                const filename = `${Date.now()}-${file.originalname}`;
-                const outputPath = path.join('public', 'uploads', 'product-images', filename);
-                
-                await sharp(file.buffer)
-                    .jpeg({ quality: 90 })
-                    .toFile(outputPath);
-
-                return filename;
-            }));
-
-            // Combine new images with existing ones
-            const existingProduct = await Product.findById(id);
-            updateFields.productImages = [...(existingProduct.productImages || []), ...newImages];
-        }
 
         // Update the product
         const updatedProduct = await Product.findByIdAndUpdate(
@@ -388,14 +348,24 @@ if (!category) {
         );
 
         if (!updatedProduct) {
-            return res.status(404).json({ error: 'Product not found' });
+            return res.status(404).json({ 
+                success: false,
+                error: 'Product not found'
+            });
         }
 
-        res.json({ success: true, message: 'Product updated successfully' });
+        res.json({ 
+            success: true, 
+            message: 'Product updated successfully'
+        });
 
     } catch (error) {
         console.error('Error updating product:', error);
-        res.status(500).json({ error: 'Internal server error', details: error.message });
+        res.status(500).json({ 
+            success: false,
+            error: 'Internal server error', 
+            details: error.message 
+        });
     }
 };
 

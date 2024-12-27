@@ -39,6 +39,8 @@ router.get('/listCategory', adminAuth, categoryController.getListCategory);
 router.get('/unlistCategory', adminAuth, categoryController.getUnlistCategory);
 router.get('/editCategory', adminAuth, categoryController.getEditCategory);
 router.post('/editCategory/:id', adminAuth, categoryController.editCategory);
+router.delete('/deleteCategory/:id', adminAuth, categoryController.deleteCategory);
+
 
 // Use multer middleware here
 router.get('/addProducts', adminAuth, productController.getProductAddPage);
@@ -71,6 +73,7 @@ router.post('/cancel-order/:id', adminAuth, orderController.cancelEntireOrder);
 router.post('/cancel-order-item/:orderId', adminAuth, orderController.cancelOrderItem);
 router.get('/return-request-details/:orderId', adminAuth, orderController.getReturnRequestDetails);
 router.post('/handle-return-request', adminAuth, orderController.handleReturnRequest);
+router.get('/download-invoice/:orderId', adminAuth, orderController.downloadInvoice);
 
 
 router.get('/offers',adminAuth, offerController.renderOffersPage);
