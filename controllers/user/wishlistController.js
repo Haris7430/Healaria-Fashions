@@ -382,6 +382,46 @@ const addToCartFromWishlist = async (productId, variantData) => {
     }
 };
 
+
+
+
+
+
+
+
+const checkWishlistItem = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const userId = req.session.user._id;
+
+        const wishlistItem = await Wishlist.findOne({
+            userId,
+            'items.productId': productId
+        });
+
+        res.json({ exists: !!wishlistItem });
+    } catch (error) {
+        console.error('Check wishlist item error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
+const getWishlistItems = async (req, res) => {
+    try {
+        const userId = req.session.user._id;
+        const wishlist = await Wishlist.findOne({ userId });
+        
+        if (!wishlist) {
+            return res.json([]);
+        }
+
+        res.json(wishlist.items);
+    } catch (error) {
+        console.error('Get wishlist items error:', error);
+        res.status(500).json({ error: 'Server error' });
+    }
+};
+
 module.exports = {
     addToWishlist,
     getWishlist,
@@ -389,4 +429,6 @@ module.exports = {
     clearWishlist,
     addAllToCart,
     updateWishlistVariant,
+    checkWishlistItem,
+    getWishlistItems,
 };

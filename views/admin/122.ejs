@@ -46,10 +46,10 @@ const productSchema = new Schema({
 const Product = mongoose.model("Product", productSchema);
 module.exports = Product;
 
+
+
 This is my offerSchema.js code:- 
-
 const mongoose = require("mongoose");
-
 const offerSchema = new mongoose.Schema(
   {
     offerType: {
@@ -106,57 +106,15 @@ const offerSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 const Offer = mongoose.model("Offer", offerSchema);
-
 module.exports = Offer;
 
-This is my orderSchema.js code:- 
-const mongoose = require('mongoose');
+
+This is my wishlistSchema.js code:- 
+const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-
-
-const returnRequestSchema = new Schema({
-    itemId: {
-        type: Schema.Types.ObjectId,
-        required: true
-    },
-    reason: {
-        type: String,
-        required: true
-    },
-    status: {
-        type: String,
-        enum: ['pending', 'approved', 'rejected'],
-        default: 'pending'
-    },
-    adminResponse: {
-        type: String,
-        default: null
-    },
-    customReason: {
-        type: String,
-        default: null
-    },
-    refundAmount: {
-        type: Number,
-        required: true
-    }
-}, { timestamps: true });
-
-
-const orderSchema = new Schema({
-    orderId: {
-        type: String,
-        unique: true,
-        default: function() {
-           
-            const timestamp = Date.now().toString().slice(-10);
-            const randomStr = Math.random().toString(36).substr(2, 6).toUpperCase();
-            return `ORD-${timestamp}-${randomStr}`;
-        }
-    },
+const wishlistSchema = new Schema({
     userId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
@@ -168,21 +126,53 @@ const orderSchema = new Schema({
             ref: 'Product',
             required: true
         },
-        variantId: {
-            type: Schema.Types.ObjectId,
-            ref: 'Product'
+        selectedVariant: {
+            color: String,
+            size: Number
         },
-        color: {
-            type: String,
+        addedAt: {
+            type: Date,
+            default: Date.now
+        } 
+    }]
+}, { timestamps: true });
+
+const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+module.exports = Wishlist; 
+
+
+This is my cartSchema.js code:- 
+const mongoose= require('mongoose');
+const {Schema}= mongoose;
+
+
+const cartSchema = new mongoose.Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    items: [{
+        productId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Product',
             required: true
         },
-        size: {
+        variantId: { 
+            type: Schema.Types.ObjectId,
+            default: null
+        },
+        size: {  
             type: Number,
+            required: true
+        },
+        color: {  
+            type: String,
             required: true
         },
         quantity: {
             type: Number,
-            required: true
+            default: 1
         },
         price: {
             type: Number,
@@ -194,235 +184,61 @@ const orderSchema = new Schema({
         },
         status: {
             type: String,
-            enum: ['placed', 'cancelled', 'returned', 'return_requested', 'return_rejected'],
             default: 'placed'
         },
-        returnRequest: returnRequestSchema
-    }],
-    // Embedded shipping address details
-    shippingAddress: {
-        name: {
+        cancellationReason: {
             type: String,
-            required: true,
-            trim: true
-        },
-        addressType: {
-            type: String,
-            enum: ['Home', 'Work', 'Other'],
-            required: true
-        },
-        city: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        landmark: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        state: {
-            type: String,
-            required: true,
-            trim: true
-        },
-        pincode: {
-            type: String,
-            required: true,
-            match: [/^[0-9]{6}$/, 'Please enter a valid 6-digit pincode']
-        },
-        phone: {
-            type: String,
-            required: true,
-            validate: {
-                validator: function(v) {
-                    return /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
-        },
-        altPhone: {
-            type: String,
-            validate: {
-                validator: function(v) {
-                    return v === '' || /^[1-9][0-9]{9}$/.test(v);
-                },
-                message: props => `${props.value} is not a valid phone number!`
-            }
+            default: 'none'
         }
-    },
-    paymentMethod: {
-        type: String,
-        required: true,
-        enum: ['COD', 'RazorPay', 'Wallet']  // Added Wallet
-    },
-    walletAmountUsed: {
-        type: Number,
-        default: 0
-    },
-    subtotal: {
-        type: Number,
-        required: true
-    },
-    shippingCost: {
-        type: Number,
-        required: true
-    },
-    discountAmount: {
-        type: Number,
-        default: 0
-    },
-    total: {
-        type: Number,
-        required: true
-    },
-    couponApplied: {
-        code: {
-            type: String,
-            default: null
-        },
-        discountPercentage: {
-            type: Number,
-            default: null
-        },
-        discountAmount: {
-            type: Number,
-            default: null
-        }
-    },
-    
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'paid', 'failed'],
-        default: 'pending'
-    },
-    status: {
-        type: String,
-        required: true,
-        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled']
-    },
-    paymentDetails: {
-        razorpay_payment_id: String,
-        razorpay_order_id: String,
-        razorpay_signature: String
-    },
+    }]
+});
 
-    totalDiscount: {
-        type: Number,
-        default: 0,
-        comment: 'Total discount including product discount and coupon discount'
-    }
-}, { timestamps: true });
+const Cart= mongoose.model('Cart',cartSchema)
+module.exports= Cart
 
-const Order = mongoose.model('Order', orderSchema);
-module.exports = Order;
 
 
 This is my userRouter.js code:- 
 
+const express=require('express');
+const router=express.Router();
+const userController= require("../controllers/user/userController");
+const userCartController = require('../controllers/user/userCartController');
+const userProfileController = require('../controllers/user/userProfileController');
+const checkoutController = require('../controllers/user/checkOutController')
+const wishlistController = require('../controllers/user/wishlistController')
+const { userAuth, adminAuth } = require('../middleware/auth');
+const passport = require('passport');
+
 router.get('/search', userController.searchProducts);
+
 router.get('/shop-page', userController.shopingPage);
 router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
+router.get('/product/:productId/variant/first', userAuth, userController.getVariantDetails);
+router.get('/check-auth', userAuth, (req, res) => res.status(200).json({ authenticated: true }));
+router.get('/product/:productId', userController.getProductForCart);
+router.get('/product/:productId/offers', userController.getProductOffers);
+
+router.get('/userCart',userAuth, userCartController.getCartPage); 
+router.post('/addToCart/:id', userAuth, userCartController.addToCart);
+router.delete('/removeFromCart/:productId', userAuth, userCartController.removeFromCart);
+router.put('/updateCart/:productId', userAuth, userCartController.updateCart);
+router.get('/check-stock/:productId', userAuth, userCartController.checkStockAvailability);
+router.post('/check-cart-item', userAuth, userCartController.checkCartItem);
+
+router.post('/add-to-wishlist', userAuth, wishlistController.addToWishlist);
+router.get('/wishlist', userAuth, wishlistController.getWishlist);
+router.delete('/remove-from-wishlist/:productId', userAuth, wishlistController.removeFromWishlist);
+router.delete('/clear-wishlist', userAuth, wishlistController.clearWishlist);
+router.post('/wishlist/add-all-to-cart', userAuth, wishlistController.addAllToCart);
+router.patch('/update-wishlist-variant/:productId', userAuth, wishlistController.updateWishlistVariant);
+router.get('/get-wishlist-items', userAuth, wishlistController.getWishlistItems);
+router.get('/check-wishlist-item/:productId', userAuth, wishlistController.checkWishlistItem);
 
 This is my userController.js code:- 
 
 
-const searchProducts = async (req, res) => {
-    try {
-        const searchTerm = req.query.q ? req.query.q.toString() : '';
-        const page = parseInt(req.query.page) || 1;
-        const limit = 9;
-        const skip = (page - 1) * limit;
-        const categoryFilter = req.query.category;
-        const globalSearch = req.query.globalSearch === 'true';
-
-        // Create a base query
-        const query = {
-            isBlocked: false,
-            productName: { $regex: searchTerm, $options: 'i' }
-        };
-
-        // Handle category filtering
-        if (categoryFilter && categoryFilter !== '') {
-            const selectedCategory = await Category.findOne({ name: categoryFilter });
-            if (selectedCategory) {
-                if (!globalSearch) {
-                    // If not global search, strictly match the selected category
-                    query.category = selectedCategory._id;
-                }
-            }
-        }
-
-        // Get total count of matching products
-        const totalProducts = await Product.countDocuments(query);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        // Find products matching the criteria
-        let products = await Product.find(query)
-            .populate('category')
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        // Process products to include necessary information
-        products = await Promise.all(products.map(async (product) => {
-            // Find applicable offers
-            const offers = await Offer.find({
-                $or: [
-                    { offerType: 'product', productIds: product._id },
-                    { offerType: 'category', categoryIds: product.category._id }
-                ],
-                status: 'active',
-                expireDate: { $gte: new Date() }
-            });
-
-            // Calculate best offer
-            let bestOffer = null;
-            let offerPercentage = 0;
-
-            if (offers.length > 0) {
-                bestOffer = offers.reduce((max, offer) => 
-                    offer.discount > max.discount ? offer : max
-                );
-                offerPercentage = bestOffer.discount;
-            }
-
-            return {
-                ...product,
-                offerPercentage
-            };
-        }));
-
-        // Prepare the response message
-        let noProductsMessage = '';
-        if (products.length === 0) {
-            if (categoryFilter && !globalSearch) {
-                noProductsMessage = `No products found for "${searchTerm}" in the "${categoryFilter}" category. 
-                    Check the global search option to search across all categories.`;
-            } else {
-                noProductsMessage = `No products found for "${searchTerm}".`;
-            }
-        }
-
-        // Send JSON response
-        res.json({
-            products,
-            pagination: {
-                currentPage: page,
-                totalPages,
-                hasNext: page < totalPages,
-                hasPrev: page > 1
-            },
-            noProductsMessage,
-            searchTerm
-        });
-
-    } catch (error) {
-        console.error('Search Products Error:', error);
-        res.status(500).json({ error: 'Server Error during search' });
-    }
-};
 
 
 const shopingPage = async (req, res) => {
@@ -430,29 +246,30 @@ const shopingPage = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = 9; 
         const sort = req.query.sort || 'default';
-        const categoryFilter = req.query.category; // New category filter
+        const categoryFilter = req.query.category || '';
         const user = req.session.user;
         
         // Get all listed categories
         const categories = await Category.find({ isListed: true });
         
-        // Base query 
-        let query = {
-            isBlocked: false,
-            category: { $in: categories.map(category => category._id) },
-        };
+        // Base query with isBlocked check
+        let query = { isBlocked: false };
 
-        // Add category filter to query if specified
-        if (categoryFilter) {
-            const selectedCategory = await Category.findOne({ name: categoryFilter });
+        // Important: Add category filter to query if specified
+        if (categoryFilter && categoryFilter !== '') {
+            const selectedCategory = await Category.findOne({ 
+                name: categoryFilter,
+                isListed: true 
+            });
             if (selectedCategory) {
+                // Ensure strict category matching
                 query.category = selectedCategory._id;
             }
         }
 
         const skip = (page - 1) * limit;
 
-        // Sort criteria logic remains the same as before
+        // Sort criteria
         let sortCriteria = {};
         switch(sort) {
             case 'price-low':
@@ -474,53 +291,47 @@ const shopingPage = async (req, res) => {
                 sortCriteria = { createdAt: -1 };
         }
 
-        // Get total count for pagination
+        // Get total count for selected category only
         const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Validate page number
+        // Validate page number and adjust if necessary
         if (page > totalPages) {
             return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
         }
 
-        // Get products with pagination and sorting
+        // Get products with category filter, pagination and sorting
         let products = await Product.find(query)
             .populate('category')
             .sort(sortCriteria)
             .skip(skip)
             .limit(limit)
-            .lean(); 
+            .lean();
 
-        // Get current date for offer calculations
+        // Rest of your existing offer calculation code...
         const currentDate = new Date();
-
-        // Find active offers
         const offers = await Offer.find({
             status: 'active',
             expireDate: { $gte: currentDate }
         });
 
-        // Calculate the best offer for each product
         products = await Promise.all(products.map(async (product) => {
+            // Your existing product mapping code...
             let bestOffer = null;
             let offerPercentage = 0;
 
-            // Find product-specific offers
             const productOffers = offers.filter(offer =>
                 offer.offerType === 'product' &&
                 offer.productIds.some(id => id.toString() === product._id.toString())
             );
 
-            // Find category-specific offers
             const categoryOffers = offers.filter(offer =>
                 offer.offerType === 'category' &&
                 offer.categoryIds.some(id => id.toString() === product.category._id.toString())
             );
 
-            // Combine all applicable offers
             const allProductOffers = [...productOffers, ...categoryOffers];
 
-            // Find the best offer
             if (allProductOffers.length > 0) {
                 bestOffer = allProductOffers.reduce((maxOffer, currentOffer) =>
                     (currentOffer.discount > maxOffer.discount) ? currentOffer : maxOffer
@@ -528,12 +339,10 @@ const shopingPage = async (req, res) => {
                 offerPercentage = bestOffer.discount;
             }
 
-            // Calculate the offer price
             const offerPrice = offerPercentage
                 ? product.regularPrice * (1 - offerPercentage / 100)
                 : null;
 
-            // Get the first image
             const firstImage = product.variants.reduce((img, variant) => {
                 if (!img && variant.images && variant.images.length > 0) {
                     return variant.images[0].filename;
@@ -541,17 +350,25 @@ const shopingPage = async (req, res) => {
                 return img;
             }, null);
 
+            let isInWishlist = false;
+            if (req.session.user) {
+                const wishlist = await Wishlist.findOne({
+                    userId: req.session.user._id,
+                    'products.productId': product._id
+                });
+                isInWishlist = !!wishlist;
+            }
+
             return {
                 ...product,
                 productImages: [firstImage || 'default-image.jpg'],
                 bestOffer: bestOffer,
                 offerPercentage: offerPercentage,
-                offerPrice: offerPrice
+                offerPrice: offerPrice,
+                isInWishlist: isInWishlist
             };
         }));
 
-
-        // Pagination logic remains the same
         const pagination = {
             currentPage: page,
             totalPages: totalPages,
@@ -562,24 +379,18 @@ const shopingPage = async (req, res) => {
             endPage: Math.min(totalPages, page + 2)
         };
 
-        // Render data
         const renderData = {
             products: products,
             pagination: pagination,
             currentSort: sort,
-            currentCategory: categoryFilter || '',
-            categories: categories, 
+            currentCategory: categoryFilter,
+            categories: categories,
             itemsPerPage: limit,
             totalItems: totalProducts
         };
 
         if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.json({
-                products,
-                pagination,
-                currentSort: sort,
-                currentCategory: categoryFilter || ''
-            });
+            return res.json(renderData);
         }
 
         if (user) {
@@ -595,19 +406,29 @@ const shopingPage = async (req, res) => {
 };
  
 
-// userController.js - Updated getProductDetails function
-const getProductDetails = async (req, res) => {
+ 
+ 
+const getProductForCart = async (req, res) => {
     try {
-        const productId = req.query.id;
-        const product = await Product.findById(productId)
+        const product = await Product.findById(req.params.productId)
             .populate('category')
-            .populate('variants');
+            .select('productName regularPrice variants');
+        res.json(product);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch product details' });
+    }
+};
+
+
+const getProductOffers = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const product = await Product.findById(productId).populate('category');
         
         if (!product) {
-            return res.status(404).render('error', { message: 'Product not found' });
+            return res.status(404).json({ message: 'Product not found' });
         }
 
-        // Find applicable offers
         const offers = await Offer.find({
             $or: [
                 { offerType: 'product', productIds: productId },
@@ -617,98 +438,172 @@ const getProductDetails = async (req, res) => {
             expireDate: { $gte: new Date() }
         });
 
-        // Calculate the maximum discount
-        let maxDiscount = 0;
-        let applicableOfferName = '';
-        
-        offers.forEach(offer => {
-            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            }
-        });
-
-        // Calculate discounted price
-        const discountedPrice = product.regularPrice * (1 - maxDiscount / 100);
-
-        const variants = product.variants.filter(variant => variant.isListed);
-        const initialVariant = variants[0];
-
-        const variantSizes = initialVariant.sizes.map(sizeObj => ({
-            size: sizeObj.size,
-            quantity: sizeObj.quantity
-        }));
-
-        res.render('product', {
-            product: {
-                ...product.toObject(),
-                regularPrice: product.regularPrice,
-                discountedPrice: discountedPrice,
-                maxDiscount,
-                applicableOfferName
-            },
-            variants,
-            initialVariant,
-            variantSizes,
-            categoryName: product.category.name,
-            isLoggedIn: !!req.session.user,
-        });
+        res.json({ offers });
     } catch (error) {
-        console.error('Error fetching product details:', error);
-        res.status(500).render('error', { message: 'Internal Server Error' });
-    }
-};
-
-
-
-const getVariantDetails = async (req, res) => {
-    try {
-        const { productId, variantId } = req.params;
-        
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        const variant = product.variants.id(variantId);
-        if (!variant) {
-            return res.status(404).json({ message: 'Variant not found' });
-        }
-
-        // Transform variant images with full path
-        const images = variant.images.map(img => ({
-            filename: img.filename,
-            fullPath: `/uploads/product-images/${img.filename}`
-        }));
-
-        const sizes = variant.sizes.map(sizeObj => ({
-            size: sizeObj.size,
-            quantity: sizeObj.quantity
-        }));
-
-        res.json({
-            images,
-            sizes
-        });
-    } catch (error) {
-        console.error('Get Variant Details Error:', error);
-        res.status(500).json({ message: 'Failed to fetch variant details' });
+        console.error('Error fetching offers:', error);
+        res.status(500).json({ message: 'Failed to fetch offers' });
     }
 };
 
 This is my This is my shop-page.ejs page code:-
 
 
-	<div class="container">
+<style>
+    /* Update your existing wishlist button styles */
+    .add-to-wishlist .wishlist-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 35px;
+        height: 35px;
+        background: #828bb3; /* Default gray background */
+        border-radius: 50%;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+    }
+    
+    .add-to-wishlist .fa-heart {
+        color: white !important; /* Always white heart */
+        transition: transform 0.3s ease;
+    }
+    
+    .add-to-wishlist.in-wishlist .wishlist-icon {
+        background-color: #ff0000; /* Red background when in wishlist */
+    }
+    
+    /* Hover effects */
+    .add-to-wishlist:hover .wishlist-icon {
+        transform: scale(1.1);
+    }
+    
+    .add-to-wishlist:hover .fa-heart {
+        transform: scale(1.2);
+    }
+    
+        </style>
+    
+        
+    <!-- card modal styles -->
+    <style>
+    
+        /* Add these styles to make the modal more compact */
+    .product-modal .modal-dialog {
+        max-width: 350px; /* Reduced width */
+    }
+    
+    .product-modal .modal-header {
+        padding: 0.75rem;
+        background: #384aeb;
+        border-bottom: none;
+    }
+    
+    .product-modal .modal-body {
+        padding: 0;
+    }
+    
+    .product-modal .product-carousel {
+        max-height: 200px; /* Reduced height */
+    }
+    
+    .product-modal .carousel-inner img {
+        height: 150px; /* Reduced height */
+        object-fit: contain;
+    }
+    
+    .product-modal .product-info {
+        padding: 1rem !important; 
+    }
+    
+    /* Improved thumbnail styling */
+    .carousel-thumbnails {
+        padding: 0.25rem;
+        gap: 0.25rem;
+        background: #f8f9fa;
+    }
+    
+    .carousel-thumbnail {
+        width: 30px; 
+        height: 30px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    /* Improved size selection */
+    .size-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+        gap: 0.5rem;
+        padding: 0.75rem;
+    }
+    
+    .size-box {
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+    }
+    
+    .size-box.selected {
+        background: #384aeb;
+        color: white;
+        border-color: #384aeb;
+    }
+    
+    /* Price section styling */
+    .price-section {
+        padding: 0.75rem;
+        background: #f8f9fa;
+        border-radius: 4px;
+        margin: 0.75rem;
+    }
+    
+    .offer-price {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #384aeb;
+    }
+    
+    .regular-price {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    /* Footer styling */
+    .modal-footer {
+        padding: 0.75rem;
+        border-top: none;
+        justify-content: space-between;
+    }
+    
+    .btn-add-cart {
+        background: #384aeb;
+        color: white;
+        border-radius: 25px;
+        padding: 0.5rem 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-add-cart:hover {
+        background: #2a3eb1;
+        transform: translateY(-1px);
+    }
+        </style>
+    
+    <div class="container">
 		<div class="row">
 			<div class="col-xl-3 col-lg-4 col-md-5">
 				<div class="sidebar-categories">
 					<div class="head">Sort By</div>
 					<div class="common-filter">
 						<form action="/shop-page" method="GET" id="sortForm">
+							<input type="hidden" name="category" value="<%= currentCategory %>">
 							<ul class="filter-options">
 								<li class="filter-list">
 									<div class="filter-box">
@@ -758,31 +653,28 @@ This is my This is my shop-page.ejs page code:-
 
 					<div class="head">Filter by Category</div>
 <div class="common-filter">
-    <form action="/shop-page" method="GET" id="categoryForm">
-        <ul class="filter-options">
+    <!-- Replace your existing category form -->
+<form action="/shop-page" method="GET" id="categoryForm">
+    <input type="hidden" name="sort" value="<%= currentSort %>">
+    <ul class="filter-options">
+        <li class="filter-list">
+            <div class="filter-box">
+                <input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
+                    <%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
+                <label for="all-categories">All Categories</label>
+            </div>
+        </li>
+        <% categories.forEach(function(category) { %>
             <li class="filter-list">
-				<div class="filter-box">
-					<input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
-						<%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
-					<label for="all-categories">
-						All Categories 
-						<% if (locals.globalSearch) { %>
-							<span class="text-primary">(Global Search Enabled)</span>
-						<% } %>
-					</label>
-				</div>
-			</li>
-            <% categories.forEach(function(category) { %>
-                <li class="filter-list">
-                    <div class="filter-box">
-                        <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
-                            <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
-                        <label for="<%= category.name %>"><%= category.name %></label>
-                    </div>
-                </li>
-            <% }) %>
-        </ul>
-    </form>
+                <div class="filter-box">
+                    <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
+                        <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
+                    <label for="<%= category.name %>"><%= category.name %></label>
+                </div>
+            </li>
+        <% }) %>
+    </ul>
+</form>
 </div>
 				</div>
 			</div>
@@ -836,11 +728,15 @@ This is my This is my shop-page.ejs page code:-
 												<a href="#" class="social-info add-to-cart" data-product-id="<%= product._id %>">
 													<span class="ti-bag"></span>
 													<p class="hover-text">add to cart</p>
+													
 												</a>
-												<a href="#" class="social-info add-to-wishlist" data-product-id="<%= product._id %>">
-													<span class="lnr lnr-heart"></span>
-													<p class="hover-text">Wishlist</p>
-												</a>
+												<a href="#" class="social-info add-to-wishlist <%= product.isInWishlist ? 'in-wishlist' : '' %>" 
+													data-product-id="<%= product._id %>">
+													 <span class="wishlist-icon">
+														 <i class="fa fa-heart" style="color: '<%= product.isInWishlist ? 'rgb(255, 0, 0)' : '#828bb3' %>'"></i>
+													 </span>
+													 <p class="hover-text">Wishlist</p>
+												 </a>
 											</div>
 											
 										</div>
@@ -883,7 +779,8 @@ This is my This is my shop-page.ejs page code:-
 
 					<div class="sorting">
 						<div class="sorting-options">
-							<form action="/shop-page" method="GET" id="sortForm">
+							<form action="/shop-page" method="GET" id="sortDropdownForm">
+								<input type="hidden" name="category" value="<%= currentCategory %>">
 								<select name="sort" class="form-control" onchange="this.form.submit()">
 									<option value="default" <%= currentSort === 'default' ? 'selected' : '' %>>Default sorting</option>
 									<option value="price-low" <%= currentSort === 'price-low' ? 'selected' : '' %>>Price: Low to High</option>
@@ -895,55 +792,151 @@ This is my This is my shop-page.ejs page code:-
 							</form>
 						</div>
 					</div>
+					
 					<div class="sorting mr-auto">
 						
 					</div>
 					<div class="filter-bar d-flex flex-wrap align-items-center">
-						<% if (pagination.totalPages > 1) { %>
-							<div class="pagination">
-								<% if (pagination.hasPrev) { %>
-									<a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>" class="prev-arrow">
-										<i class="fa fa-long-arrow-left" aria-hidden="true"></i>
-									</a>
-								<% } %>
-					
+						
+						<div class="pagination">
+							<% if (pagination.totalPages > 0) { %>
+								<!-- Previous button - always visible -->
+								<a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="prev-arrow <%= pagination.currentPage <= 1 ? 'disabled' : '' %>">
+									<i class="fa fa-long-arrow-left" aria-hidden="true"></i>
+								</a>
+						
+								<!-- First page - always visible -->
+								<a href="/shop-page?page=1&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="<%= pagination.currentPage === 1 ? 'active' : '' %>">1</a>
+						
 								<% 
-								let startPage = Math.max(1, pagination.currentPage - 2);
-								let endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+								let totalVisible = 5;
+								let startPage = Math.max(2, pagination.currentPage - Math.floor(totalVisible/2));
+								let endPage = Math.min(pagination.totalPages - 1, startPage + totalVisible - 1);
 								
-								if (startPage > 1) { %>
-									<a href="/shop-page?page=1&sort=<%= currentSort %>">1</a>
-									<% if (startPage > 2) { %>
-										<span class="dot-dot">...</span>
-									<% } %>
+								if (startPage > 2) { %>
+									<span class="dot-dot">...</span>
+								<% } 
+								
+								for (let i = startPage; i <= endPage; i++) { %>
+									<a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+									   class="<%= pagination.currentPage === i ? 'active' : '' %>"><%= i %></a>
+								<% } 
+								
+								if (endPage < pagination.totalPages - 1) { %>
+									<span class="dot-dot">...</span>
 								<% } %>
-					
-								<% for(let i = startPage; i <= endPage; i++) { %>
-									<a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>" 
-									   class="<%= pagination.currentPage === i ? 'active' : '' %>">
-										<%= i %>
-									</a>
-								<% } %>
-					
-								<% if (endPage < pagination.totalPages) { %>
-									<% if (endPage < pagination.totalPages - 1) { %>
-										<span class="dot-dot">...</span>
-									<% } %>
-									<a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>">
+						
+								<!-- Last page - always visible if not first page -->
+								<% if (pagination.totalPages > 1) { %>
+									<a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+									   class="<%= pagination.currentPage === pagination.totalPages ? 'active' : '' %>">
 										<%= pagination.totalPages %>
 									</a>
 								<% } %>
-					
-								<% if (pagination.hasNext) { %>
-									<a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>" class="next-arrow">
-										<i class="fa fa-long-arrow-right" aria-hidden="true"></i>
-									</a>
-								<% } %>
-							</div>
-						<% } %>
+						
+								<!-- Next button - always visible -->
+								<a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="next-arrow <%= pagination.currentPage >= pagination.totalPages ? 'disabled' : '' %>">
+									<i class="fa fa-long-arrow-right" aria-hidden="true"></i>
+								</a>
+							<% } %>
+						</div>
+
 					</div>
 				</div>
-				<!-- End Filter Bar -->
+				
+			</div>
+		</div>
+	</div>
+
+
+	<!-- add Tp Cart modal -->
+	<div class="modal fade product-modal" id="addToCartModal" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title">
+						<i class="fa fa-shopping-cart mr-2"></i>
+						Add to Cart
+					</h5>
+					<button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+				</div>
+				<div class="modal-body p-0">
+					<!-- Product Image Carousel with Thumbnails -->
+					<div class="product-carousel">
+						<div id="productImageCarousel" class="carousel slide" data-ride="carousel">
+							<div class="carousel-inner" id="carouselInner">
+								<!-- Images dynamically added here -->
+							</div>
+							<a class="carousel-control-prev" href="#productImageCarousel" role="button" data-slide="prev">
+								<span class="carousel-control-prev-icon"></span>
+							</a>
+							<a class="carousel-control-next" href="#productImageCarousel" role="button" data-slide="next">
+								<span class="carousel-control-next-icon"></span>
+							</a>
+							<!-- Thumbnails -->
+							<div class="carousel-thumbnails mt-3 d-flex justify-content-center">
+								<!-- Thumbnails dynamically added here -->
+							</div>
+						</div>
+					</div>
+	
+					<!-- Product Details Section -->
+					<div class="product-info p-4">
+						<h4 id="modalProductName" class="product-name mb-2"></h4>
+						<p id="modalProductCategory" class="product-category text-muted"></p>
+	
+						<!-- Price Section with Animation -->
+						<div class="price-section mb-4">
+							<div class="d-flex align-items-center">
+								<span id="modalOfferPrice" class="offer-price mr-3"></span>
+								<span id="modalRegularPrice" class="regular-price mr-3"></span>
+								<span id="modalDiscountBadge" class="discount-badge animate-pulse"></span>
+							</div>
+						</div>
+	
+						<!-- Size Selection with Visual Feedback -->
+						<div class="size-section mb-4">
+							<h6 class="size-title d-flex justify-content-between">
+								<span>Select Size</span>
+								<small class="text-primary">Size Guide</small>
+							</h6>
+							<div id="modalSizeBoxes" class="size-grid">
+								<!-- Size boxes dynamically added here -->
+							</div>
+							<small id="sizeError" class="size-error text-danger mt-2" style="display: none;">
+								<i class="fa fa-exclamation-circle mr-1"></i>
+								Please select a size to continue
+							</small>
+						</div>
+	
+						<!-- Stock Status -->
+						<div class="stock-status mb-3">
+							<i class="fa fa-check-circle text-success mr-2"></i>
+							<span>In Stock</span>
+						</div>
+	
+						<!-- Product Link -->
+						<a href="#" id="viewDetailsLink" class="btn btn-link text-primary w-100">
+							<i class="fa fa-external-link mr-1"></i>
+							View Full Details
+						</a>
+					</div>
+				</div>
+	
+				<!-- Modal Footer with Enhanced Buttons -->
+				<div class="modal-footer border-0 px-4 pb-4">
+					<button type="button" class="btn btn-light" data-dismiss="modal">
+						<i class="fa fa-times mr-1"></i>
+						Close
+					</button>
+					<button type="button" class="btn btn-primary" id="confirmAddToCart" disabled>
+						<i class="fa fa-shopping-cart mr-1"></i>
+						Add to Cart
+					</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -964,8 +957,7 @@ This is my This is my shop-page.ejs page code:-
 	<script src="js/main.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
 	<script>
         // Add this code at the bottom of your shop-page.ejs file, replacing the existing search-related JavaScript
@@ -1087,59 +1079,502 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- This is for my wishlist add botton -->
 <script>
-    
+  document.addEventListener('DOMContentLoaded', function() {
+    let currentProductDetails = null;
+    let selectedSize = null;
+    const confirmAddToCartBtn = document.getElementById('confirmAddToCart');
 
-	// Update the add-to-wishlist click handler in shop-page.ejs
-	document.addEventListener('DOMContentLoaded', function() {
-    // Update wishlist click handler
-    document.querySelectorAll('.add-to-wishlist').forEach(button => {
-        button.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const productId = this.dataset.productId;
 
-            try {
-                const response = await fetch('/add-to-wishlist', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
-                    },
-                    body: JSON.stringify({ productId })
-                });
+	 // Check authentication status
+	 async function checkAuth() {
+        try {
+            const response = await fetch('/check-auth');
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+	
 
-                const data = await response.json();
+    // Show login prompt
+    function showLoginPrompt(action) {
+    return Swal.fire({
+        title: 'Please Login',
+        text: `You need to login to ${action}`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        cancelButtonText: 'Close',
+        confirmButtonColor: '#384aeb',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '/login';
+        }
+    });
+}
 
-                if (response.status === 401) {
-                    // Handle unauthorized/not logged in
-                    Swal.fire({
-                        title: 'Please Login',
-                        text: 'You need to login to add items to wishlist',
-                        icon: 'info',
-                        showCancelButton: true,
-                        confirmButtonText: 'Login Now',
-                        cancelButtonText: 'Cancel'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = '/login';
-                        }
-                    });
-                    return;
+
+function handleAuthError(response) {
+    if (response.status === 401) {
+        return response.json().then(data => {
+            return Swal.fire({
+                title: data.title || 'Please Login',
+                text: data.message || 'You need to login to continue',
+                icon: data.type || 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
                 }
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Failed to add to wishlist');
-                }
-
-                if (data.isExisting) {
-                    Swal.fire('Info', 'Product already in wishlist', 'info');
-                } else {
-                    Swal.fire('Success', 'Product added to wishlist', 'success');
-                }
-            } catch (error) {
-                Swal.fire('Error', error.message, 'error');
-            }
+                throw new Error('auth_required');
+            });
         });
+    }
+    return response;
+}
+
+
+function updateWishlistButton(button, isInWishlist) {
+    const wishlistIcon = button.querySelector('.wishlist-icon');
+    const icon = button.querySelector('.fa-heart');
+    
+    if (isInWishlist) {
+        button.classList.add('in-wishlist');
+        wishlistIcon.style.backgroundColor = '#ff0000'; // Red circle when in wishlist
+    } else {
+        button.classList.remove('in-wishlist');
+        wishlistIcon.style.backgroundColor = '#828bb3'; // Gray circle when not in wishlist
+    }
+    
+    // Heart icon stays white in both states
+    icon.style.color = 'white';
+}
+
+	async function initializeWishlistButtons() {
+        const isAuthenticated = await checkAuth();
+        if (!isAuthenticated) return;
+
+        try {
+            const response = await fetch('/get-wishlist-items');
+            if (!response.ok) return;
+            
+            const wishlistItems = await response.json();
+            document.querySelectorAll('.add-to-wishlist').forEach(button => {
+                const productId = button.dataset.productId;
+                const isInWishlist = wishlistItems.some(item => item.productId === productId);
+                updateWishlistButton(button, isInWishlist);
+            });
+        } catch (error) {
+            console.error('Failed to initialize wishlist states:', error);
+        }
+    }
+
+    // Handle wishlist toggle
+	async function handleWishlistToggle(button) {
+    try {
+        const productId = button.dataset.productId;
+        const isInWishlist = button.classList.contains('in-wishlist');
+        
+        const response = await fetch(isInWishlist ? 
+            `/remove-from-wishlist/${productId}` : 
+            '/add-to-wishlist', {
+                method: isInWishlist ? 'DELETE' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: isInWishlist ? null : JSON.stringify({ productId })
+            });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                return showLoginPrompt('add to wishlist');
+            }
+            throw new Error('Failed to update wishlist');
+        }
+
+        updateWishlistButton(button, !isInWishlist);
+        
+        Swal.fire({
+            icon: 'success',
+            title: isInWishlist ? 'Removed from Wishlist' : 'Added to Wishlist',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    } catch (error) {
+        console.error('Wishlist error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update wishlist',
+            confirmButtonColor: '#384aeb'
+        });
+    }
+}
+
+    // Update wishlist button appearance
+	async function updateModalContent(product, variant) {
+    if (!product || !variant) return;
+
+    const modal = document.getElementById('addToCartModal');
+    if (!modal) return;
+
+    // Set current product details
+    currentProductDetails = product;
+
+    // Update carousel images and thumbnails
+    const carouselInner = document.getElementById('carouselInner');
+    const thumbnailContainer = document.querySelector('.carousel-thumbnails');
+    
+    if (carouselInner && thumbnailContainer && variant.images) {
+        // Clear existing content
+        carouselInner.innerHTML = '';
+        thumbnailContainer.innerHTML = '';
+
+        // Add images to carousel and create thumbnails
+        variant.images.forEach((image, index) => {
+            // Add to carousel
+            const carouselItem = document.createElement('div');
+            carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+            carouselItem.innerHTML = `
+                <img src="/uploads/product-images/${image.filename}" 
+                     class="d-block w-100" 
+                     alt="${product.productName}">
+            `;
+            carouselInner.appendChild(carouselItem);
+
+            // Create thumbnail
+            const thumbnail = document.createElement('img');
+            thumbnail.src = `/uploads/product-images/${image.filename}`;
+            thumbnail.className = `carousel-thumbnail ${index === 0 ? 'active' : ''}`;
+            thumbnail.dataset.slide = index;
+            thumbnail.addEventListener('click', () => {
+                $('.carousel').carousel(index);
+                document.querySelectorAll('.carousel-thumbnail').forEach(thumb => 
+                    thumb.classList.remove('active'));
+                thumbnail.classList.add('active');
+            });
+            thumbnailContainer.appendChild(thumbnail);
+        });
+    }
+
+    // Update carousel event listener
+    $('#productImageCarousel').on('slide.bs.carousel', (e) => {
+        const thumbnails = document.querySelectorAll('.carousel-thumbnail');
+        thumbnails.forEach(thumb => thumb.classList.remove('active'));
+        thumbnails[e.to].classList.add('active');
+    });
+
+    // Rest of your existing updateModalContent code...
+    modal.querySelector('#modalProductName').textContent = product.productName;
+    modal.querySelector('#modalProductCategory').textContent = 
+        product.category ? `Category: ${product.category.name}` : '';
+
+    // Update sizes with animation
+    const sizeBoxesContainer = modal.querySelector('#modalSizeBoxes');
+    if (sizeBoxesContainer && variant.sizes) {
+        sizeBoxesContainer.innerHTML = variant.sizes
+            .filter(size => size.quantity > 0)
+            .map(size => `
+                <div class="size-box" data-size="${size.size}">
+                    ${size.size}
+                </div>
+            `).join('');
+
+        // Add size selection handlers with animation
+        sizeBoxesContainer.querySelectorAll('.size-box').forEach(box => {
+            box.addEventListener('click', () => {
+                sizeBoxesContainer.querySelectorAll('.size-box').forEach(b => 
+                    b.classList.remove('selected'));
+                box.classList.add('selected');
+                selectedSize = parseInt(box.dataset.size);
+                document.getElementById('sizeError').style.display = 'none';
+                document.getElementById('confirmAddToCart').disabled = false;
+            });
+        });
+    }
+
+    // Fetch and update offers with animation
+    try {
+        const offersResponse = await fetch(`/product/${product._id}/offers`);
+        const offersData = await offersResponse.json();
+        
+        const regularPrice = product.regularPrice;
+        let finalPrice = regularPrice;
+        let maxDiscount = 0;
+        
+        if (offersData?.offers) {
+            maxDiscount = Math.max(...offersData.offers.map(o => o.discount));
+            if (maxDiscount > 0) {
+                finalPrice = regularPrice * (1 - maxDiscount / 100);
+            }
+        }
+
+        // Animate price updates
+        const offerPriceElement = modal.querySelector('#modalOfferPrice');
+        offerPriceElement.style.opacity = '0';
+        setTimeout(() => {
+            offerPriceElement.textContent = maxDiscount > 0 ? 
+                `₹${Math.round(finalPrice)}` : `₹${regularPrice}`;
+            offerPriceElement.style.opacity = '1';
+        }, 300);
+
+        const regularPriceElement = modal.querySelector('#modalRegularPrice');
+        regularPriceElement.style.opacity = '0';
+        setTimeout(() => {
+            regularPriceElement.textContent = `₹${regularPrice}`;
+            regularPriceElement.style.display = maxDiscount > 0 ? 'inline' : 'none';
+            regularPriceElement.style.opacity = '1';
+        }, 300);
+
+        const discountBadge = modal.querySelector('#modalDiscountBadge');
+        discountBadge.textContent = `${maxDiscount}% OFF`;
+        discountBadge.style.display = maxDiscount > 0 ? 'inline' : 'none';
+    } catch (error) {
+        console.error('Error updating offers:', error);
+    }
+
+    // Reset size selection
+    selectedSize = null;
+    document.getElementById('confirmAddToCart').disabled = true;
+}
+
+   
+	// Add to cart handler
+	document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        // Check authentication first
+        const isAuthenticated = await checkAuth();
+        if (!isAuthenticated) {
+            return Swal.fire({
+                title: 'Please Login',
+                text: 'You need to login to add items to cart',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        try {
+            const productId = this.dataset.productId;
+            const response = await fetch(`/product/${productId}`);
+            if (!response.ok) throw new Error('Failed to fetch product details');
+            
+            const product = await response.json();
+            await updateModalContent(product, product.variants[0]);
+            $('#addToCartModal').modal('show');
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to load product details',
+                icon: 'error',
+                confirmButtonColor: '#384aeb'
+            });
+        }
     });
 });
-	</script>
 
+    // Confirm add to cart
+    document.getElementById('confirmAddToCart').addEventListener('click', async function() {
+    try {
+        // Check authentication again before adding to cart
+        const authResponse = await fetch('/check-auth');
+        if (!authResponse.ok) {
+            $('#addToCartModal').modal('hide');
+            return Swal.fire({
+                title: 'Please Login',
+                text: 'You need to login to add items to cart',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        if (!selectedSize) {
+            document.getElementById('sizeError').style.display = 'block';
+            return;
+        }
+
+        const response = await fetch(`/addToCart/${currentProductDetails._id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                size: selectedSize,
+                color: currentProductDetails.variants[0].color,
+                quantity: 1,
+                variantId: currentProductDetails.variants[0]._id
+            })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            $('#addToCartModal').modal('hide');
+            Swal.fire({
+                title: 'Success!',
+                text: 'Product added to cart successfully',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Cart',
+                cancelButtonText: 'Continue Shopping',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
+        } else {
+            Swal.fire('Error', data.message || 'Failed to add item to cart', 'error');
+        }
+    } catch (error) {
+        console.error('Add to cart error:', error);
+        Swal.fire('Error', 'Failed to add item to cart', 'error');
+    }
+});
+
+    // Add wishlist event listeners
+    document.querySelectorAll('.add-to-wishlist').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleWishlistToggle(button);
+        });
+    });
+
+    // Initialize wishlist states
+    initializeWishlistButtons();
+});
+  </script>
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <style>
+
+        /* Styling for product card bottom actions */
+.prd-bottom {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    gap: 20px; /* Add space between cart and wishlist buttons */
+}
+
+/* Base styles for both cart and wishlist buttons */
+.social-info {
+    position: relative;
+    text-align: center;
+    width: 40px; /* Fixed width for icon container */
+    height: 40px;
+    line-height: 40px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+/* Add to cart button specific styles */
+.add-to-cart {
+    background: #384aeb;
+}
+
+.add-to-cart .ti-bag {
+    color: #fff;
+}
+
+/* Hover text styles */
+.social-info .hover-text {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 100px; /* Ensure enough space for text */
+    top: -30px;
+    background: #384aeb;
+    padding: 5px 10px;
+    color: #fff;
+    border-radius: 4px;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s ease;
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+/* Show hover text on hover */
+.social-info:hover .hover-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Wishlist button specific styles */
+.add-to-wishlist {
+    margin-left: 10px; /* Add extra space from cart button */
+}
+
+.add-to-wishlist .wishlist-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 35px;
+    height: 35px;
+    background: #828bb3;
+    border-radius: 50%;
+    margin: 0 auto;
+    transition: background-color 0.3s ease;
+}
+
+.add-to-wishlist .fa-heart {
+    color: white !important;
+}
+
+.add-to-wishlist.in-wishlist .wishlist-icon {
+    background-color: #ff0000;
+}
+
+/* Remove zoom effect on wishlist icon */
+.add-to-wishlist:hover .fa-heart {
+    transform: none;
+}
+
+.add-to-wishlist:hover .wishlist-icon {
+    transform: none;
+}
+    </style>

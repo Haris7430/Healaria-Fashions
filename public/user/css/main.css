@@ -1575,7 +1575,7 @@ h1, h2, h3, h4, h5, h6 {
         opacity: 0;
         visibility: hidden; }
       .single-product .product-details .prd-bottom .social-info:hover {
-        width: 115px; }
+        width: 125px; }
         .single-product .product-details .prd-bottom .social-info:hover span:after {
           opacity: 1;
           visibility: visible; }

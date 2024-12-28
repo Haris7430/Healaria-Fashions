@@ -6,8 +6,8 @@ const Offer = require('../../models/offerSchema');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 const session= require("express-session");
-
 const env = require('dotenv').config();
+const Wishlist = require('../../models/wishlistSchema')
 
 
 function generateOtp() {
@@ -618,29 +618,30 @@ const shopingPage = async (req, res) => {
         const page = parseInt(req.query.page) || 1;
         const limit = 9; 
         const sort = req.query.sort || 'default';
-        const categoryFilter = req.query.category; // New category filter
+        const categoryFilter = req.query.category || '';
         const user = req.session.user;
         
         // Get all listed categories
         const categories = await Category.find({ isListed: true });
         
-        // Base query 
-        let query = {
-            isBlocked: false,
-            category: { $in: categories.map(category => category._id) },
-        };
+        // Base query with isBlocked check
+        let query = { isBlocked: false };
 
-        // Add category filter to query if specified
-        if (categoryFilter) {
-            const selectedCategory = await Category.findOne({ name: categoryFilter });
+        // Important: Add category filter to query if specified
+        if (categoryFilter && categoryFilter !== '') {
+            const selectedCategory = await Category.findOne({ 
+                name: categoryFilter,
+                isListed: true 
+            });
             if (selectedCategory) {
+                // Ensure strict category matching
                 query.category = selectedCategory._id;
             }
         }
 
         const skip = (page - 1) * limit;
 
-        // Sort criteria logic remains the same as before
+        // Sort criteria
         let sortCriteria = {};
         switch(sort) {
             case 'price-low':
@@ -662,53 +663,47 @@ const shopingPage = async (req, res) => {
                 sortCriteria = { createdAt: -1 };
         }
 
-        // Get total count for pagination
+        // Get total count for selected category only
         const totalProducts = await Product.countDocuments(query);
         const totalPages = Math.ceil(totalProducts / limit);
 
-        // Validate page number
+        // Validate page number and adjust if necessary
         if (page > totalPages) {
             return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
         }
 
-        // Get products with pagination and sorting
+        // Get products with category filter, pagination and sorting
         let products = await Product.find(query)
             .populate('category')
             .sort(sortCriteria)
             .skip(skip)
             .limit(limit)
-            .lean(); 
+            .lean();
 
-        // Get current date for offer calculations
+        // Rest of your existing offer calculation code...
         const currentDate = new Date();
-
-        // Find active offers
         const offers = await Offer.find({
             status: 'active',
             expireDate: { $gte: currentDate }
         });
 
-        // Calculate the best offer for each product
         products = await Promise.all(products.map(async (product) => {
+            // Your existing product mapping code...
             let bestOffer = null;
             let offerPercentage = 0;
 
-            // Find product-specific offers
             const productOffers = offers.filter(offer =>
                 offer.offerType === 'product' &&
                 offer.productIds.some(id => id.toString() === product._id.toString())
             );
 
-            // Find category-specific offers
             const categoryOffers = offers.filter(offer =>
                 offer.offerType === 'category' &&
                 offer.categoryIds.some(id => id.toString() === product.category._id.toString())
             );
 
-            // Combine all applicable offers
             const allProductOffers = [...productOffers, ...categoryOffers];
 
-            // Find the best offer
             if (allProductOffers.length > 0) {
                 bestOffer = allProductOffers.reduce((maxOffer, currentOffer) =>
                     (currentOffer.discount > maxOffer.discount) ? currentOffer : maxOffer
@@ -716,12 +711,10 @@ const shopingPage = async (req, res) => {
                 offerPercentage = bestOffer.discount;
             }
 
-            // Calculate the offer price
             const offerPrice = offerPercentage
                 ? product.regularPrice * (1 - offerPercentage / 100)
                 : null;
 
-            // Get the first image
             const firstImage = product.variants.reduce((img, variant) => {
                 if (!img && variant.images && variant.images.length > 0) {
                     return variant.images[0].filename;
@@ -729,17 +722,25 @@ const shopingPage = async (req, res) => {
                 return img;
             }, null);
 
+            let isInWishlist = false;
+            if (req.session.user) {
+                const wishlist = await Wishlist.findOne({
+                    userId: req.session.user._id,
+                    'products.productId': product._id
+                });
+                isInWishlist = !!wishlist;
+            }
+
             return {
                 ...product,
                 productImages: [firstImage || 'default-image.jpg'],
                 bestOffer: bestOffer,
                 offerPercentage: offerPercentage,
-                offerPrice: offerPrice
+                offerPrice: offerPrice,
+                isInWishlist: isInWishlist
             };
         }));
 
-
-        // Pagination logic remains the same
         const pagination = {
             currentPage: page,
             totalPages: totalPages,
@@ -750,24 +751,18 @@ const shopingPage = async (req, res) => {
             endPage: Math.min(totalPages, page + 2)
         };
 
-        // Render data
         const renderData = {
             products: products,
             pagination: pagination,
             currentSort: sort,
-            currentCategory: categoryFilter || '',
-            categories: categories, 
+            currentCategory: categoryFilter,
+            categories: categories,
             itemsPerPage: limit,
             totalItems: totalProducts
         };
 
         if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.json({
-                products,
-                pagination,
-                currentSort: sort,
-                currentCategory: categoryFilter || ''
-            });
+            return res.json(renderData);
         }
 
         if (user) {
@@ -889,7 +884,42 @@ const getVariantDetails = async (req, res) => {
 
  
  
+const getProductForCart = async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.productId)
+            .populate('category')
+            .select('productName regularPrice variants');
+        res.json(product);
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to fetch product details' });
+    }
+};
 
+
+const getProductOffers = async (req, res) => {
+    try {
+        const productId = req.params.productId;
+        const product = await Product.findById(productId).populate('category');
+        
+        if (!product) {
+            return res.status(404).json({ message: 'Product not found' });
+        }
+
+        const offers = await Offer.find({
+            $or: [
+                { offerType: 'product', productIds: productId },
+                { offerType: 'category', categoryIds: product.category._id }
+            ],
+            status: 'active',
+            expireDate: { $gte: new Date() }
+        });
+
+        res.json({ offers });
+    } catch (error) {
+        console.error('Error fetching offers:', error);
+        res.status(500).json({ message: 'Failed to fetch offers' });
+    }
+};
  
  
 
@@ -914,6 +944,8 @@ module.exports = {
     shopingPage,
     getProductDetails,
     getVariantDetails,
+    getProductForCart,
+    getProductOffers,
    
 
 

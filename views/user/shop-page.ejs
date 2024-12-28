@@ -121,18 +121,147 @@
 
 
 <style>
-	.add-to-wishlist {
-		cursor: pointer;
-		transition: all 0.3s ease;
-	}
+/* Update your existing wishlist button styles */
+
+
+
+.add-to-wishlist .wishlist-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    background: #828bb3; /* Default gray background */
+    
+    margin: 0 auto;
+   
+}
+
+.add-to-wishlist .fa-heart {
+    color: white !important; /* Always white heart */
+    
+}
+
+.add-to-wishlist.in-wishlist .wishlist-icon {
+    background-color: #ff0000; /* Red background when in wishlist */
+}
+
+
+	</style>
+
 	
-	.add-to-wishlist:hover {
-		color: #ff0000;
-	}
+<!-- card modal styles -->
+<style>
+
 	
-	.in-wishlist {
-		color: #ff0000;
-	}
+
+	/* Add these styles to make the modal more compact */
+.product-modal .modal-dialog {
+    max-width: 350px; /* Reduced width */
+}
+
+.product-modal .modal-header {
+    padding: 0.75rem;
+    background: #384aeb;
+    border-bottom: none;
+}
+
+.product-modal .modal-body {
+    padding: 0;
+}
+
+.product-modal .product-carousel {
+    max-height: 200px; /* Reduced height */
+}
+
+.product-modal .carousel-inner img {
+    height: 150px; /* Reduced height */
+    object-fit: contain;
+}
+
+.product-modal .product-info {
+    padding: 1rem !important; 
+}
+
+/* Improved thumbnail styling */
+.carousel-thumbnails {
+    padding: 0.25rem;
+    gap: 0.25rem;
+    background: #f8f9fa;
+}
+
+.carousel-thumbnail {
+    width: 30px; 
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+/* Improved size selection */
+.size-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(45px, 1fr));
+    gap: 0.5rem;
+    padding: 0.75rem;
+}
+
+.size-box {
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.size-box.selected {
+    background: #384aeb;
+    color: white;
+    border-color: #384aeb;
+}
+
+/* Price section styling */
+.price-section {
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 4px;
+    margin: 0.75rem;
+}
+
+.offer-price {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #384aeb;
+}
+
+.regular-price {
+    text-decoration: line-through;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+/* Footer styling */
+.modal-footer {
+    padding: 0.75rem;
+    border-top: none;
+    justify-content: space-between;
+}
+
+.btn-add-cart {
+    background: #384aeb;
+    color: white;
+    border-radius: 25px;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-add-cart:hover {
+    background: #2a3eb1;
+    transform: translateY(-1px);
+}
 	</style>
 
 
@@ -165,6 +294,7 @@
 					<div class="head">Sort By</div>
 					<div class="common-filter">
 						<form action="/shop-page" method="GET" id="sortForm">
+							<input type="hidden" name="category" value="<%= currentCategory %>">
 							<ul class="filter-options">
 								<li class="filter-list">
 									<div class="filter-box">
@@ -214,31 +344,28 @@
 
 					<div class="head">Filter by Category</div>
 <div class="common-filter">
-    <form action="/shop-page" method="GET" id="categoryForm">
-        <ul class="filter-options">
+    <!-- Replace your existing category form -->
+<form action="/shop-page" method="GET" id="categoryForm">
+    <input type="hidden" name="sort" value="<%= currentSort %>">
+    <ul class="filter-options">
+        <li class="filter-list">
+            <div class="filter-box">
+                <input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
+                    <%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
+                <label for="all-categories">All Categories</label>
+            </div>
+        </li>
+        <% categories.forEach(function(category) { %>
             <li class="filter-list">
-				<div class="filter-box">
-					<input class="pixel-radio" type="radio" id="all-categories" name="category" value="" 
-						<%= !currentCategory ? 'checked' : '' %> onchange="this.form.submit()">
-					<label for="all-categories">
-						All Categories 
-						<% if (locals.globalSearch) { %>
-							<span class="text-primary">(Global Search Enabled)</span>
-						<% } %>
-					</label>
-				</div>
-			</li>
-            <% categories.forEach(function(category) { %>
-                <li class="filter-list">
-                    <div class="filter-box">
-                        <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
-                            <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
-                        <label for="<%= category.name %>"><%= category.name %></label>
-                    </div>
-                </li>
-            <% }) %>
-        </ul>
-    </form>
+                <div class="filter-box">
+                    <input class="pixel-radio" type="radio" id="<%= category.name %>" name="category" value="<%= category.name %>" 
+                        <%= currentCategory === category.name ? 'checked' : '' %> onchange="this.form.submit()">
+                    <label for="<%= category.name %>"><%= category.name %></label>
+                </div>
+            </li>
+        <% }) %>
+    </ul>
+</form>
 </div>
 				</div>
 			</div>
@@ -292,11 +419,15 @@
 												<a href="#" class="social-info add-to-cart" data-product-id="<%= product._id %>">
 													<span class="ti-bag"></span>
 													<p class="hover-text">add to cart</p>
+													
 												</a>
-												<a href="#" class="social-info add-to-wishlist" data-product-id="<%= product._id %>">
-													<span class="lnr lnr-heart"></span>
-													<p class="hover-text">Wishlist</p>
-												</a>
+												<a href="#" class="social-info add-to-wishlist <%= product.isInWishlist ? 'in-wishlist' : '' %>" 
+													data-product-id="<%= product._id %>">
+													 <span class="wishlist-icon">
+														 <i class="fa fa-heart" style="color: '<%= product.isInWishlist ? 'rgb(255, 0, 0)' : '#828bb3' %>'"></i>
+													 </span>
+													 <p class="hover-text">Wishlist</p>
+												 </a>
 											</div>
 											
 										</div>
@@ -339,7 +470,8 @@
 
 					<div class="sorting">
 						<div class="sorting-options">
-							<form action="/shop-page" method="GET" id="sortForm">
+							<form action="/shop-page" method="GET" id="sortDropdownForm">
+								<input type="hidden" name="category" value="<%= currentCategory %>">
 								<select name="sort" class="form-control" onchange="this.form.submit()">
 									<option value="default" <%= currentSort === 'default' ? 'selected' : '' %>>Default sorting</option>
 									<option value="price-low" <%= currentSort === 'price-low' ? 'selected' : '' %>>Price: Low to High</option>
@@ -351,58 +483,156 @@
 							</form>
 						</div>
 					</div>
+					
 					<div class="sorting mr-auto">
 						
 					</div>
 					<div class="filter-bar d-flex flex-wrap align-items-center">
-						<% if (pagination.totalPages > 1) { %>
-							<div class="pagination">
-								<% if (pagination.hasPrev) { %>
-									<a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>" class="prev-arrow">
-										<i class="fa fa-long-arrow-left" aria-hidden="true"></i>
-									</a>
-								<% } %>
-					
+						
+						<div class="pagination">
+							<% if (pagination.totalPages > 0) { %>
+								<!-- Previous button - always visible -->
+								<a href="/shop-page?page=<%= pagination.currentPage - 1 %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="prev-arrow <%= pagination.currentPage <= 1 ? 'disabled' : '' %>">
+									<i class="fa fa-long-arrow-left" aria-hidden="true"></i>
+								</a>
+						
+								<!-- First page - always visible -->
+								<a href="/shop-page?page=1&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="<%= pagination.currentPage === 1 ? 'active' : '' %>">1</a>
+						
 								<% 
-								let startPage = Math.max(1, pagination.currentPage - 2);
-								let endPage = Math.min(pagination.totalPages, pagination.currentPage + 2);
+								let totalVisible = 5;
+								let startPage = Math.max(2, pagination.currentPage - Math.floor(totalVisible/2));
+								let endPage = Math.min(pagination.totalPages - 1, startPage + totalVisible - 1);
 								
-								if (startPage > 1) { %>
-									<a href="/shop-page?page=1&sort=<%= currentSort %>">1</a>
-									<% if (startPage > 2) { %>
-										<span class="dot-dot">...</span>
-									<% } %>
+								if (startPage > 2) { %>
+									<span class="dot-dot">...</span>
+								<% } 
+								
+								for (let i = startPage; i <= endPage; i++) { %>
+									<a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+									   class="<%= pagination.currentPage === i ? 'active' : '' %>"><%= i %></a>
+								<% } 
+								
+								if (endPage < pagination.totalPages - 1) { %>
+									<span class="dot-dot">...</span>
 								<% } %>
-					
-								<% for(let i = startPage; i <= endPage; i++) { %>
-									<a href="/shop-page?page=<%= i %>&sort=<%= currentSort %>" 
-									   class="<%= pagination.currentPage === i ? 'active' : '' %>">
-										<%= i %>
-									</a>
-								<% } %>
-					
-								<% if (endPage < pagination.totalPages) { %>
-									<% if (endPage < pagination.totalPages - 1) { %>
-										<span class="dot-dot">...</span>
-									<% } %>
-									<a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>">
+						
+								<!-- Last page - always visible if not first page -->
+								<% if (pagination.totalPages > 1) { %>
+									<a href="/shop-page?page=<%= pagination.totalPages %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+									   class="<%= pagination.currentPage === pagination.totalPages ? 'active' : '' %>">
 										<%= pagination.totalPages %>
 									</a>
 								<% } %>
-					
-								<% if (pagination.hasNext) { %>
-									<a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>" class="next-arrow">
-										<i class="fa fa-long-arrow-right" aria-hidden="true"></i>
-									</a>
-								<% } %>
-							</div>
-						<% } %>
+						
+								<!-- Next button - always visible -->
+								<a href="/shop-page?page=<%= pagination.currentPage + 1 %>&sort=<%= currentSort %>&category=<%= currentCategory %>" 
+								   class="next-arrow <%= pagination.currentPage >= pagination.totalPages ? 'disabled' : '' %>">
+									<i class="fa fa-long-arrow-right" aria-hidden="true"></i>
+								</a>
+							<% } %>
+						</div>
+
 					</div>
 				</div>
-				<!-- End Filter Bar -->
+				
 			</div>
 		</div>
 	</div>
+
+
+	<!-- add Tp Cart modal -->
+	<div class="modal fade product-modal" id="addToCartModal" tabindex="-1">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header bg-primary text-white">
+					<h5 class="modal-title">
+						<i class="fa fa-shopping-cart mr-2"></i>
+						Add to Cart
+					</h5>
+					<button type="button" class="close text-white" data-dismiss="modal">&times;</button>
+				</div>
+				<div class="modal-body p-0">
+					<!-- Product Image Carousel with Thumbnails -->
+					<div class="product-carousel">
+						<div id="productImageCarousel" class="carousel slide" data-ride="carousel">
+							<div class="carousel-inner" id="carouselInner">
+								<!-- Images dynamically added here -->
+							</div>
+							<a class="carousel-control-prev" href="#productImageCarousel" role="button" data-slide="prev">
+								<span class="carousel-control-prev-icon"></span>
+							</a>
+							<a class="carousel-control-next" href="#productImageCarousel" role="button" data-slide="next">
+								<span class="carousel-control-next-icon"></span>
+							</a>
+							<!-- Thumbnails -->
+							<div class="carousel-thumbnails mt-3 d-flex justify-content-center">
+								<!-- Thumbnails dynamically added here -->
+							</div>
+						</div>
+					</div>
+	
+					<!-- Product Details Section -->
+					<div class="product-info p-4">
+						<h4 id="modalProductName" class="product-name mb-2"></h4>
+						<p id="modalProductCategory" class="product-category text-muted"></p>
+	
+						<!-- Price Section with Animation -->
+						<div class="price-section mb-4">
+							<div class="d-flex align-items-center">
+								<span id="modalOfferPrice" class="offer-price mr-3"></span>
+								<span id="modalRegularPrice" class="regular-price mr-3"></span>
+								<span id="modalDiscountBadge" class="discount-badge animate-pulse"></span>
+							</div>
+						</div>
+	
+						<!-- Size Selection with Visual Feedback -->
+						<div class="size-section mb-4">
+							<h6 class="size-title d-flex justify-content-between">
+								<span>Select Size</span>
+								<small class="text-primary">Size Guide</small>
+							</h6>
+							<div id="modalSizeBoxes" class="size-grid">
+								<!-- Size boxes dynamically added here -->
+							</div>
+							<small id="sizeError" class="size-error text-danger mt-2" style="display: none;">
+								<i class="fa fa-exclamation-circle mr-1"></i>
+								Please select a size to continue
+							</small>
+						</div>
+	
+						<!-- Stock Status -->
+						<div class="stock-status mb-3">
+							<i class="fa fa-check-circle text-success mr-2"></i>
+							<span>In Stock</span>
+						</div>
+	
+						<!-- Product Link -->
+						<a href="#" id="viewDetailsLink" class="btn btn-link text-primary w-100">
+							<i class="fa fa-external-link mr-1"></i>
+							View Full Details
+						</a>
+					</div>
+				</div>
+	
+				<!-- Modal Footer with Enhanced Buttons -->
+				<div class="modal-footer border-0 px-4 pb-4">
+					<button type="button" class="btn btn-light" data-dismiss="modal">
+						<i class="fa fa-times mr-1"></i>
+						Close
+					</button>
+					<button type="button" class="btn btn-primary" id="confirmAddToCart" disabled>
+						<i class="fa fa-shopping-cart mr-1"></i>
+						Add to Cart
+					</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
 
 	<!-- Start related-product Area -->
 	<section class="related-product-area section_gap">
@@ -688,11 +918,11 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 		</div>
 	</div>
 
-
-
 	
 </body>
-<script src="js/vendor/jquery-2.2.4.min.js"></script>
+
+
+    <script src="js/vendor/jquery-2.2.4.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4"
 	 crossorigin="anonymous"></script>
 	<script src="js/vendor/bootstrap.min.js"></script>
@@ -708,8 +938,7 @@ Copyright &copy;<script>document.write(new Date().getFullYear());</script> All r
 	<script src="js/main.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
 	<script>
         // Add this code at the bottom of your shop-page.ejs file, replacing the existing search-related JavaScript
@@ -831,61 +1060,394 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- This is for my wishlist add botton -->
 <script>
-    
+  document.addEventListener('DOMContentLoaded', function() {
+    let currentProductDetails = null;
+    let selectedSize = null;
+    const confirmAddToCartBtn = document.getElementById('confirmAddToCart');
 
-	// Update the add-to-wishlist click handler in shop-page.ejs
-	document.addEventListener('DOMContentLoaded', function() {
-    // Update wishlist click handler
-    document.querySelectorAll('.add-to-wishlist').forEach(button => {
-        button.addEventListener('click', async function(e) {
-            e.preventDefault();
-            const productId = this.dataset.productId;
 
-            try {
-                const response = await fetch('/add-to-wishlist', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content
-                    },
-                    body: JSON.stringify({ productId })
-                });
+	 // Check authentication status
+	 async function checkAuth() {
+        try {
+            const response = await fetch('/check-auth');
+            return response.ok;
+        } catch (error) {
+            return false;
+        }
+    }
+	
 
-                const data = await response.json();
+    // Show login prompt
+    function showLoginPrompt(action) {
+    return Swal.fire({
+        title: 'Please Login',
+        text: `You need to login to ${action}`,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonText: 'Go to Login',
+        cancelButtonText: 'Close',
+        confirmButtonColor: '#384aeb',
+        cancelButtonColor: '#6c757d'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            window.location.href = '/login';
+        }
+    });
+}
 
-                if (response.status === 401) {
-                    // Handle unauthorized/not logged in
-                    Swal.fire({
-                        title: 'Please Login',
-                        text: 'You need to login to add items to wishlist',
-                        icon: 'info',
-                        showCancelButton: true,
-                        confirmButtonText: 'Login Now',
-                        cancelButtonText: 'Cancel'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            window.location.href = '/login';
-                        }
-                    });
-                    return;
+
+function handleAuthError(response) {
+    if (response.status === 401) {
+        return response.json().then(data => {
+            return Swal.fire({
+                title: data.title || 'Please Login',
+                text: data.message || 'You need to login to continue',
+                icon: data.type || 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
                 }
-
-                if (!response.ok) {
-                    throw new Error(data.message || 'Failed to add to wishlist');
-                }
-
-                if (data.isExisting) {
-                    Swal.fire('Info', 'Product already in wishlist', 'info');
-                } else {
-                    Swal.fire('Success', 'Product added to wishlist', 'success');
-                }
-            } catch (error) {
-                Swal.fire('Error', error.message, 'error');
-            }
+                throw new Error('auth_required');
+            });
         });
+    }
+    return response;
+}
+
+
+function updateWishlistButton(button, isInWishlist) {
+    const wishlistIcon = button.querySelector('.wishlist-icon');
+    const icon = button.querySelector('.fa-heart');
+    
+    if (isInWishlist) {
+        button.classList.add('in-wishlist');
+        wishlistIcon.style.backgroundColor = '#ff0000'; // Red circle when in wishlist
+    } else {
+        button.classList.remove('in-wishlist');
+        wishlistIcon.style.backgroundColor = '#828bb3'; // Gray circle when not in wishlist
+    }
+    
+    // Heart icon stays white in both states
+    icon.style.color = 'white';
+}
+
+	async function initializeWishlistButtons() {
+        const isAuthenticated = await checkAuth();
+        if (!isAuthenticated) return;
+
+        try {
+            const response = await fetch('/get-wishlist-items');
+            if (!response.ok) return;
+            
+            const wishlistItems = await response.json();
+            document.querySelectorAll('.add-to-wishlist').forEach(button => {
+                const productId = button.dataset.productId;
+                const isInWishlist = wishlistItems.some(item => item.productId === productId);
+                updateWishlistButton(button, isInWishlist);
+            });
+        } catch (error) {
+            console.error('Failed to initialize wishlist states:', error);
+        }
+    }
+
+    // Handle wishlist toggle
+	async function handleWishlistToggle(button) {
+    try {
+        const productId = button.dataset.productId;
+        const isInWishlist = button.classList.contains('in-wishlist');
+        
+        const response = await fetch(isInWishlist ? 
+            `/remove-from-wishlist/${productId}` : 
+            '/add-to-wishlist', {
+                method: isInWishlist ? 'DELETE' : 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: isInWishlist ? null : JSON.stringify({ productId })
+            });
+
+        if (!response.ok) {
+            if (response.status === 401) {
+                return showLoginPrompt('add to wishlist');
+            }
+            throw new Error('Failed to update wishlist');
+        }
+
+        updateWishlistButton(button, !isInWishlist);
+        
+        Swal.fire({
+            icon: 'success',
+            title: isInWishlist ? 'Removed from Wishlist' : 'Added to Wishlist',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            timerProgressBar: true
+        });
+    } catch (error) {
+        console.error('Wishlist error:', error);
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Failed to update wishlist',
+            confirmButtonColor: '#384aeb'
+        });
+    }
+}
+
+    // Update wishlist button appearance
+	async function updateModalContent(product, variant) {
+    if (!product || !variant) return;
+
+    const modal = document.getElementById('addToCartModal');
+    if (!modal) return;
+
+    // Set current product details
+    currentProductDetails = product;
+
+    // Update carousel images and thumbnails
+    const carouselInner = document.getElementById('carouselInner');
+    const thumbnailContainer = document.querySelector('.carousel-thumbnails');
+    
+    if (carouselInner && thumbnailContainer && variant.images) {
+        // Clear existing content
+        carouselInner.innerHTML = '';
+        thumbnailContainer.innerHTML = '';
+
+        // Add images to carousel and create thumbnails
+        variant.images.forEach((image, index) => {
+            // Add to carousel
+            const carouselItem = document.createElement('div');
+            carouselItem.className = `carousel-item ${index === 0 ? 'active' : ''}`;
+            carouselItem.innerHTML = `
+                <img src="/uploads/product-images/${image.filename}" 
+                     class="d-block w-100" 
+                     alt="${product.productName}">
+            `;
+            carouselInner.appendChild(carouselItem);
+
+            // Create thumbnail
+            const thumbnail = document.createElement('img');
+            thumbnail.src = `/uploads/product-images/${image.filename}`;
+            thumbnail.className = `carousel-thumbnail ${index === 0 ? 'active' : ''}`;
+            thumbnail.dataset.slide = index;
+            thumbnail.addEventListener('click', () => {
+                $('.carousel').carousel(index);
+                document.querySelectorAll('.carousel-thumbnail').forEach(thumb => 
+                    thumb.classList.remove('active'));
+                thumbnail.classList.add('active');
+            });
+            thumbnailContainer.appendChild(thumbnail);
+        });
+    }
+
+    // Update carousel event listener
+    $('#productImageCarousel').on('slide.bs.carousel', (e) => {
+        const thumbnails = document.querySelectorAll('.carousel-thumbnail');
+        thumbnails.forEach(thumb => thumb.classList.remove('active'));
+        thumbnails[e.to].classList.add('active');
+    });
+
+    // Rest of your existing updateModalContent code...
+    modal.querySelector('#modalProductName').textContent = product.productName;
+    modal.querySelector('#modalProductCategory').textContent = 
+        product.category ? `Category: ${product.category.name}` : '';
+
+    // Update sizes with animation
+    const sizeBoxesContainer = modal.querySelector('#modalSizeBoxes');
+    if (sizeBoxesContainer && variant.sizes) {
+        sizeBoxesContainer.innerHTML = variant.sizes
+            .filter(size => size.quantity > 0)
+            .map(size => `
+                <div class="size-box" data-size="${size.size}">
+                    ${size.size}
+                </div>
+            `).join('');
+
+        // Add size selection handlers with animation
+        sizeBoxesContainer.querySelectorAll('.size-box').forEach(box => {
+            box.addEventListener('click', () => {
+                sizeBoxesContainer.querySelectorAll('.size-box').forEach(b => 
+                    b.classList.remove('selected'));
+                box.classList.add('selected');
+                selectedSize = parseInt(box.dataset.size);
+                document.getElementById('sizeError').style.display = 'none';
+                document.getElementById('confirmAddToCart').disabled = false;
+            });
+        });
+    }
+
+    // Fetch and update offers with animation
+    try {
+        const offersResponse = await fetch(`/product/${product._id}/offers`);
+        const offersData = await offersResponse.json();
+        
+        const regularPrice = product.regularPrice;
+        let finalPrice = regularPrice;
+        let maxDiscount = 0;
+        
+        if (offersData?.offers) {
+            maxDiscount = Math.max(...offersData.offers.map(o => o.discount));
+            if (maxDiscount > 0) {
+                finalPrice = regularPrice * (1 - maxDiscount / 100);
+            }
+        }
+
+        // Animate price updates
+        const offerPriceElement = modal.querySelector('#modalOfferPrice');
+        offerPriceElement.style.opacity = '0';
+        setTimeout(() => {
+            offerPriceElement.textContent = maxDiscount > 0 ? 
+                `₹${Math.round(finalPrice)}` : `₹${regularPrice}`;
+            offerPriceElement.style.opacity = '1';
+        }, 300);
+
+        const regularPriceElement = modal.querySelector('#modalRegularPrice');
+        regularPriceElement.style.opacity = '0';
+        setTimeout(() => {
+            regularPriceElement.textContent = `₹${regularPrice}`;
+            regularPriceElement.style.display = maxDiscount > 0 ? 'inline' : 'none';
+            regularPriceElement.style.opacity = '1';
+        }, 300);
+
+        const discountBadge = modal.querySelector('#modalDiscountBadge');
+        discountBadge.textContent = `${maxDiscount}% OFF`;
+        discountBadge.style.display = maxDiscount > 0 ? 'inline' : 'none';
+    } catch (error) {
+        console.error('Error updating offers:', error);
+    }
+
+    // Reset size selection
+    selectedSize = null;
+    document.getElementById('confirmAddToCart').disabled = true;
+}
+
+   
+	// Add to cart handler
+	document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        // Check authentication first
+        const isAuthenticated = await checkAuth();
+        if (!isAuthenticated) {
+            return Swal.fire({
+                title: 'Please Login',
+                text: 'You need to login to add items to cart',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        try {
+            const productId = this.dataset.productId;
+            const response = await fetch(`/product/${productId}`);
+            if (!response.ok) throw new Error('Failed to fetch product details');
+            
+            const product = await response.json();
+            await updateModalContent(product, product.variants[0]);
+            $('#addToCartModal').modal('show');
+        } catch (error) {
+            console.error('Error:', error);
+            Swal.fire({
+                title: 'Error',
+                text: 'Failed to load product details',
+                icon: 'error',
+                confirmButtonColor: '#384aeb'
+            });
+        }
     });
 });
-	</script>
+
+    // Confirm add to cart
+    document.getElementById('confirmAddToCart').addEventListener('click', async function() {
+    try {
+        // Check authentication again before adding to cart
+        const authResponse = await fetch('/check-auth');
+        if (!authResponse.ok) {
+            $('#addToCartModal').modal('hide');
+            return Swal.fire({
+                title: 'Please Login',
+                text: 'You need to login to add items to cart',
+                icon: 'info',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Login',
+                cancelButtonText: 'Close',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/login';
+                }
+            });
+        }
+
+        if (!selectedSize) {
+            document.getElementById('sizeError').style.display = 'block';
+            return;
+        }
+
+        const response = await fetch(`/addToCart/${currentProductDetails._id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                size: selectedSize,
+                color: currentProductDetails.variants[0].color,
+                quantity: 1,
+                variantId: currentProductDetails.variants[0]._id
+            })
+        });
+
+        const data = await response.json();
+        
+        if (response.ok) {
+            $('#addToCartModal').modal('hide');
+            Swal.fire({
+                title: 'Success!',
+                text: 'Product added to cart successfully',
+                icon: 'success',
+                showCancelButton: true,
+                confirmButtonText: 'Go to Cart',
+                cancelButtonText: 'Continue Shopping',
+                confirmButtonColor: '#384aeb',
+                cancelButtonColor: '#6c757d'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = '/userCart';
+                }
+            });
+        } else {
+            Swal.fire('Error', data.message || 'Failed to add item to cart', 'error');
+        }
+    } catch (error) {
+        console.error('Add to cart error:', error);
+        Swal.fire('Error', 'Failed to add item to cart', 'error');
+    }
+});
+
+    // Add wishlist event listeners
+    document.querySelectorAll('.add-to-wishlist').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleWishlistToggle(button);
+        });
+    });
+
+    // Initialize wishlist states
+    initializeWishlistButtons();
+});
+  </script>
 
 
 </html>

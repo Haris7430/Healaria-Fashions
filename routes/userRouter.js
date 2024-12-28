@@ -7,9 +7,6 @@ const userCartController = require('../controllers/user/userCartController');
 const userProfileController = require('../controllers/user/userProfileController');
 const checkoutController = require('../controllers/user/checkOutController')
 const wishlistController = require('../controllers/user/wishlistController')
-
-
-
 const { userAuth, adminAuth } = require('../middleware/auth');
 const passport = require('passport');
 
@@ -50,6 +47,10 @@ router.get('/search', userController.searchProducts);
 router.get('/shop-page', userController.shopingPage);
 router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
+router.get('/product/:productId/variant/first', userAuth, userController.getVariantDetails);
+router.get('/check-auth', userAuth, (req, res) => res.status(200).json({ authenticated: true }));
+router.get('/product/:productId', userController.getProductForCart);
+router.get('/product/:productId/offers', userController.getProductOffers);
 
 
 router.get('/userCart',userAuth, userCartController.getCartPage); 
@@ -101,6 +102,8 @@ router.delete('/remove-from-wishlist/:productId', userAuth, wishlistController.r
 router.delete('/clear-wishlist', userAuth, wishlistController.clearWishlist);
 router.post('/wishlist/add-all-to-cart', userAuth, wishlistController.addAllToCart);
 router.patch('/update-wishlist-variant/:productId', userAuth, wishlistController.updateWishlistVariant);
+router.get('/get-wishlist-items', userAuth, wishlistController.getWishlistItems);
+router.get('/check-wishlist-item/:productId', userAuth, wishlistController.checkWishlistItem);
 
 
 
