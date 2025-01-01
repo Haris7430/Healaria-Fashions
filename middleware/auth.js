@@ -49,22 +49,26 @@ const userAuth = (req, res, next) => {
         });
 };
 
+
 const adminAuth = (req, res, next) => {
-    if (!req.session.admin) {
+    // First check if admin is logged in via session
+    if (!req.session.isAdmin) {
         return res.redirect('/admin/admin-login');
     }
-    
-    User.findOne({ _id: req.session.admin._id, isAdmin: true })
+
+    // Then verify admin status in database
+    User.findOne({ isAdmin: true })
         .then(admin => {
             if (admin) {
                 next();
             } else {
-                req.session.destroy();
+                // Clear admin session if no admin found in database
+                req.session.isAdmin = false;
                 res.redirect('/admin/admin-login');
             }
         })
         .catch(error => {
-            console.error('Admin auth error:', error);
+            console.log('Error in adminAuth middleware:', error);
             res.status(500).send('Internal Server Error');
         });
 };

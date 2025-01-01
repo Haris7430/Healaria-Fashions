@@ -1171,40 +1171,54 @@ const cancelEntireOrder = async (req, res) => {
             });
         }
 
-        // Calculate total refund amount
-        let refundAmount = order.total;
-        
-        // Process refund to wallet
-        const refundSuccess = await handleRefundToWallet(
-            order.userId,
-            refundAmount,
-            `Refund for cancelled order #${order.orderId}`,
-            order._id
-        );
+        // Calculate refund amount only for non-cancelled items
+        const nonCancelledItems = order.items.filter(item => item.status !== 'cancelled');
+        let refundAmount = nonCancelledItems.reduce((total, item) => {
+            let itemRefund = item.totalPrice;
+            
+            // If coupon was applied, calculate proportional discount for this item
+            if (order.couponApplied && order.couponApplied.discountAmount) {
+                const orderSubtotal = order.items.reduce((sum, item) => sum + item.totalPrice, 0);
+                const itemDiscountProportion = item.totalPrice / orderSubtotal;
+                const itemCouponDiscount = order.couponApplied.discountAmount * itemDiscountProportion;
+                itemRefund -= itemCouponDiscount;
+            }
+            
+            return total + itemRefund;
+        }, 0);
 
-        if (!refundSuccess) {
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to process refund'
-            });
+        // Only process refund if there are non-cancelled items
+        if (refundAmount > 0) {
+            // Process refund to wallet
+            const refundSuccess = await handleRefundToWallet(
+                order.userId,
+                refundAmount,
+                `Refund for cancelled order #${order.orderId}`,
+                order._id
+            );
+
+            if (!refundSuccess) {
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to process refund'
+                });
+            }
         }
 
-        // Restore inventory for all items
-        for (const item of order.items) {
-            if (item.status !== 'cancelled') {
-                const product = await Product.findById(item.productId);
-                if (product) {
-                    const variant = product.variants.find(v => v.color === item.color);
-                    if (variant) {
-                        const sizeVariant = variant.sizes.find(s => s.size === item.size);
-                        if (sizeVariant) {
-                            sizeVariant.quantity += item.quantity;
-                            await product.save();
-                        }
+        // Restore inventory only for non-cancelled items
+        for (const item of nonCancelledItems) {
+            const product = await Product.findById(item.productId);
+            if (product) {
+                const variant = product.variants.find(v => v.color === item.color);
+                if (variant) {
+                    const sizeVariant = variant.sizes.find(s => s.size === item.size);
+                    if (sizeVariant) {
+                        sizeVariant.quantity += item.quantity;
+                        await product.save();
                     }
                 }
-                item.status = 'cancelled';
             }
+            item.status = 'cancelled';
         }
 
         order.status = 'cancelled';
@@ -1212,9 +1226,9 @@ const cancelEntireOrder = async (req, res) => {
 
         res.json({ 
             success: true, 
-            message: 'Order cancelled successfully and refund processed',
+            message: 'Order cancelled successfully' + (refundAmount > 0 ? ' and refund processed' : ''),
             orderStatus: order.status,
-            refundAmount
+            refundAmount: refundAmount
         });
     } catch (error) {
         console.error('Cancel Entire Order Error:', error);

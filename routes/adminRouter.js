@@ -25,6 +25,11 @@ router.get('/pageerror', adminController.pageerror);
 router.get('/admin-login', adminController.loadLogin);
 router.post('/admin-login', adminController.login);
 router.get('/admin-dashboard', adminAuth, adminController.loadDashboard);
+
+router.get('/api/dashboard-data', adminAuth, adminController.getDashboardData);
+router.get('/api/sales-report', adminAuth, adminController.getSalesReport);
+router.get('/api/download-report/:format', adminAuth, adminController.downloadReport);
+
 router.get('/admin-logout', adminController.logout);
 
 router.get('/all-customers', adminAuth, customerController.customerInfo);

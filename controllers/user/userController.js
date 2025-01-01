@@ -616,7 +616,7 @@ const searchProducts = async (req, res) => {
 const shopingPage = async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
-        const limit = 9; 
+        const limit = 9;
         const sort = req.query.sort || 'default';
         const categoryFilter = req.query.category || '';
         const user = req.session.user;
@@ -627,71 +627,36 @@ const shopingPage = async (req, res) => {
         // Base query with isBlocked check
         let query = { isBlocked: false };
 
-        // Important: Add category filter to query if specified
+        // Add category filter if specified
         if (categoryFilter && categoryFilter !== '') {
             const selectedCategory = await Category.findOne({ 
                 name: categoryFilter,
                 isListed: true 
             });
             if (selectedCategory) {
-                // Ensure strict category matching
                 query.category = selectedCategory._id;
             }
         }
 
         const skip = (page - 1) * limit;
 
-        // Sort criteria
-        let sortCriteria = {};
-        switch(sort) {
-            case 'price-low':
-                sortCriteria = { regularPrice: 1 };
-                break;
-            case 'price-high':
-                sortCriteria = { regularPrice: -1 };
-                break;
-            case 'name-asc':
-                sortCriteria = { productName: 1 };
-                break;
-            case 'name-desc':
-                sortCriteria = { productName: -1 };
-                break;
-            case 'new-arrivals':
-                sortCriteria = { createdAt: -1 };
-                break;
-            default:
-                sortCriteria = { createdAt: -1 };
-        }
-
-        // Get total count for selected category only
-        const totalProducts = await Product.countDocuments(query);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        // Validate page number and adjust if necessary
-        if (page > totalPages) {
-            return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
-        }
-
-        // Get products with category filter, pagination and sorting
+        // First, get all products matching the query
         let products = await Product.find(query)
             .populate('category')
-            .sort(sortCriteria)
-            .skip(skip)
-            .limit(limit)
             .lean();
 
-        // Rest of your existing offer calculation code...
+        // Get current date for offer validation
         const currentDate = new Date();
+
+        // Fetch all active offers
         const offers = await Offer.find({
             status: 'active',
             expireDate: { $gte: currentDate }
         });
 
+        // Calculate effective prices and add offer information
         products = await Promise.all(products.map(async (product) => {
-            // Your existing product mapping code...
-            let bestOffer = null;
-            let offerPercentage = 0;
-
+            // Find applicable offers
             const productOffers = offers.filter(offer =>
                 offer.offerType === 'product' &&
                 offer.productIds.some(id => id.toString() === product._id.toString())
@@ -704,6 +669,10 @@ const shopingPage = async (req, res) => {
 
             const allProductOffers = [...productOffers, ...categoryOffers];
 
+            // Calculate best discount
+            let bestOffer = null;
+            let offerPercentage = 0;
+
             if (allProductOffers.length > 0) {
                 bestOffer = allProductOffers.reduce((maxOffer, currentOffer) =>
                     (currentOffer.discount > maxOffer.discount) ? currentOffer : maxOffer
@@ -711,10 +680,12 @@ const shopingPage = async (req, res) => {
                 offerPercentage = bestOffer.discount;
             }
 
-            const offerPrice = offerPercentage
+            // Calculate effective price
+            const effectivePrice = offerPercentage
                 ? product.regularPrice * (1 - offerPercentage / 100)
-                : null;
+                : product.regularPrice;
 
+            // Get first image
             const firstImage = product.variants.reduce((img, variant) => {
                 if (!img && variant.images && variant.images.length > 0) {
                     return variant.images[0].filename;
@@ -722,6 +693,7 @@ const shopingPage = async (req, res) => {
                 return img;
             }, null);
 
+            // Check wishlist status
             let isInWishlist = false;
             if (req.session.user) {
                 const wishlist = await Wishlist.findOne({
@@ -733,13 +705,47 @@ const shopingPage = async (req, res) => {
 
             return {
                 ...product,
+                effectivePrice,
+                regularPrice: product.regularPrice,
+                offerPercentage,
+                bestOffer,
                 productImages: [firstImage || 'default-image.jpg'],
-                bestOffer: bestOffer,
-                offerPercentage: offerPercentage,
-                offerPrice: offerPrice,
-                isInWishlist: isInWishlist
+                isInWishlist
             };
         }));
+
+        // Apply sorting
+        switch(sort) {
+            case 'price-low':
+                products.sort((a, b) => a.effectivePrice - b.effectivePrice);
+                break;
+            case 'price-high':
+                products.sort((a, b) => b.effectivePrice - a.effectivePrice);
+                break;
+            case 'name-asc':
+                products.sort((a, b) => a.productName.localeCompare(b.productName));
+                break;
+            case 'name-desc':
+                products.sort((a, b) => b.productName.localeCompare(a.productName));
+                break;
+            case 'new-arrivals':
+                products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                break;
+            default:
+                products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        }
+
+        // Apply pagination after sorting
+        const totalProducts = products.length;
+        const totalPages = Math.ceil(totalProducts / limit);
+        
+        // Validate page number
+        if (page > totalPages) {
+            return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
+        }
+
+        // Slice products for pagination
+        products = products.slice(skip, skip + limit);
 
         const pagination = {
             currentPage: page,
@@ -752,11 +758,11 @@ const shopingPage = async (req, res) => {
         };
 
         const renderData = {
-            products: products,
-            pagination: pagination,
+            products,
+            pagination,
             currentSort: sort,
             currentCategory: categoryFilter,
-            categories: categories,
+            categories,
             itemsPerPage: limit,
             totalItems: totalProducts
         };
@@ -779,6 +785,7 @@ const shopingPage = async (req, res) => {
  
 
 // userController.js - Updated getProductDetails function
+// Add this to your getProductDetails function in userController.js
 const getProductDetails = async (req, res) => {
     try {
         const productId = req.query.id;
@@ -800,7 +807,7 @@ const getProductDetails = async (req, res) => {
             expireDate: { $gte: new Date() }
         });
 
-        // Calculate the maximum discount
+        // Calculate the maximum discount (existing code remains the same)
         let maxDiscount = 0;
         let applicableOfferName = '';
         
@@ -816,6 +823,38 @@ const getProductDetails = async (req, res) => {
 
         // Calculate discounted price
         const discountedPrice = product.regularPrice * (1 - maxDiscount / 100);
+
+        // Fetch related products from the same category
+        const relatedProducts = await Product.find({
+            category: product.category._id,
+            _id: { $ne: product._id }, // Exclude current product
+            isBlocked: false
+        })
+        .populate('category')
+        .limit(4) // Show only 4 related products
+        .lean();
+
+        // Calculate offers for related products
+        const relatedProductsWithOffers = await Promise.all(relatedProducts.map(async (relatedProduct) => {
+            const productOffers = await Offer.find({
+                $or: [
+                    { offerType: 'product', productIds: relatedProduct._id },
+                    { offerType: 'category', categoryIds: relatedProduct.category._id }
+                ],
+                status: 'active',
+                expireDate: { $gte: new Date() }
+            });
+
+            let maxOfferPercentage = 0;
+            productOffers.forEach(offer => {
+                maxOfferPercentage = Math.max(maxOfferPercentage, offer.discount);
+            });
+
+            return {
+                ...relatedProduct,
+                offerPercentage: maxOfferPercentage
+            };
+        }));
 
         const variants = product.variants.filter(variant => variant.isListed);
         const initialVariant = variants[0];
@@ -837,6 +876,7 @@ const getProductDetails = async (req, res) => {
             initialVariant,
             variantSizes,
             categoryName: product.category.name,
+            relatedProducts: relatedProductsWithOffers,
             isLoggedIn: !!req.session.user,
         });
     } catch (error) {

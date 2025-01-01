@@ -610,9 +610,9 @@
 						</div>
 	
 						<!-- Product Link -->
-						<a href="#" id="viewDetailsLink" class="btn btn-link text-primary w-100">
+						<a href="#" id="viewDetailsLink" class="btn btn-link text-primary w-100" data-product-id="">
 							<i class="fa fa-external-link mr-1"></i>
-							View Full Details
+							View Full Details   
 						</a>
 					</div>
 				</div>
@@ -1208,10 +1208,17 @@ function updateWishlistButton(button, isInWishlist) {
     // Set current product details
     currentProductDetails = product;
 
-    // Update carousel images and thumbnails
+    // Update view details link
+    const viewDetailsLink = modal.querySelector('#viewDetailsLink');
+    if (viewDetailsLink) {
+        viewDetailsLink.href = `/productDetails?id=${product._id}`;
+        viewDetailsLink.dataset.productId = product._id;
+    }
+
+    // Rest of your existing updateModalContent code...
     const carouselInner = document.getElementById('carouselInner');
     const thumbnailContainer = document.querySelector('.carousel-thumbnails');
-    
+
     if (carouselInner && thumbnailContainer && variant.images) {
         // Clear existing content
         carouselInner.innerHTML = '';
@@ -1244,19 +1251,12 @@ function updateWishlistButton(button, isInWishlist) {
         });
     }
 
-    // Update carousel event listener
-    $('#productImageCarousel').on('slide.bs.carousel', (e) => {
-        const thumbnails = document.querySelectorAll('.carousel-thumbnail');
-        thumbnails.forEach(thumb => thumb.classList.remove('active'));
-        thumbnails[e.to].classList.add('active');
-    });
-
-    // Rest of your existing updateModalContent code...
+    // Update product details
     modal.querySelector('#modalProductName').textContent = product.productName;
     modal.querySelector('#modalProductCategory').textContent = 
         product.category ? `Category: ${product.category.name}` : '';
 
-    // Update sizes with animation
+    // Update sizes
     const sizeBoxesContainer = modal.querySelector('#modalSizeBoxes');
     if (sizeBoxesContainer && variant.sizes) {
         sizeBoxesContainer.innerHTML = variant.sizes
@@ -1267,7 +1267,7 @@ function updateWishlistButton(button, isInWishlist) {
                 </div>
             `).join('');
 
-        // Add size selection handlers with animation
+        // Add size selection handlers
         sizeBoxesContainer.querySelectorAll('.size-box').forEach(box => {
             box.addEventListener('click', () => {
                 sizeBoxesContainer.querySelectorAll('.size-box').forEach(b => 
@@ -1280,7 +1280,7 @@ function updateWishlistButton(button, isInWishlist) {
         });
     }
 
-    // Fetch and update offers with animation
+    // Fetch and update offers
     try {
         const offersResponse = await fetch(`/product/${product._id}/offers`);
         const offersData = await offersResponse.json();
@@ -1296,22 +1296,12 @@ function updateWishlistButton(button, isInWishlist) {
             }
         }
 
-        // Animate price updates
-        const offerPriceElement = modal.querySelector('#modalOfferPrice');
-        offerPriceElement.style.opacity = '0';
-        setTimeout(() => {
-            offerPriceElement.textContent = maxDiscount > 0 ? 
-                `₹${Math.round(finalPrice)}` : `₹${regularPrice}`;
-            offerPriceElement.style.opacity = '1';
-        }, 300);
-
+        modal.querySelector('#modalOfferPrice').textContent = 
+            maxDiscount > 0 ? `₹${Math.round(finalPrice)}` : `₹${regularPrice}`;
+        
         const regularPriceElement = modal.querySelector('#modalRegularPrice');
-        regularPriceElement.style.opacity = '0';
-        setTimeout(() => {
-            regularPriceElement.textContent = `₹${regularPrice}`;
-            regularPriceElement.style.display = maxDiscount > 0 ? 'inline' : 'none';
-            regularPriceElement.style.opacity = '1';
-        }, 300);
+        regularPriceElement.textContent = `₹${regularPrice}`;
+        regularPriceElement.style.display = maxDiscount > 0 ? 'inline' : 'none';
 
         const discountBadge = modal.querySelector('#modalDiscountBadge');
         discountBadge.textContent = `${maxDiscount}% OFF`;
