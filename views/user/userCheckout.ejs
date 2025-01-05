@@ -862,6 +862,39 @@ function createSaveAmountSpan(item) {
         return;
     }
 
+    
+    const quantityValidation = await fetch('/checkout/validate-quantities', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+
+        const validationData = await quantityValidation.json();
+        if (!validationData.success) {
+            if (validationData.invalidItems && validationData.invalidItems.length > 0) {
+                let errorMessage = 'Some items in your cart are no longer available in the requested quantity:\n\n';
+                validationData.invalidItems.forEach(item => {
+                    errorMessage += `${item.productName} (${item.color}, Size ${item.size}):\n`;
+                    errorMessage += `Requested: ${item.requestedQuantity}, Available: ${item.availableQuantity}\n\n`;
+                });
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Insufficient Stock',
+                    html: errorMessage.replace(/\n/g, '<br>'),
+                    confirmButtonText: 'Update Cart'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = '/userCart';
+                    }
+                });
+                return;
+            }
+            throw new Error('Failed to validate product quantities');
+        }
+        
+
     // Get selected address details
     let selectedAddress;
     try {
@@ -937,7 +970,9 @@ function createSaveAmountSpan(item) {
         if (data.success) {
     if (paymentMethod === 'COD' || paymentMethod === 'Wallet') {
         window.location.href = `/orders/${data.orderId}`;
-    } else if (paymentMethod === 'RazorPay') {
+    }  
+    
+    else if (paymentMethod === 'RazorPay') {
                 const options = {
                     key: 'rzp_test_kGARsyFFRtqEHR',
                     amount: data.total * 100,
@@ -1006,7 +1041,6 @@ function createSaveAmountSpan(item) {
     }
 }
 
-// Add new function to handle payment failure
 // Update the handlePaymentFailure function in userCheckout.ejs
 async function handlePaymentFailure(orderId) {
     try {

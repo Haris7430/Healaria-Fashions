@@ -1,3 +1,4 @@
+
 const User = require('../../models/userSchema'); // User schema
 const Address = require('../../models/addressSchema');
 const Order = require('../../models/orderSchema');
@@ -5,6 +6,7 @@ const mongoose = require('mongoose');
 const Product = require('../../models/productSchema');
 const bcrypt = require('bcrypt'); 
 const Wallet = require('../../models/walletSchema');
+const Referral = require('../../models/referralSchema')
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -33,6 +35,219 @@ const getUserProfile = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.redirect('/login');
+    }
+};
+
+
+const generateUniqueCode = () => {
+    const prefix = 'REF';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+};
+
+
+// Controller to get referrals
+const getReferrals = async (req, res) => {
+    try {
+        const user = await User.findById(req.session.user._id);
+        
+        // Get all referrals for the user
+        const referrals = await Referral.find({ referrer: user._id })
+            .populate('referees.user', 'name email')
+            .sort({ createdAt: -1 });
+
+        // Calculate statistics
+        const referralStats = {
+            totalReferrals: referrals.reduce((sum, ref) => sum + ref.referees.length, 0),
+            pendingRewards: referrals.reduce((sum, ref) => 
+                sum + ref.referees
+                    .filter(referee => referee.rewardStatus === 'Pending')
+                    .reduce((refSum, referee) => refSum + referee.rewardAmount, 0), 0),
+            totalEarned: referrals.reduce((sum, ref) => ref.totalRewards + sum, 0)
+        };
+
+        // Flatten referees array for display
+        const referralHistory = referrals.flatMap(referral => 
+            referral.referees.map(referee => ({
+                code: referral.referralCode,
+                user: referee.user,
+                joinedAt: referee.joinedAt,
+                rewardStatus: referee.rewardStatus,
+                rewardAmount: referee.rewardAmount
+            }))
+        ).sort((a, b) => b.joinedAt - a.joinedAt);
+
+        res.render('userProfile', {
+            user,
+            activeSection: 'referrals',
+            referrals: referralHistory,
+            referralStats,
+            activeReferral: referrals.find(r => r.status === 'Active')
+        });
+    } catch (error) {
+        console.error('Error fetching referrals:', error);
+        res.status(500).render('error', {
+            message: 'Error fetching referral data',
+            error: error.message
+        });
+    }
+};
+
+// Controller to generate referral code
+const generateReferralCode = async (req, res) => {
+    try {
+        const user = await User.findById(req.session.user._id);
+        
+        // Find all referrals for this user
+        const userReferrals = await Referral.find({
+            referrer: user._id
+        });
+
+        // Check if user can generate a new code
+        const activeReferral = userReferrals.find(ref => ref.status === 'Active');
+        const hasUsedReferrals = userReferrals.some(ref => 
+            ref.referees.length > 0 && 
+            ref.referees.some(referee => referee.rewardStatus === 'Completed')
+        );
+
+        // Allow new code generation if no active code or has successful referrals
+        if (!activeReferral || hasUsedReferrals) {
+            let isUnique = false;
+            let newCode;
+
+            while (!isUnique) {
+                newCode = generateUniqueCode();
+                const existingCode = await Referral.findOne({ referralCode: newCode });
+                if (!existingCode) {
+                    isUnique = true;
+                }
+            }
+
+            // If there's an active code, deactivate it
+            if (activeReferral) {
+                activeReferral.status = 'Expired';
+                await activeReferral.save();
+            }
+
+            // Create new referral record
+            const newReferral = await Referral.create({
+                referralCode: newCode,
+                referrer: user._id,
+                status: 'Active'
+            });
+
+            // Update user's current referral code
+            user.referralCode = newCode;
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                referralCode: newCode,
+                message: 'New referral code generated successfully'
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'Cannot generate new code until current code is used'
+            });
+        }
+    } catch (error) {
+        console.error('Error generating referral code:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating referral code',
+            error: error.message
+        });
+    }
+};
+
+
+
+const processReferralReward = async (req, res) => {
+    try {
+        const { referralCode } = req.body;
+        const userId = req.session.user._id;
+
+        const referral = await Referral.findOne({ 
+            referralCode,
+            status: 'Active'
+        });
+
+        if (!referral) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired referral code'
+            });
+        }
+
+        // Check if user has already used any referral code
+        const existingReferral = await Referral.findOne({
+            'referees.user': userId
+        });
+
+        if (existingReferral) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already used a referral code'
+            });
+        }
+
+        // Add new referee to the referral
+        referral.referees.push({
+            user: userId,
+            rewardAmount: 50 // Referee reward amount
+        });
+
+        // Update referrer's wallet
+        const referrerWallet = await Wallet.findOne({ userId: referral.referrer });
+        const referrerReward = 25; // Referrer reward amount
+
+        if (referrerWallet) {
+            referrerWallet.balance += referrerReward;
+            const transaction = {
+                amount: referrerReward,
+                type: 'credit',
+                description: 'Referral reward for new user signup',
+                balance: referrerWallet.balance
+            };
+            referrerWallet.transactions.push(transaction);
+            await referrerWallet.save();
+        }
+
+        // Update referee's wallet
+        const refereeWallet = await Wallet.findOne({ userId });
+        if (refereeWallet) {
+            refereeWallet.balance += 50; // Referee reward
+            refereeWallet.transactions.push({
+                amount: 50,
+                type: 'credit',
+                description: 'Reward for using referral code',
+                balance: refereeWallet.balance
+            });
+            await refereeWallet.save();
+        }
+
+        // Update referral statistics
+        referral.totalRewards += referrerReward;
+        
+        // Update reward status
+        const refereeIndex = referral.referees.length - 1;
+        referral.referees[refereeIndex].rewardStatus = 'Completed';
+
+        await referral.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Referral reward processed successfully'
+        });
+    } catch (error) {
+        console.error('Error processing referral reward:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing referral reward',
+            error: error.message
+        });
     }
 };
 
@@ -1365,6 +1580,9 @@ const getWallet = async (req, res) => {
 
 module.exports = {
     getUserProfile,
+    getReferrals,
+    generateReferralCode,
+    processReferralReward,
     updateProfile,
     changePassword,
     getAddressPage,

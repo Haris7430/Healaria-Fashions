@@ -123,8 +123,8 @@
                                             <td><%= item.size %></td>
                                             <td><%= item.product.category?.name || 'Uncategorized' %></td>
                                             <td><%= item.quantity %></td>
-                                            <td>₹<%= item.price %></td>
-                                            <td>₹<%= item.totalPrice %></td>
+                                            <td>₹<%= Math.round(item.price) %></td>
+                                            <td>₹<%= Math.round(item.totalPrice) %></td>
 
                                             <td>
                                                 <% if (order.couponApplied && order.couponApplied.discountAmount) { 
@@ -185,12 +185,12 @@
                             <div class="col-md-6 offset-md-6">
                                 <div class="d-flex justify-content-between">
                                     <span>Subtotal:</span>
-                                    <span>₹<%= order.subtotal %></span>
+                                    <span>₹<%= Math.round(order.subtotal) %></span>
                                 </div>
                                 <% if (order.couponApplied && order.couponApplied.discountAmount) { %>
                                 <div class="d-flex justify-content-between">
                                     <span>Coupon Discount:</span>
-                                    <span>-₹<%= order.couponApplied.discountAmount %></span>
+                                    <span>-₹<%= Math.round(order.couponApplied.discountAmount) %></span>
                                 </div>
                                 <% } %>
                                 <div class="d-flex justify-content-between">
@@ -200,9 +200,12 @@
                                 <div class="d-flex justify-content-between fw-bold">
                                     <span>Total:</span>
                                     <span>₹<%= 
-                                        (order.subtotal - 
-                                        (order.couponApplied ? order.couponApplied.discountAmount : 0) + 
-                                        50).toFixed(2) 
+                                        Math.round(
+                                            (Number(order.subtotal) || 0) - 
+                                            (order.couponApplied && order.couponApplied.discountAmount ? 
+                                                Number(order.couponApplied.discountAmount) : 0) + 
+                                            50
+                                        )
                                     %></span>
                                 </div>
                             </div>

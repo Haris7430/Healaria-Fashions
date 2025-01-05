@@ -11,7 +11,6 @@ const { userAuth, adminAuth } = require('../middleware/auth');
 const passport = require('passport');
 
 
-router.get("/pageNotFound",userController.pageNotFound)
 
 router.get('/',userController.loadHomePage);
 router.get('/signup',userController.loadSignup)
@@ -25,7 +24,6 @@ router.post("/resend-otp",userController.resendOtp);
 
 
 router.get("/auth/google",passport.authenticate('google',{scope:['profile','email']}));
-
 router.get('/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
 
     req.session.user = req.user;
@@ -43,7 +41,6 @@ router.post('/reset-password', userController.postNewPassword);
 
 
 router.get('/search', userController.searchProducts);
-
 router.get('/shop-page', userController.shopingPage);
 router.get('/productDetails', userController.getProductDetails);
 router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
@@ -62,6 +59,7 @@ router.post('/check-cart-item', userAuth, userCartController.checkCartItem);
 
 
 router.get('/checkout', userAuth, checkoutController.getCheckoutPage);
+router.post('/checkout/validate-quantities', userAuth, checkoutController.validateQuantities);
 router.post('/checkout/place-order', userAuth, checkoutController.createOrder);
 router.get('/orders/:orderId', userAuth, checkoutController.getOrderSummary);
 router.post('/checkout/initiate-payment', userAuth, checkoutController.initiatePayment);
@@ -70,8 +68,11 @@ router.post('/checkout/validate-coupon', userAuth, checkoutController.validateCo
 router.post('/verify-payment',userAuth,checkoutController.verifyPayment);
 router.get('/checkout/wallet-balance', userAuth, checkoutController.checkWalletBalance);
 
-
+ 
 router.get('/userProfile/:section?', userAuth, userProfileController.getUserProfile);
+router.get('/profile/referrals', userAuth, userProfileController.getReferrals);
+router.post('/profile/generate-referral-code', userAuth, userProfileController.generateReferralCode);
+router.post('/process-referral-reward', userAuth, userProfileController.processReferralReward);
 router.get('/profile/addresses', userAuth, userProfileController.getAddressPage);
 router.get('/profile/add-address', userAuth, userProfileController.getAddAddress);
 router.post('/profile/add-address', userAuth, userProfileController.addAddress);

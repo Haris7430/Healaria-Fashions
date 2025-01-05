@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Page Not Found</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .error-code {
+            font-size: 8rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .error-message {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: #f1f1f1;
+        }
+
+        .error-description {
+            font-size: 1.1rem;
+            color: #888;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+        }
+
+        .home-link {
+            display: inline-block;
+            padding: 1rem 2rem;
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 500;
+            transition: transform 0.3s ease;
+        }
+
+        .home-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .graph-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        .node {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: rgba(78, 205, 196, 0.5);
+            border-radius: 50%;
+        }
+
+        .line {
+            position: absolute;
+            height: 1px;
+            background: rgba(78, 205, 196, 0.2);
+            transform-origin: left center;
+        }
+    </style>
+</head>
+<body>
+    <div class="graph-container" id="graphContainer"></div>
+    <div class="container">
+        <h1 class="error-code">404</h1>
+        <h2 class="error-message">Page Not Found</h2>
+        <p class="error-description">
+            Oops! It seems you've ventured into uncharted territory. The page you're looking for might have been moved, 
+            deleted, or never existed in the first place. Let's get you back on track!
+        </p>
+        <a href="/" class="home-link">Return to Homepage</a>
+    </div>
+
+    <script>
+        function createNode(x, y) {
+            const node = document.createElement('div');
+            node.className = 'node';
+            node.style.left = x + 'px';
+            node.style.top = y + 'px';
+            return node;
+        }
+
+        function createLine(x1, y1, x2, y2) {
+            const length = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+            
+            const line = document.createElement('div');
+            line.className = 'line';
+            line.style.width = length + 'px';
+            line.style.left = x1 + 'px';
+            line.style.top = y1 + 'px';
+            line.style.transform = `rotate(${angle}deg)`;
+            
+            return line;
+        }
+
+        function initGraph() {
+            const container = document.getElementById('graphContainer');
+            const nodes = [];
+            const numNodes = 50;
+            
+            // Create nodes
+            for (let i = 0; i < numNodes; i++) {
+                const x = Math.random() * window.innerWidth;
+                const y = Math.random() * window.innerHeight;
+                const node = createNode(x, y);
+                container.appendChild(node);
+                nodes.push({ x, y, element: node, vx: 0, vy: 0 });
+            }
+
+            // Create lines between nearby nodes
+            nodes.forEach((node1, i) => {
+                nodes.slice(i + 1).forEach(node2 => {
+                    const distance = Math.sqrt(
+                        Math.pow(node2.x - node1.x, 2) + 
+                        Math.pow(node2.y - node1.y, 2)
+                    );
+                    if (distance < 150) {
+                        const line = createLine(node1.x, node1.y, node2.x, node2.y);
+                        container.appendChild(line);
+                    }
+                });
+            });
+
+            // Animate nodes
+            gsap.to(nodes, {
+                duration: "random(2, 4)",
+                x: "random(-20, 20)",
+                y: "random(-20, 20)",
+                repeat: -1,
+                yoyo: true,
+                ease: "none",
+                stagger: {
+                    amount: 2,
+                    from: "random"
+                }
+            });
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initGraph);
+
+        // Error code animation
+        gsap.from('.error-code', {
+            duration: 1,
+            y: -100,
+            opacity: 0,
+            ease: "bounce.out"
+        });
+
+        gsap.from('.error-message, .error-description, .home-link', {
+            duration: 1,
+            y: 50,
+            opacity: 0,
+            stagger: 0.2,
+            ease: "power2.out"
+        });
+    </script>
+</body>
+</html>

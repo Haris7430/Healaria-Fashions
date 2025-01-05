@@ -121,6 +121,65 @@ const checkWalletBalance = async (req, res) => {
 
 
 
+const validateQuantities = async (req, res) => {
+    try {
+        const cart = await Cart.findOne({ userId: req.user._id })
+            .populate({
+                path: 'items.productId',
+                model: 'Product'
+            });
+
+        if (!cart || !cart.items.length) {
+            return res.status(400).json({
+                success: false,
+                message: 'Cart is empty'
+            });
+        }
+
+        const invalidItems = [];
+
+        for (const cartItem of cart.items) {
+            const product = await Product.findById(cartItem.productId._id);
+            if (!product) continue;
+
+            const variant = product.variants.find(v => 
+                v._id.toString() === cartItem.variantId.toString() && 
+                v.color === cartItem.color
+            );
+
+            if (!variant) continue;
+
+            const sizeVariant = variant.sizes.find(s => s.size === cartItem.size);
+            if (!sizeVariant) continue;
+
+            if (sizeVariant.quantity < cartItem.quantity) {
+                invalidItems.push({
+                    productName: product.productName,
+                    color: cartItem.color,
+                    size: cartItem.size,
+                    requestedQuantity: cartItem.quantity,
+                    availableQuantity: sizeVariant.quantity
+                });
+            }
+        }
+
+        if (invalidItems.length > 0) {
+            return res.status(400).json({
+                success: false,
+                invalidItems
+            });
+        }
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Error validating quantities:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error validating product quantities'
+        });
+    }
+};
+
 
 const createOrder = async (req, res) => {
     try {
@@ -149,6 +208,40 @@ const createOrder = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: 'Cart is empty'
+            });
+        }
+
+        const invalidItems = [];
+
+        for (const cartItem of cart.items) {
+            const product = await Product.findById(cartItem.productId._id);
+            if (!product) continue;
+
+            const variant = product.variants.find(v => 
+                v._id.toString() === cartItem.variantId.toString() && 
+                v.color === cartItem.color
+            );
+
+            if (!variant) continue;
+
+            const sizeVariant = variant.sizes.find(s => s.size === cartItem.size);
+            if (!sizeVariant) continue;
+
+            if (sizeVariant.quantity < cartItem.quantity) {
+                invalidItems.push({
+                    productName: product.productName,
+                    color: cartItem.color,
+                    size: cartItem.size,
+                    requestedQuantity: cartItem.quantity,
+                    availableQuantity: sizeVariant.quantity
+                });
+            }
+        }
+
+        if (invalidItems.length > 0) {
+            return res.status(400).json({
+                success: false,
+                invalidItems
             });
         }
 
@@ -392,7 +485,7 @@ const verifyPayment = async (req, res) => {
 };
 
 
-
+ 
 const getOrderSummary = async (req, res) => {
     try {
         const { orderId } = req.params;
@@ -602,6 +695,7 @@ const getAvailableCoupons = async (req, res) => {
 
 module.exports = {
     getCheckoutPage,
+    validateQuantities,
     createOrder,
     verifyPayment,
     getOrderSummary,

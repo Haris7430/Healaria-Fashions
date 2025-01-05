@@ -21,25 +21,25 @@
         }
 
         .signup-container {
-            display: flex;
-            width: 70%;
-            max-width: 800px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            transform: scale(1);
-            transition: transform 0.5s ease;
-        }
+    display: flex;
+    width: 60%;
+    max-width: 700px; 
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    transform: scale(1);
+    transition: transform 0.5s ease;
+}
 
         .signup-container:hover {
             transform: scale(1.05);
         }
 
         .signup-form {
-            padding: 40px;
-            flex: 1;
-        }
+    padding: 30px; /* Reduced from 40px */
+    flex: 1;
+}
 
         .signup-form h2 {
             margin-bottom: 20px;
@@ -56,8 +56,9 @@
         }
 
         .input-group {
-            margin-bottom: 20px;
-        }
+    margin-bottom: 15px; /* Reduced from 20px */
+}
+
 
         .input-group label {
             display: block;
@@ -71,7 +72,7 @@
 
         .input-group input {
             width: 100%;
-            padding: 10px;
+            padding: 8px;
             border: 1px solid #ccc;
             border-radius: 5px;
             font-size: 16px;
@@ -128,7 +129,7 @@
         }
 
         .signup-image {
-            flex: 1;
+            flex: 0.8;
             overflow: hidden;
             position: relative;
             opacity: 0;
@@ -138,13 +139,13 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            padding: 15px;
         }
 
         .signup-image img {
             width: 100%;
-            height: auto;
-            object-fit: cover;
+            max-height: 300px;
+            object-fit: contain;
             margin-bottom: 20px;
         }
 
@@ -179,6 +180,34 @@
             font-size: 0.75rem;
             display: none;
         }
+    </style>
+
+<style>
+    .alert-message {
+        background-color: #ff6b6b;
+        color: white;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 14px;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+    <style>
+
     </style>
 </head>
 <body>
@@ -219,9 +248,14 @@
                     <input type="password" id="confirmPassword" name="cPassword" required>
                     <div id="error5" class="error-message"></div>
                 </div>
+                <div class="input-group">
+                    <label for="referralCode">Referral Code (Optional)</label>
+                    <input type="text" id="referralCode" name="referralCode" placeholder="Enter referral code if you have one">
+                    <div id="error6" class="error-message"></div>
+                </div>
 
                 <%if(locals.message && message.length>0){%>
-                    <div class="aler alert-danger text-center">
+                    <div class="alert-message">
                         <%=message%>
                     </div>
                 <%}%>
@@ -252,6 +286,7 @@
         const error3 = document.getElementById('error3');
         const error4 = document.getElementById('error4');
         const error5 = document.getElementById('error5');
+        const error6 = document.getElementById('error6')
         const signform = document.getElementById('signform');
 
         function nameValidateChecking() {
@@ -322,6 +357,23 @@
             }
         }
 
+        function referralCodeValidateChecking() {
+    const referralCode = document.getElementById('referralCode').value.trim();
+    const error6 = document.getElementById('error6');
+    
+    if (referralCode !== '' && !/^REF-\d{6}-[A-Z0-9]{3}$/.test(referralCode)) {
+        error6.style.display = "block";
+        error6.innerHTML = "Invalid referral code format";
+    } else {
+        error6.style.display = "none";
+        error6.innerHTML = "";
+    }
+}
+
+// Add this event listener
+document.getElementById('referralCode').addEventListener("blur", referralCodeValidateChecking);
+
+
         username.addEventListener("blur", nameValidateChecking);
         email.addEventListener("blur", emailValidateChecking);
         phone.addEventListener("blur", phoneValidateChecking);
@@ -334,9 +386,13 @@
             phoneValidateChecking();
             passwordValidateChecking();
             confirmPasswordValidateChecking();
-            if (error1.innerHTML !== "" || error2.innerHTML !== "" || error3.innerHTML !== "" || error4.innerHTML !== "" || error5.innerHTML !== "") {
-                event.preventDefault();
-            }
+            referralCodeValidateChecking();
+    
+    if (error1.innerHTML !== "" || error2.innerHTML !== "" || 
+        error3.innerHTML !== "" || error4.innerHTML !== "" || 
+        error5.innerHTML !== "" || error6.innerHTML !== "") {
+        event.preventDefault();
+    }
         });
     </script>
 </body>

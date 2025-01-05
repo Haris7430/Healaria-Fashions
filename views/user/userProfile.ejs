@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -539,10 +540,6 @@
 
 </style>
 
-
-
-
-
 <style>
     .order-id-column {
         width: 250px;
@@ -550,6 +547,31 @@
         overflow: hidden;
         text-overflow: ellipsis;
     }
+</style>
+
+
+<style>
+    /* Referral Styles */
+.referral-info .card {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+}
+
+.referral-stats .card {
+    transition: transform 0.2s;
+}
+
+.referral-stats .card:hover {
+    transform: translateY(-5px);
+}
+
+.referral-history {
+    margin-top: 2rem;
+}
+
+.badge {
+    padding: 0.5em 1em;
+}
 </style>
     
 </head>
@@ -575,6 +597,7 @@
                     <li><a href="/profile/add-address" class="<%= activeSection === 'add-address' ? 'active' : '' %>">Add New Address</a></li>
                     <li><a href="/profile/orders" class="<%= activeSection === 'order-details' ? 'active' : '' %>">Order Details</a></li>
                     <li><a href="/profile/wallet" class="<%= activeSection === 'wallet' ? 'active' : '' %>">My Wallet</a></li>
+                    <li><a href="/profile/referrals" class="<%= activeSection === 'referrals' ? 'active' : '' %>">My Referrals</a></li>
                     <li><a href="/wishlist" class="<%= activeSection === 'wishlist' ? 'active' : '' %>">My Wishlist</a></li>
                     <li><a href="/logout">Sign Out</a></li>
                 </ul>
@@ -984,6 +1007,111 @@
                 <% } %>
 
                 
+<!-- Referral Section -->
+<% if (activeSection === 'referrals') { %>
+    <div class="profile-section">
+        <h2>My Referrals</h2>
+        
+        <!-- Referral Code Card -->
+        <div class="referral-info mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Your Referral Code</h5>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <input type="text" class="form-control" id="referralCode" 
+                            value="<%= activeReferral ? activeReferral.referralCode : 'No active code' %>" readonly>
+                        <button class="btn btn-primary" onclick="generateReferralCode()" 
+                            <%= !activeReferral || (activeReferral.referees && activeReferral.referees.some(r => r.rewardStatus === 'Completed')) ? '' : 'disabled' %>>
+                            <%= !activeReferral ? 'Generate Code' : 'Regenerate Code' %>
+                        </button>
+                        <button class="btn btn-secondary" onclick="copyReferralCode()" 
+                            <%= !activeReferral ? 'disabled' : '' %>>
+                            <i class="fas fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    <p class="text-muted mb-0">Share this code with your friends and earn rewards!</p>
+                    <% if (activeReferral) { %>
+                        <small class="text-muted">Generated on: <%= new Date(activeReferral.createdAt).toLocaleDateString() %></small>
+                        <% if (!activeReferral.referees || !activeReferral.referees.some(r => r.rewardStatus === 'Completed')) { %>
+                            <br><small class="text-warning">You can generate a new code after someone uses your current code</small>
+                        <% } %>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral Stats -->
+        <div class="referral-stats row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">Total Referrals</h6>
+                        <h3 class="card-title"><%= referralStats.totalReferrals %></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">Pending Rewards</h6>
+                        <h3 class="card-title">₹<%= referralStats.pendingRewards %></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card bg-light">
+                    <div class="card-body text-center">
+                        <h6 class="card-subtitle mb-2 text-muted">Total Earned</h6>
+                        <h3 class="card-title">₹<%= referralStats.totalEarned %></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Referral History -->
+        <div class="referral-history">
+            <h4>Referral History</h4>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Referral Code</th>
+                            <th>Referred User</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Reward</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (referrals && referrals.length > 0) { %>
+                            <% referrals.forEach(referral => { %>
+                                <tr>
+                                    <td><small class="text-muted"><%= referral.code %></small></td>
+                                    <td><%= referral.user?.name || 'Anonymous' %></td>
+                                    <td><%= new Date(referral.joinedAt).toLocaleDateString() %></td>
+                                    <td>
+                                        <span class="badge <%= referral.rewardStatus === 'Completed' ? 'bg-success' : 
+                                                              referral.rewardStatus === 'Pending' ? 'bg-warning' : 
+                                                              'bg-danger' %>">
+                                            <%= referral.rewardStatus %>
+                                        </span>
+                                    </td>
+                                    <td>₹<%= referral.rewardAmount %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" class="text-center">No referrals yet</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<% } %>
+
 
                 <% if (activeSection === 'wishlist') { %>
                     <div class="wishlist-section">
@@ -2246,6 +2374,64 @@ document.querySelector('.add-all-to-cart')?.addEventListener('click', async func
 </script>
 
 
+
+
+<script>
+    async function generateReferralCode() {
+        try {
+            const response = await fetch('/profile/generate-referral-code', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    text: data.message,
+                    timer: 1500
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                throw new Error(data.message);
+            }
+        } catch (error) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: error.message || 'Failed to generate referral code'
+            });
+        }
+    }
+
+    async function copyReferralCode() {
+        const referralCode = document.getElementById('referralCode');
+        referralCode.select();
+        referralCode.setSelectionRange(0, 99999);
+        
+        try {
+            await navigator.clipboard.writeText(referralCode.value);
+            Swal.fire({
+                icon: 'success',
+                title: 'Copied!',
+                text: 'Referral code copied to clipboard',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        } catch (err) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'Failed to copy referral code'
+            });
+        }
+    }
+</script>
 
 
 

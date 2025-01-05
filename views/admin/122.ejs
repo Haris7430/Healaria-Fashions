@@ -46,232 +46,79 @@ const productSchema = new Schema({
 const Product = mongoose.model("Product", productSchema);
 module.exports = Product;
 
-
-
-This is my offerSchema.js code:- 
-const mongoose = require("mongoose");
-const offerSchema = new mongoose.Schema(
-  {
-    offerType: {
-      type: String,
-      enum: ["product", "category", "referral"],
-      required: true,
-    },
-    offerName: {
-      type: String,
-      required: true,
-      trim: true
-    },
-    discount: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100
-    },
-    expireDate: {
-      type: Date,
-      required: true
-    },
-    productIds: [{ 
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Product",
-      required: function () {
-        return this.offerType === "product";
-      },
-    }],
-    categoryIds: [{ 
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: function () {
-        return this.offerType === "category";
-      },
-    }],
-    referralCode: {
-      type: String,
-      required: function () {
-        return this.offerType === "referral";
-      },
-      unique: true,
-      sparse: true
-    },
-    status: {
-      type: String,
-      enum: ["active", "inactive"],
-      default: "active",
-    },
-    isListed: {
-      type: Boolean,
-      default: true
-    }
-  },
-  { timestamps: true }
-);
-const Offer = mongoose.model("Offer", offerSchema);
-module.exports = Offer;
-
-
-This is my userSchema.js code:- 
-const mongoose= require("mongoose");
-const {Schema}= mongoose;
-
-const userSchema= new Schema ({
-    name:{
-        type: String,
-        required: true
-    },
-    email: {
-        type: String,
-        required: true,
-        unique:true
-    },
-    phone: {
-        type:String,
-        required: false,
-        unique: true,
-        sparse:true,
-        default:undefined
-    },
-    googleId:{
-        type:String,
-        unique:true,
-        sparse:true
-    },
-    password: {
-        type:String,
-        required: false
-    },
-    isBlocked: {
-        type: Boolean,
-        default:false
-    },
-    isAdmin: {
-        type: Boolean,
-        default: false
-    },
-    cart: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Cart'
-    }],
-    
-    wallet: {
-        type: Number,
-        default:0,
-    },
-    wishlist: [{
-        type: Schema.Types.ObjectId,
-        ref: "wishlist"
-    }],
-    orderHistory: [{
-        type: Schema.Types.ObjectId,
-        ref: "Order"
-    }],
-    createdOn : {
-        type:Date,
-        default:Date.now,
-    },
-    referralCode: {
-        type: String,
-        // required:true
-    },
-    redeemed: {
-        type: Boolean,
-        // defaulte:false
  
-    },
-    redeemedUsers: [{
-        type: Schema.Types.ObjectId,
-        ref: "User",
-        // required:true
-    }],
-    searchHistory: [{
-        category: {
-            type: Schema.Types.ObjectId,
-            ref: "Category"
-        },
-        Brand: {
-            type: String,
+This is my referralSchema.js code:- 
 
-        },
-        searchOn: {
-            type: Date,
-            default: Date.now
-        }
-    }]
-},{timestamps:true})
-const user= mongoose.model("User",userSchema);
-module.exports= user
 
-This is my couponSchema.js code:- 
+
+
 const mongoose = require('mongoose');
 
-const couponSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
-        trim: true,
-        validate: {
-            validator: function(v) {
-                // Allow letters, numbers, and spaces
-                return /^[A-Za-z0-9\s]+$/.test(v);
-            },
-            message: props => `${props.value} is not a valid title! Only letters, numbers, and spaces are allowed.`
-        }
-    },
-    description: {
-        type: String,
-        trim: true
-    },
-    code: {
+
+
+
+const mongoose = require('mongoose');
+
+const referralSchema = new mongoose.Schema({
+    referralCode: {
         type: String,
         required: true,
         unique: true,
-        uppercase: true,
-        trim: true
     },
-    validFrom: {
-        type: Date,
-        required: true
-    },
-    expiryDate: {
-        type: Date,
-        required: true
-    },
-    discountPercentage: {
-        type: Number,
+    referrer: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
         required: true,
-        min: 1,
-        max: 80
     },
-    maxDiscountAmount: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function(v) {
-                return typeof v === 'number' && v >= 0;
-            },
-            message: props => `${props.value} is not a valid maximum discount amount!`
+    referees: [{
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        },
+        joinedAt: {
+            type: Date,
+            default: Date.now
+        },
+        rewardStatus: {
+            type: String,
+            enum: ['Pending', 'Completed', 'Failed'],
+            default: 'Pending'
+        },
+        rewardAmount: {
+            type: Number,
+            default: 0
+        },
+        walletTransactionId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Wallet'
         }
-    },
-    minPurchaseLimit: {
-        type: Number,
-        required: true, 
-        min: 0
-    },
+    }],
     status: {
         type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
+        enum: ['Active', 'Expired', 'Deactivated'],
+        default: 'Active'
+    },
+    hasUsedReferral: {
+      type: Boolean,
+      default: false
+  },
+    totalRewards: {
+        type: Number,
+        default: 0
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-}, { timestamps: true });
-const Coupon = mongoose.model('Coupon', couponSchema);
-module.exports = Coupon;
+});
+
+module.exports = mongoose.model('Referral', referralSchema);
+
 
 This is my orderSchema.js code:- 
 
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-
-
 
 const returnRequestSchema = new Schema({
     itemId: {
@@ -473,1691 +320,1124 @@ const orderSchema = new Schema({
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;
 
+This is my walletSchema.js code:- 
+
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+const walletTransactionSchema = new Schema({
+    amount: {
+        type: Number,
+        required: true
+    },
+    type: {
+        type: String,
+        enum: ['credit', 'debit'],
+        required: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    orderId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Order',
+        default: null
+    },
+    balance: {
+        type: Number,
+        required: true
+    }
+}, { timestamps: true });
+
+const walletSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique: true
+    },
+    balance: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    transactions: [walletTransactionSchema]
+});
+
+const Wallet = mongoose.model('Wallet', walletSchema);
+module.exports = Wallet;
+
 
 This is my userRouter.js code:- 
 
+const express=require('express');
+const router=express.Router();
+const userController= require("../controllers/user/userController");
+const userCartController = require('../controllers/user/userCartController');
+const userProfileController = require('../controllers/user/userProfileController');
+const checkoutController = require('../controllers/user/checkOutController')
+const wishlistController = require('../controllers/user/wishlistController')
+const { userAuth, adminAuth } = require('../middleware/auth');
+const passport = require('passport');
 
-router.get('/search', userController.searchProducts);
 
-router.get('/shop-page', userController.shopingPage);
-router.get('/productDetails', userController.getProductDetails);
-router.get('/product/:productId/variant/:variantId', userController.getVariantDetails);
-router.get('/product/:productId/variant/first', userAuth, userController.getVariantDetails);
-router.get('/check-auth', userAuth, (req, res) => res.status(200).json({ authenticated: true }));
-router.get('/product/:productId', userController.getProductForCart);
-router.get('/product/:productId/offers', userController.getProductOffers);
-This is my userProfileController.js code:- 
+
+router.get('/',userController.loadHomePage);
+router.get('/signup',userController.loadSignup)
+router.get('/login',userController.loadLogin);
+router.get('/logout',userController.logout)
+
+router.post('/login',userController.login);
+router.post('/signup',userController.signUp)
+router.post('/verify-otp',userController.verifyOtp);
+router.post("/resend-otp",userController.resendOtp);
+
+
+router.get("/auth/google",passport.authenticate('google',{scope:['profile','email']}));
+router.get('/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
+
+    req.session.user = req.user;
+    res.redirect('/')
+    
+});
+
+
+
+This is my userProfileController.js code just for your reference:- 
+
+const User = require('../../models/userSchema'); // User schema
+const Address = require('../../models/addressSchema');
+const Order = require('../../models/orderSchema');
+const mongoose = require('mongoose');
+const Product = require('../../models/productSchema');
+const bcrypt = require('bcrypt'); 
+const Wallet = require('../../models/walletSchema');
+const Referral = require('../../models/referralSchema')
+const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
+const Razorpay = require('razorpay');
+const crypto = require('crypto');
+
+
+const getUserProfile = async (req, res) => {
+    try {
+        const user = await User.findById(req.session.user._id);
+        const section = req.params.section; 
+        
+        let data = [];
+        if (section === 'orders') {
+            data = await Order.find({ userId: user._id });
+        } else if (section === 'addresses') {
+            data = user.addresses;
+        }
+        
+        // Render the profile page with activeSection and data
+        res.render('userProfile', {
+            user,
+            activeSection: section || 'profile', 
+            data
+        });
+    } catch (err) {
+        console.error(err);
+        res.redirect('/login');
+    }
+};
+
+
+const generateUniqueCode = () => {
+    const prefix = 'REF';
+    const timestamp = Date.now().toString().slice(-6);
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `${prefix}-${timestamp}-${random}`;
+};
+
+
+// Controller to get referrals
+const getReferrals = async (req, res) => {
+    try {
+        const user = await User.findById(req.session.user._id);
+        
+        // Get all referrals for the user
+        const referrals = await Referral.find({ referrer: user._id })
+            .populate('referees.user', 'name email')
+            .sort({ createdAt: -1 });
+
+        // Calculate statistics
+        const referralStats = {
+            totalReferrals: referrals.reduce((sum, ref) => sum + ref.referees.length, 0),
+            pendingRewards: referrals.reduce((sum, ref) => 
+                sum + ref.referees
+                    .filter(referee => referee.rewardStatus === 'Pending')
+                    .reduce((refSum, referee) => refSum + referee.rewardAmount, 0), 0),
+            totalEarned: referrals.reduce((sum, ref) => ref.totalRewards + sum, 0)
+        };
+
+        // Flatten referees array for display
+        const referralHistory = referrals.flatMap(referral => 
+            referral.referees.map(referee => ({
+                code: referral.referralCode,
+                user: referee.user,
+                joinedAt: referee.joinedAt,
+                rewardStatus: referee.rewardStatus,
+                rewardAmount: referee.rewardAmount
+            }))
+        ).sort((a, b) => b.joinedAt - a.joinedAt);
+
+        res.render('userProfile', {
+            user,
+            activeSection: 'referrals',
+            referrals: referralHistory,
+            referralStats,
+            activeReferral: referrals.find(r => r.status === 'Active')
+        });
+    } catch (error) {
+        console.error('Error fetching referrals:', error);
+        res.status(500).render('error', {
+            message: 'Error fetching referral data',
+            error: error.message
+        });
+    }
+};
+
+// Controller to generate referral code
+const generateReferralCode = async (req, res) => {
+    try {
+        const user = await User.findById(req.session.user._id);
+        
+        // Find all referrals for this user
+        const userReferrals = await Referral.find({
+            referrer: user._id
+        });
+
+        // Check if user can generate a new code
+        const activeReferral = userReferrals.find(ref => ref.status === 'Active');
+        const hasUsedReferrals = userReferrals.some(ref => 
+            ref.referees.length > 0 && 
+            ref.referees.some(referee => referee.rewardStatus === 'Completed')
+        );
+
+        // Allow new code generation if no active code or has successful referrals
+        if (!activeReferral || hasUsedReferrals) {
+            let isUnique = false;
+            let newCode;
+
+            while (!isUnique) {
+                newCode = generateUniqueCode();
+                const existingCode = await Referral.findOne({ referralCode: newCode });
+                if (!existingCode) {
+                    isUnique = true;
+                }
+            }
+
+            // If there's an active code, deactivate it
+            if (activeReferral) {
+                activeReferral.status = 'Expired';
+                await activeReferral.save();
+            }
+
+            // Create new referral record
+            const newReferral = await Referral.create({
+                referralCode: newCode,
+                referrer: user._id,
+                status: 'Active'
+            });
+
+            // Update user's current referral code
+            user.referralCode = newCode;
+            await user.save();
+
+            res.status(200).json({
+                success: true,
+                referralCode: newCode,
+                message: 'New referral code generated successfully'
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: 'Cannot generate new code until current code is used'
+            });
+        }
+    } catch (error) {
+        console.error('Error generating referral code:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error generating referral code',
+            error: error.message
+        });
+    }
+};
+
+
+
+const processReferralReward = async (req, res) => {
+    try {
+        const { referralCode } = req.body;
+        const userId = req.session.user._id;
+
+        const referral = await Referral.findOne({ 
+            referralCode,
+            status: 'Active'
+        });
+
+        if (!referral) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired referral code'
+            });
+        }
+
+        // Check if user has already used any referral code
+        const existingReferral = await Referral.findOne({
+            'referees.user': userId
+        });
+
+        if (existingReferral) {
+            return res.status(400).json({
+                success: false,
+                message: 'You have already used a referral code'
+            });
+        }
+
+        // Add new referee to the referral
+        referral.referees.push({
+            user: userId,
+            rewardAmount: 50 // Referee reward amount
+        });
+
+        // Update referrer's wallet
+        const referrerWallet = await Wallet.findOne({ userId: referral.referrer });
+        const referrerReward = 25; // Referrer reward amount
+
+        if (referrerWallet) {
+            referrerWallet.balance += referrerReward;
+            const transaction = {
+                amount: referrerReward,
+                type: 'credit',
+                description: 'Referral reward for new user signup',
+                balance: referrerWallet.balance
+            };
+            referrerWallet.transactions.push(transaction);
+            await referrerWallet.save();
+        }
+
+        // Update referee's wallet
+        const refereeWallet = await Wallet.findOne({ userId });
+        if (refereeWallet) {
+            refereeWallet.balance += 50; // Referee reward
+            refereeWallet.transactions.push({
+                amount: 50,
+                type: 'credit',
+                description: 'Reward for using referral code',
+                balance: refereeWallet.balance
+            });
+            await refereeWallet.save();
+        }
+
+        // Update referral statistics
+        referral.totalRewards += referrerReward;
+        
+        // Update reward status
+        const refereeIndex = referral.referees.length - 1;
+        referral.referees[refereeIndex].rewardStatus = 'Completed';
+
+        await referral.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Referral reward processed successfully'
+        });
+    } catch (error) {
+        console.error('Error processing referral reward:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing referral reward',
+            error: error.message
+        });
+    }
+};
+
+
+This is my signup.ejs page code:- 
+
+
+
+<link rel="stylesheet" href="css/main.css">
+
+    <title>Sign Up</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            background: linear-gradient(135deg, #bdc3c7, #2c3e50);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .signup-container {
+    display: flex;
+    width: 60%;
+    max-width: 700px; 
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    transform: scale(1);
+    transition: transform 0.5s ease;
+}
+
+        .signup-container:hover {
+            transform: scale(1.05);
+        }
+
+        .signup-form {
+    padding: 30px; /* Reduced from 40px */
+    flex: 1;
+}
+
+        .signup-form h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 2rem;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .input-group {
+    margin-bottom: 15px; /* Reduced from 20px */
+}
+
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+            opacity: 0;
+            animation: fadeIn 1s ease forwards;
+            animation-delay: 0.3s;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: #ff6700;
+            box-shadow: 0px 0px 10px rgba(255, 103, 0, 0.3);
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 10px;
+            background-color: #ff6700;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .btn-submit:hover {
+            background-color: #ff4500;
+            transform: translateY(-3px);
+        }
+
+        .signup-google {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            padding: 10px;
+            background-color: white;
+            color: #555;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-top: 20px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .signup-google img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .signup-google:hover {
+            background-color: #f5f5f5;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .signup-image {
+            flex: 0.8;
+            overflow: hidden;
+            position: relative;
+            opacity: 0;
+            animation: slideIn 1s ease forwards;
+            animation-delay: 0.6s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .signup-image img {
+            width: 100%;
+            max-height: 300px;
+            object-fit: contain;
+            margin-bottom: 20px;
+        }
+
+        .login-option {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .login-option a {
+            text-decoration: none;
+            color: #ff6700;
+            font-weight: bold;
+            transition: color 0.3s ease;
+        }
+
+        .login-option a:hover {
+            color: #ff4500;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(-100%);
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .error-message {
+            color: red;
+            font-size: 0.75rem;
+            display: none;
+        }
+    </style>
+
+<style>
+    .alert-message {
+        background-color: #ff6b6b;
+        color: white;
+        padding: 12px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+        text-align: center;
+        font-size: 14px;
+        animation: slideDown 0.3s ease-out;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-20px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+</style>
+    <style>
+
+    </style>
+</head>
+<body>
+    
+    
+    <div class="signup-container">
+        <div class="signup-image">
+            <img src="/img/i added/user-signup-3.jpg" alt="Sign Up Image">
+            <div class="login-option">
+                <p>Already registered? <a href="/login">Login</a></p>
+            </div>
+        </div>
+        <div class="signup-form">
+            <h2>Create an Account</h2>
+            <form id="signform" action="/signup" method="POST">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="name" required>
+                    <div id="error1" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required>
+                    <div id="error2" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" required pattern="\d{10}" title="Enter a 10-digit phone number">
+                    <div id="error3" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" required>
+                    <div id="error4" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" name="cPassword" required>
+                    <div id="error5" class="error-message"></div>
+                </div>
+                <div class="input-group">
+                    <label for="referralCode">Referral Code (Optional)</label>
+                    <input type="text" id="referralCode" name="referralCode" placeholder="Enter referral code if you have one">
+                    <div id="error6" class="error-message"></div>
+                </div>
+
+                <%if(locals.message && message.length>0){%>
+                    <div class="alert-message">
+                        <%=message%>
+                    </div>
+                <%}%>
+
+                <button type="submit" class="btn-submit">Sign Up</button>
+            </form>
+            
+            <div class="signup-google">
+                <a href="/auth/google" class="btn btn-outline-danger">
+                    <img 
+                    src="/img/i added/user signup 2.png" 
+                    alt="Google Logo"
+                    style="width:24px; height: 24px;">
+                </a>
+                <span> Sign up with Google</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const username = document.getElementById("username");
+        const email = document.getElementById("email");
+        const phone = document.getElementById('phone');
+        const password = document.getElementById('password');
+        const confirmPassword = document.getElementById('confirmPassword');
+        const error1 = document.getElementById('error1');
+        const error2 = document.getElementById('error2');
+        const error3 = document.getElementById('error3');
+        const error4 = document.getElementById('error4');
+        const error5 = document.getElementById('error5');
+        const error6 = document.getElementById('error6')
+        const signform = document.getElementById('signform');
+
+        function nameValidateChecking() {
+            const nameval = username.value.trim();
+            const namepattern = /^[A-Za-z\s]{3,20}$/;
+            if (nameval === "") {
+                error1.style.display = "block";
+                error1.innerHTML = "Please enter a valid name.";
+            } else if (!namepattern.test(nameval)) {
+                error1.style.display = "block";
+                error1.innerHTML = "Name can only contain alphabets and spaces (3-20 characters).";
+            } else {
+                error1.style.display = "none";
+                error1.innerHTML = "";
+            }
+        }
+
+        function emailValidateChecking() {
+            const emailval = email.value.trim();
+            const emailpattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
+            if (emailval === "") {
+                error2.style.display = "block";
+                error2.innerHTML = "Email is required.";
+            } else if (!emailpattern.test(emailval)) {
+                error2.style.display = "block";
+                error2.innerHTML = "Invalid email format.";
+            } else {
+                error2.style.display = "none";
+                error2.innerHTML = "";
+            }
+        }
+
+        function phoneValidateChecking() {
+            const phoneval = phone.value.trim();
+            const phonepattern = /^\d{10}$/;
+            if (phoneval === '') {
+                error3.style.display = "block";
+                error3.innerHTML = "Phone number is required.";
+            } else if (!phonepattern.test(phoneval)) {
+                error3.style.display = "block";
+                error3.innerHTML = "Invalid phone number format.";
+            } else {
+                error3.style.display = "none";
+                error3.innerHTML = "";
+            }
+        }
+
+        function passwordValidateChecking() {
+            const passval = password.value.trim();
+            if (passval.length < 6) {
+                error4.style.display = "block";
+                error4.innerHTML = "Password should be at least 6 characters long.";
+            } else {
+                error4.style.display = "none";
+                error4.innerHTML = "";
+            }
+        }
+
+        function confirmPasswordValidateChecking() {
+            const confirmPassval = confirmPassword.value.trim();
+            const passval = password.value.trim();
+            if (confirmPassval !== passval) {
+                error5.style.display = "block";
+                error5.innerHTML = "Passwords do not match.";
+            } else {
+                error5.style.display = "none";
+                error5.innerHTML = "";
+            }
+        }
+
+        function referralCodeValidateChecking() {
+    const referralCode = document.getElementById('referralCode').value.trim();
+    const error6 = document.getElementById('error6');
+    
+    if (referralCode !== '' && !/^REF-\d{6}-[A-Z0-9]{3}$/.test(referralCode)) {
+        error6.style.display = "block";
+        error6.innerHTML = "Invalid referral code format";
+    } else {
+        error6.style.display = "none";
+        error6.innerHTML = "";
+    }
+}
+
+// Add this event listener
+document.getElementById('referralCode').addEventListener("blur", referralCodeValidateChecking);
+
+
+        username.addEventListener("blur", nameValidateChecking);
+        email.addEventListener("blur", emailValidateChecking);
+        phone.addEventListener("blur", phoneValidateChecking);
+        password.addEventListener("blur", passwordValidateChecking);
+        confirmPassword.addEventListener("blur", confirmPasswordValidateChecking);
+
+        signform.addEventListener('submit', function (event) {
+            nameValidateChecking();
+            emailValidateChecking();
+            phoneValidateChecking();
+            passwordValidateChecking();
+            confirmPasswordValidateChecking();
+            referralCodeValidateChecking();
+    
+    if (error1.innerHTML !== "" || error2.innerHTML !== "" || 
+        error3.innerHTML !== "" || error4.innerHTML !== "" || 
+        error5.innerHTML !== "" || error6.innerHTML !== "") {
+        event.preventDefault();
+    }
+        });
+    </script>
+</body>
+</html>
+
 
 This is my userController.js code:- 
 
 
-const searchProducts = async (req, res) => {
+const User = require('../../models/userSchema');
+const Category= require('../../models/categorySchema');
+const Product = require('../../models/productSchema');
+const Cart = require('../../models/cartSchema')
+const Offer = require('../../models/offerSchema');
+const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
+const session= require("express-session");
+const env = require('dotenv').config();
+const Wishlist = require('../../models/wishlistSchema')
+const Referral = require('../../models/referralSchema');
+const Wallet = require('../../models/walletSchema')
+
+
+function generateOtp() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+
+async function sendVerificationEmail(email, otp) {
     try {
-        const searchTerm = req.query.q ? req.query.q.toString() : '';
-        const page = parseInt(req.query.page) || 1;
-        const limit = 9;
-        const skip = (page - 1) * limit;
-        const categoryFilter = req.query.category;
-        const globalSearch = req.query.globalSearch === 'true';
-
-        // Create a base query
-        const query = {
-            isBlocked: false,
-            productName: { $regex: searchTerm, $options: 'i' }
-        };
-
-        // Handle category filtering
-        if (categoryFilter && categoryFilter !== '') {
-            const selectedCategory = await Category.findOne({ name: categoryFilter });
-            if (selectedCategory) {
-                if (!globalSearch) {
-                    // If not global search, strictly match the selected category
-                    query.category = selectedCategory._id;
-                }
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            port: 587,
+            secure: false,
+            requireTLS: true,
+            auth: {
+                user: process.env.NODEMAILER_EMAIL,
+                pass: process.env.NODEMAILER_PASSWORD
             }
-        }
-
-        // Get total count of matching products
-        const totalProducts = await Product.countDocuments(query);
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        // Find products matching the criteria
-        let products = await Product.find(query)
-            .populate('category')
-            .skip(skip)
-            .limit(limit)
-            .lean();
-
-        // Process products to include necessary information
-        products = await Promise.all(products.map(async (product) => {
-            // Find applicable offers
-            const offers = await Offer.find({
-                $or: [
-                    { offerType: 'product', productIds: product._id },
-                    { offerType: 'category', categoryIds: product.category._id }
-                ],
-                status: 'active',
-                expireDate: { $gte: new Date() }
-            });
-
-            // Calculate best offer
-            let bestOffer = null;
-            let offerPercentage = 0;
-
-            if (offers.length > 0) {
-                bestOffer = offers.reduce((max, offer) => 
-                    offer.discount > max.discount ? offer : max
-                );
-                offerPercentage = bestOffer.discount;
-            }
-
-            return {
-                ...product,
-                offerPercentage
-            };
-        }));
-
-        // Prepare the response message
-        let noProductsMessage = '';
-        if (products.length === 0) {
-            if (categoryFilter && !globalSearch) {
-                noProductsMessage = `No products found for "${searchTerm}" in the "${categoryFilter}" category. 
-                    Check the global search option to search across all categories.`;
-            } else {
-                noProductsMessage = `No products found for "${searchTerm}".`;
-            }
-        }
-
-        // Send JSON response
-        res.json({
-            products,
-            pagination: {
-                currentPage: page,
-                totalPages,
-                hasNext: page < totalPages,
-                hasPrev: page > 1
-            },
-            noProductsMessage,
-            searchTerm
         });
 
+        const info = await transporter.sendMail({
+            from: process.env.NODEMAILER_EMAIL,
+            to: email,
+            subject: "Verify your account",
+            text: `Your OTP is ${otp}`,
+            html: `<b>Your OTP is ${otp}</b>`
+        });
+
+        return info.accepted.length > 0;
     } catch (error) {
-        console.error('Search Products Error:', error);
-        res.status(500).json({ error: 'Server Error during search' });
+        console.error("Error sending email:", error);
+        return false;
     }
-};
+}
 
 
-const shopingPage = async (req, res) => {
+const loadHomePage = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = 9;
-        const sort = req.query.sort || 'default';
-        const categoryFilter = req.query.category || '';
         const user = req.session.user;
+        const categories = await Category.find({isListed: true});
         
-        // Get all listed categories
-        const categories = await Category.find({ isListed: true });
-        
-        // Base query with isBlocked check
-        let query = { isBlocked: false };
-
-        // Add category filter if specified
-        if (categoryFilter && categoryFilter !== '') {
-            const selectedCategory = await Category.findOne({ 
-                name: categoryFilter,
-                isListed: true 
-            });
-            if (selectedCategory) {
-                query.category = selectedCategory._id;
-            }
-        }
-
-        const skip = (page - 1) * limit;
-
-        // First, get all products matching the query
-        let products = await Product.find(query)
-            .populate('category')
-            .lean();
-
-        // Get current date for offer validation
-        const currentDate = new Date();
-
-        // Fetch all active offers
-        const offers = await Offer.find({
+        // Find active offers
+        const activeOffers = await Offer.find({
             status: 'active',
-            expireDate: { $gte: currentDate }
+            isListed: true,
+            expireDate: { $gte: new Date() }
         });
 
-        // Calculate effective prices and add offer information
-        products = await Promise.all(products.map(async (product) => {
-            // Find applicable offers
-            const productOffers = offers.filter(offer =>
-                offer.offerType === 'product' &&
+        let productData = await Product.find({
+            isBlocked: false,
+            category: {$in: categories.map(category => category._id)}
+        }).populate('category');
+
+        // Process offers and calculate best discount for each product
+        const productsWithOffers = productData.map(product => {
+            // Find product-specific offers
+            const productOffers = activeOffers.filter(offer => 
+                offer.offerType === 'product' && 
                 offer.productIds.some(id => id.toString() === product._id.toString())
             );
 
-            const categoryOffers = offers.filter(offer =>
-                offer.offerType === 'category' &&
+            // Find category offers
+            const categoryOffers = activeOffers.filter(offer => 
+                offer.offerType === 'category' && 
                 offer.categoryIds.some(id => id.toString() === product.category._id.toString())
             );
 
-            const allProductOffers = [...productOffers, ...categoryOffers];
+            // Combine and find maximum offer
+            const allRelevantOffers = [...productOffers, ...categoryOffers];
+            const maxOffer = allRelevantOffers.length > 0 
+                ? Math.max(...allRelevantOffers.map(offer => offer.discount))
+                : 0;
 
-            // Calculate best discount
-            let bestOffer = null;
-            let offerPercentage = 0;
-
-            if (allProductOffers.length > 0) {
-                bestOffer = allProductOffers.reduce((maxOffer, currentOffer) =>
-                    (currentOffer.discount > maxOffer.discount) ? currentOffer : maxOffer
-                );
-                offerPercentage = bestOffer.discount;
-            }
-
-            // Calculate effective price
-            const effectivePrice = offerPercentage
-                ? product.regularPrice * (1 - offerPercentage / 100)
-                : product.regularPrice;
-
-            // Get first image
-            const firstImage = product.variants.reduce((img, variant) => {
-                if (!img && variant.images && variant.images.length > 0) {
-                    return variant.images[0].filename;
-                }
-                return img;
-            }, null);
-
-            // Check wishlist status
-            let isInWishlist = false;
-            if (req.session.user) {
-                const wishlist = await Wishlist.findOne({
-                    userId: req.session.user._id,
-                    'products.productId': product._id
-                });
-                isInWishlist = !!wishlist;
-            }
+            // Calculate offer price
+            const offerPrice = maxOffer > 0 
+                ? product.regularPrice * (1 - maxOffer / 100)
+                : null;
 
             return {
-                ...product,
-                effectivePrice,
-                regularPrice: product.regularPrice,
-                offerPercentage,
-                bestOffer,
-                productImages: [firstImage || 'default-image.jpg'],
-                isInWishlist
+                ...product.toObject(),
+                maxOfferPercentage: maxOffer,
+                offerPrice: offerPrice ? Math.round(offerPrice) : null
             };
-        }));
+        });
 
-        // Apply sorting
-        switch(sort) {
-            case 'price-low':
-                products.sort((a, b) => a.effectivePrice - b.effectivePrice);
-                break;
-            case 'price-high':
-                products.sort((a, b) => b.effectivePrice - a.effectivePrice);
-                break;
-            case 'name-asc':
-                products.sort((a, b) => a.productName.localeCompare(b.productName));
-                break;
-            case 'name-desc':
-                products.sort((a, b) => b.productName.localeCompare(a.productName));
-                break;
-            case 'new-arrivals':
-                products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-                break;
-            default:
-                products.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        }
-
-        // Apply pagination after sorting
-        const totalProducts = products.length;
-        const totalPages = Math.ceil(totalProducts / limit);
+        // Sort by createdAt timestamp
+        productsWithOffers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         
-        // Validate page number
-        if (page > totalPages) {
-            return res.redirect(`/shop-page?page=1&sort=${sort}&category=${categoryFilter || ''}`);
-        }
-
-        // Slice products for pagination
-        products = products.slice(skip, skip + limit);
-
-        const pagination = {
-            currentPage: page,
-            totalPages: totalPages,
-            hasNext: page < totalPages,
-            hasPrev: page > 1,
-            pages: Array.from({ length: totalPages }, (_, i) => i + 1),
-            startPage: Math.max(1, page - 2),
-            endPage: Math.min(totalPages, page + 2)
-        };
-
-        const renderData = {
-            products,
-            pagination,
-            currentSort: sort,
-            currentCategory: categoryFilter,
-            categories,
-            itemsPerPage: limit,
-            totalItems: totalProducts
-        };
-
-        if (req.headers['x-requested-with'] === 'XMLHttpRequest') {
-            return res.json(renderData);
-        }
+        // Limit to 8 products
+        const limitedProducts = productsWithOffers.slice(0, 8);
 
         if (user) {
-            const userData = await User.findOne({ _id: user._id }).lean();
-            renderData.user = userData;
-        }
-
-        res.render("shop-page", renderData);
-    } catch (error) {
-        console.log('Shop Page Error:', error);
-        res.status(500).send('Server Error: Shop Page Not Found');
-    }
-};
- 
-
-// userController.js - Updated getProductDetails function
-const getProductDetails = async (req, res) => {
-    try {
-        const productId = req.query.id;
-        const product = await Product.findById(productId)
-            .populate('category')
-            .populate('variants');
-        
-        if (!product) {
-            return res.status(404).render('error', { message: 'Product not found' });
-        }
-
-        // Find applicable offers
-        const offers = await Offer.find({
-            $or: [
-                { offerType: 'product', productIds: productId },
-                { offerType: 'category', categoryIds: product.category._id }
-            ],
-            status: 'active',
-            expireDate: { $gte: new Date() }
-        });
-
-        // Calculate the maximum discount
-        let maxDiscount = 0;
-        let applicableOfferName = '';
-        
-        offers.forEach(offer => {
-            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            }
-        });
-
-        // Calculate discounted price
-        const discountedPrice = product.regularPrice * (1 - maxDiscount / 100);
-
-        const variants = product.variants.filter(variant => variant.isListed);
-        const initialVariant = variants[0];
-
-        const variantSizes = initialVariant.sizes.map(sizeObj => ({
-            size: sizeObj.size,
-            quantity: sizeObj.quantity
-        }));
-
-        res.render('product', {
-            product: {
-                ...product.toObject(),
-                regularPrice: product.regularPrice,
-                discountedPrice: discountedPrice,
-                maxDiscount,
-                applicableOfferName
-            },
-            variants,
-            initialVariant,
-            variantSizes,
-            categoryName: product.category.name,
-            isLoggedIn: !!req.session.user,
-        });
-    } catch (error) {
-        console.error('Error fetching product details:', error);
-        res.status(500).render('error', { message: 'Internal Server Error' });
-    }
-};
-
-
-
-const getVariantDetails = async (req, res) => {
-    try {
-        const { productId, variantId } = req.params;
-        
-        const product = await Product.findById(productId);
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        const variant = product.variants.id(variantId);
-        if (!variant) {
-            return res.status(404).json({ message: 'Variant not found' });
-        }
-
-        // Transform variant images with full path
-        const images = variant.images.map(img => ({
-            filename: img.filename,
-            fullPath: `/uploads/product-images/${img.filename}`
-        }));
-
-        const sizes = variant.sizes.map(sizeObj => ({
-            size: sizeObj.size,
-            quantity: sizeObj.quantity
-        }));
-
-        res.json({
-            images,
-            sizes
-        });
-    } catch (error) {
-        console.error('Get Variant Details Error:', error);
-        res.status(500).json({ message: 'Failed to fetch variant details' });
-    }
-};
-
- 
- 
-const getProductForCart = async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.productId)
-            .populate('category')
-            .select('productName regularPrice variants');
-        res.json(product);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to fetch product details' });
-    }
-};
-
-
-const getProductOffers = async (req, res) => {
-    try {
-        const productId = req.params.productId;
-        const product = await Product.findById(productId).populate('category');
-        
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        const offers = await Offer.find({
-            $or: [
-                { offerType: 'product', productIds: productId },
-                { offerType: 'category', categoryIds: product.category._id }
-            ],
-            status: 'active',
-            expireDate: { $gte: new Date() }
-        });
-
-        res.json({ offers });
-    } catch (error) {
-        console.error('Error fetching offers:', error);
-        res.status(500).json({ message: 'Failed to fetch offers' });
-    }
-};
-
-This is my admin-dashboard.ejs page code:- 
-
-
-
-<%- include("../../views/partials/user/header/") %>
-
-<style>
-
-.product-price {
-    font-size: 26px;
-    margin-bottom: 25px;
-}
-
-.original-price {
-    text-decoration: line-through;
-    color: #888;
-    font-size: 18px;
-    margin-right: 10px;
-}
-
-.discounted-price {
-    font-weight: bold;
-    font-size: 26px;
-}
-
-.discount-badge {
-    background-color: #ff0000;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 10px;
-    font-size: 14px;
-}
-
-.offer-type {
-    font-size: 12px;
-    color: #666;
-    margin-top: 5px;
-}
-
-.product-category {
-    font-size: 16px;
-    color: #666;
-    margin-bottom: 15px;
-    font-style:normal;
-}
-
-
-
-.main-image {
-        position: relative;
-        overflow: hidden;
-        width: 100%;
-        height: 500px;
-        border-radius: 8px;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: crosshair;
-    }
-
-    .zoom-image {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        transition: transform 0.2s ease;
-    }
-
-    .zoomed {
-        transform: scale(2); /* Zoom level */
-        cursor: move;
-    }
-
-
-
-
-.main-image {
-        position: relative;
-        overflow: hidden;
-        width: 100%;
-        height: 500px;
-        border-radius: 8px;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: crosshair;
-    }
-
-    .main-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        transition: transform 0.2s ease;
-    }
-
-    .main-image img.zoomed {
-        transform: scale(3); /* Adjust zoom level */
-    }
-
-
-
-
-    .product-detail-area {
-        padding: 60px 0;
-        background: linear-gradient(to bottom, #f8f9fa, #ffffff);
-    }
-
-    /* Product Images */
-    .product-images {
-        background: #fff;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        transition: all 0.3s ease;
-    }
-
-    .product-images:hover {
-        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-    }
-
-    .main-image {
-        width: 100%;
-        height: 500px;
-        border-radius: 8px;
-        margin-bottom: 20px;
-        overflow: hidden;
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .main-image img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        transition: transform 0.3s ease;
-    }
-
-    .main-image img:hover {
-        transform: scale(1.05);
-    }
-
-    .thumbnail-row {
-        display: flex;
-        gap: 12px;
-        overflow-x: auto;
-        padding: 10px 0;
-        scrollbar-width: thin;
-    }
-
-    .thumbnail-row::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .thumbnail-row::-webkit-scrollbar-thumb {
-        background: #384aeb;
-        border-radius: 10px;
-    }
-
-    .thumbnail {
-        width: 90px;
-        height: 90px;
-        border: 2px solid #eee;
-        border-radius: 8px;
-        cursor: pointer;
-        overflow: hidden;
-        flex-shrink: 0;
-        transition: all 0.2s ease;
-    }
-
-    .thumbnail.active {
-        border-color: #384aeb;
-        transform: translateY(-2px);
-    }
-
-    .thumbnail:hover {
-        border-color: #384aeb;
-    }
-
-    .thumbnail img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    /* Product Info */
-    .product-info {
-        background: #fff;
-        padding: 35px;
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-    }
-
-    .product-title {
-        font-size: 28px;
-        color: #2d2d2d;
-        margin-bottom: 20px;
-        font-weight: 600;
-    }
-
-    /* .product-price {
-        font-size: 26px;
-        background: linear-gradient(45deg, #384aeb, #5c6bc0);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: bold;
-        margin-bottom: 25px;
-    } */
-
-    /* Variants */
-    .variant-options {
-        margin: 25px 0;
-    }
-
-    .variant-title {
-        font-size: 18px;
-        color: #333;
-        margin-bottom: 15px;
-        font-weight: 500;
-    }
-
-    .color-options {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-    }
-
-    .color-option {
-        width: 80px;
-        height: 80px;
-        border: 2px solid #eee;
-        border-radius: 8px;
-        cursor: pointer;
-        overflow: hidden;
-        position: relative;
-        transition: all 0.3s ease;
-    }
-
-    .color-option::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.7));
-        z-index: 1;
-    }
-
-    .color-option.active {
-        border-color: #384aeb;
-        transform: translateY(-3px);
-        box-shadow: 0 4px 12px rgba(56,74,235,0.2);
-    }
-
-    .color-option:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-
-    .color-option img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .color-name {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        color: #fff;
-        padding: 8px 4px;
-        font-size: 12px;
-        text-align: center;
-        z-index: 2;
-    }
-
-    /* Size Options */
-    .size-options {
-        margin: 25px 0;
-    }
-
-    .size-grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin-top: 15px;
-    }
-
-    .size-btn {
-        min-width: 85px;
-        padding: 12px;
-        border: 2px solid #eee;
-        border-radius: 8px;
-        background: #fff;
-        cursor: pointer;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-
-    .size-btn:hover:not(.out-of-stock) {
-        border-color: #384aeb;
-        transform: translateY(-2px);
-    }
-
-    .size-btn.active {
-        border-color: #384aeb;
-        background: linear-gradient(45deg, #384aeb, #5c6bc0);
-        color: #fff;
-        transform: translateY(-2px);
-    }
-
-    .size-btn.out-of-stock {
-        opacity: 0.6;
-        cursor: not-allowed;
-        background: #f5f5f5;
-    }
-
-    .stock-info {
-        font-size: 11px;
-        color: #666;
-        margin-top: 6px;
-    }
-
-    /* Add to Cart Button */
-    .add-cart-btn {
-        width: 100%;
-        padding: 16px;
-        background: linear-gradient(45deg, #384aeb, #5c6bc0);
-        color: #fff;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .add-cart-btn:hover:not(:disabled) {
-        background: linear-gradient(45deg, #2a3bcc, #4a5ab0);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(56,74,235,0.3);
-    }
-
-    .add-cart-btn:disabled {
-        background: linear-gradient(45deg, #ccc, #999);
-        cursor: not-allowed;
-        transform: none;
-        box-shadow: none;
-    }
-
-    .product-description {
-        padding: 20px 0;
-        border-top: 1px solid #eee;
-        border-bottom: 1px solid #eee;
-        margin: 20px 0;
-        line-height: 1.6;
-        color: #666;
-    }
-</style>
-
-
-
-
-
-	<!-- End Header Area -->
-
-	<!-- Start Banner Area -->
-	<section class="banner-area organic-breadcrumb">
-		<div class="container">
-			<div class="breadcrumb-banner d-flex flex-wrap align-items-center justify-content-end">
-				<div class="col-first">
-					<h1>Product Details Page</h1>
-					<nav class="d-flex align-items-center">
-						<a href="index.html">Home<span class="lnr lnr-arrow-right"></span></a>
-						<a href="#">Shop<span class="lnr lnr-arrow-right"></span></a>
-						<a href="single-product.html">product-details</a>
-					</nav>
-				</div>
-			</div>
-		</div>
-	</section>
-	<!-- End Banner Area -->
-
-
-
-
-
-
-
-<!--================Single Product Area =================-->
-<% if (product) { %>
-	<div class="product-detail-area">
-		<div class="container">
-			<div class="row">
-				<!-- Product Images -->
-				<div class="col-lg-6">
-					<div class="product-images">
-						<div>
-							<input type="range" id="zoomLevel" min="1" max="5" step="0.1" value="2" />
-						</div>
-						<div class="main-image" id="imageZoomContainer">
-							<% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
-								<img id="mainImage" 
-									 src="/uploads/product-images/<%= initialVariant.images[0].filename %>" 
-									 alt="<%= product.productName %>" 
-									 class="zoom-image">
-							<% } else { %>
-								<img id="mainImage" 
-									 src="/images/default-product.jpg" 
-									 alt="Default product image" 
-									 class="zoom-image">
-							<% } %>
-						</div>
-						
-						
-						
-						
-						
-						<!-- Thumbnails -->
-						<div class="thumbnail-row">
-							<% if (initialVariant && initialVariant.images && initialVariant.images.length > 0) { %>
-								<% initialVariant.images.forEach((image, index) => { %>
-									<div class="thumbnail <%= index === 0 ? 'active' : '' %>"
-										 onclick="changeMainImage('/uploads/product-images/<%= image.filename %>', this, '<%= image.filename %>')">
-										<img src="/uploads/product-images/<%= image.filename %>" 
-											 alt="Product view <%= index + 1 %>">
-									</div>
-								<% }); %>
-							<% } %>
-						</div>
-					</div>
-				</div>
-	
-				<!-- Product Info -->
-				<div class="col-lg-6">
-					<div class="product-info">
-						<h1 class="product-title"><%= product.productName %></h1>
-						<!-- Price Section -->
-						<div class="product-price">
-							<% if (product.maxDiscount > 0) { %>
-								<span class="original-price" style="text-decoration: line-through; color: #888; font-size: 0.7em; margin-right: 10px;">
-									₹<%= product.regularPrice.toFixed(2) %>
-								</span>
-								<span class="discounted-price" style="color: #000; font-weight: bold; font-size: 1.2em;">
-									₹<%= product.discountedPrice.toFixed(2) %>
-								</span>
-								<span class="discount-badge" style="background-color: #ff0000; color: white; padding: 2px 6px; border-radius: 4px; margin-left: 10px; font-size: 0.8em;">
-									<%= product.maxDiscount.toFixed(0) %>% OFF
-								</span>
-								<div class="offer-type" style="font-size: 12px; color: #666; margin-top: 5px;">
-									Offer: <%= product.applicableOfferName || 'N/A' %>
-								</div>
-							<% } else { %>
-								<span>₹<%= product.regularPrice.toFixed(2) %></span>
-							<% } %>
-						</div>
-						
-						<!-- Inside the product-info div, add this section -->
-<div class="product-category">
-    <span>Category: <%= typeof categoryName !== 'undefined' ? categoryName : 'Not Available' %></span>
-</div>
-						<div class="product-description">
-							<p><%= product.description %></p>
-						</div>
-						
-	
-						<!-- Color Variants -->
-						<div class="variant-options">
-							<h4 class="variant-title">Available Colors</h4>
-							<div class="color-options">
-								<% if (variants && variants.length > 0) { %>
-									<% variants.forEach(variant => { %>
-										<% if (variant.images && variant.images.length > 0) { %>
-											<div class="color-option <%= variant._id.toString() === initialVariant._id.toString() ? 'active' : '' %>"
-												 onclick="selectVariant('<%= product._id %>', '<%= variant._id %>', this)">
-												<img src="/uploads/product-images/<%= variant.images[0].filename %>" 
-													 alt="<%= variant.color %>">
-												<span class="color-name"><%= variant.color %></span>
-											</div>
-										<% } %>
-									<% }); %>
-								<% } %>
-							</div>
-						<!-- Size Options -->
-						<div class="size-options">
-							<h4 class="variant-title">Select Size</h4>
-							<div class="size-grid" id="sizeGrid">
-								<% variantSizes.forEach(sizeObj => { %>
-									<button type="button" 
-											class="size-btn <%= sizeObj.quantity === 0 ? 'out-of-stock' : '' %>"
-											onclick="selectSize(this, '<%= sizeObj.size %>')"
-											<%= sizeObj.quantity === 0 ? 'disabled' : '' %>>
-										UK <%= sizeObj.size %>
-										<div class="stock-info">
-											<%= sizeObj.quantity === 0 ? 'Out of Stock' : `${sizeObj.quantity} left` %>
-										</div>
-									</button>
-								<% }) %>
-							</div>
-						</div>
-	
-						<!-- Add to Cart Form -->
-						<form id="addToCartForm" onsubmit="return handleAddToCart(event)">
-							<input type="hidden" id="selectedSize" name="size" value="">
-							<input type="hidden" id="selectedVariant" name="variantId" value="<%= initialVariant._id %>">
-							<button type="submit" class="add-cart-btn" id="addToCartBtn" disabled>
-								Add to Cart
-							</button>
-						</form>
-					</div>
-				</div>
-			</div>
-		</div>
-	</div>
-<% } else { %>
-	<p>Product not found.</p>
-<% } %>
-<!--================End Single Product Area =================-->
-
-
-	<!-- Start related-product Area -->
-	<section class="related-product-area section_gap_bottom">
-		<div class="container">
-			<div class="row justify-content-center">
-				<div class="col-lg-6 text-center">
-					<div class="section-title">
-						<h1>Deals of the Week</h1>
-						<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore
-							magna aliqua.</p>
-					</div>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-lg-9">
-					<div class="row">
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r1.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r2.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r3.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r5.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r6.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6 mb-20">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r7.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r9.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r10.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-						<div class="col-lg-4 col-md-4 col-sm-6">
-							<div class="single-related-product d-flex">
-								<a href="#"><img src="img/r11.jpg" alt=""></a>
-								<div class="desc">
-									<a href="#" class="title">Black lace Heels</a>
-									<div class="price">
-										<h6>$189.00</h6>
-										<h6 class="l-through">$210.00</h6>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
-				</div>
-				<div class="col-lg-3">
-					<div class="ctg-right">
-						<a href="#" target="_blank">
-							<img class="img-fluid d-block mx-auto" src="img/category/c5.jpg" alt="">
-						</a>
-					</div>
-				</div>
-			</div>
-		</div>
-	</section>
-	<!-- End related-product Area -->
-
-
-	<%- include("../../views/partials/user/footer/") %>
-
-
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/elevatezoom/3.0.8/jquery.elevatezoom.min.js"></script>
-	
-
-
-	<script>
- const zoomContainer = document.getElementById('imageZoomContainer');
-    const mainImage = document.getElementById('mainImage');
-    const zoomLevelInput = document.getElementById('zoomLevel');
-
-    let isZoomed = false;
-
-    // Set initial zoom level from the range input
-    let zoomLevel = parseFloat(zoomLevelInput.value);
-
-    zoomLevelInput.addEventListener('input', (event) => {
-        zoomLevel = parseFloat(event.target.value);
-        if (isZoomed) {
-            mainImage.style.transform = `scale(${zoomLevel})`;
-        }
-    });
-
-    // Toggle Zoom on Click
-    zoomContainer.addEventListener('click', () => {
-        isZoomed = !isZoomed;
-        if (isZoomed) {
-            mainImage.classList.add('zoomed');
-            mainImage.style.transform = `scale(${zoomLevel})`;
+            const userData = await User.findOne({_id: user._id});
+            res.render("home", {user: userData, products: limitedProducts});
         } else {
-            mainImage.classList.remove('zoomed');
-            mainImage.style.transform = 'scale(1)';
-            mainImage.style.transformOrigin = 'center center';
-        }
-    });
-
-    // Mousemove for Panning
-    zoomContainer.addEventListener('mousemove', (event) => {
-        if (isZoomed) {
-            const rect = zoomContainer.getBoundingClientRect();
-            const offsetX = ((event.clientX - rect.left) / rect.width) * 100;
-            const offsetY = ((event.clientY - rect.top) / rect.height) * 100;
-
-            mainImage.style.transformOrigin = `${offsetX}% ${offsetY}%`;
-        }
-    });
-
-    // Reset Zoom when Mouse Leaves Container
-    zoomContainer.addEventListener('mouseleave', () => {
-        if (isZoomed) {
-            mainImage.classList.remove('zoomed');
-            mainImage.style.transform = 'scale(1)';
-            mainImage.style.transformOrigin = 'center center';
-            isZoomed = false; // Automatically reset zoom
-        }
-    });
-
-
-	function changeMainImage(imagePath, thumbnailElement) {
-    // Update the main image source
-    const mainImage = document.getElementById('mainImage');
-    mainImage.src = imagePath;
-
-    // Remove active class from all thumbnails
-    document.querySelectorAll('.thumbnail').forEach(thumb => {
-        thumb.classList.remove('active');
-    });
-
-    // Add active class to the clicked thumbnail
-    thumbnailElement.classList.add('active');
-}
-
-
-		
-		// Function to select variant
-		function selectVariant(productId, variantId, element) {
-			console.log('Selecting variant:', variantId); // Debug log
-			
-			// Update active state
-			document.querySelectorAll('.color-option').forEach(option => {
-				option.classList.remove('active');
-			});
-			element.classList.add('active');
-			
-			// Update form values
-			document.getElementById('selectedVariant').value = variantId;
-			document.getElementById('selectedSize').value = '';
-			document.getElementById('addToCartBtn').disabled = true;
-			
-			// Fetch variant details
-			fetch(`/product/${productId}/variant/${variantId}`)
-    .then(response => response.json())
-    .then(data => {
-        if (data.images && data.images.length > 0) {
-            // Update main image
-            const mainImage = document.getElementById('mainImage');
-            mainImage.src = data.images[0].fullPath;
-            
-            // Update thumbnails
-            const thumbnailRow = document.querySelector('.thumbnail-row');
-            thumbnailRow.innerHTML = data.images.map((image, index) => `
-                <div class="thumbnail ${index === 0 ? 'active' : ''}"
-                     onclick="changeMainImage('${image.fullPath}', this)">
-                    <img src="${image.fullPath}" 
-                         alt="Product view ${index + 1}">
-                </div>
-            `).join('');
+            return res.render('home', {products: limitedProducts});
         }
         
-        // Update sizes
-        if (data.sizes) {
-            updateSizeOptions(data.sizes);
-        }
-    })
-    .catch(error => {
-        console.error('Error fetching variant details:', error);
-    });
-		}
-		
-		// Function to update size options
-		function updateSizeOptions(sizes) {
-			const sizeGrid = document.getElementById('sizeGrid');
-			sizeGrid.innerHTML = sizes.map(size => `
-				<button type="button" 
-						class="size-btn ${size.quantity === 0 ? 'out-of-stock' : ''}"
-						onclick="selectSize(this, ${size.size})"
-						${size.quantity === 0 ? 'disabled' : ''}>
-					UK ${size.size}
-					<div class="stock-info">
-						${size.quantity === 0 ? 'Out of Stock' : `${size.quantity} left`}
-					</div>
-				</button>
-			`).join('');
-		}
-		
-		// Function to select size
-		function selectSize(element, size) {
-			// Update active state
-			document.querySelectorAll('.size-btn').forEach(btn => {
-				btn.classList.remove('active');
-			});
-			element.classList.add('active');
-			
-			// Update form value
-			document.getElementById('selectedSize').value = size;
-			document.getElementById('addToCartBtn').disabled = false;
-		}
-		
-		
-		
-
-		function showLoginRequiredAlert() {
-    Swal.fire({
-        icon: 'warning',
-        title: 'Login Required',
-        text: 'You need to log in to add items to your cart.',
-        showConfirmButton: true,
-        confirmButtonText: 'Go to Login',
-        confirmButtonColor: '#384aeb',
-        showCancelButton: true,
-        cancelButtonColor: '#6c757d',
-        cancelButtonText: 'Cancel'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = '/login';
-        }
-    });
-}
-
-function handleAddToCart(event) {
-    event.preventDefault();
-    
-    // Use the server-side passed isLoggedIn variable
-    const isLoggedIn = "<%= isLoggedIn ? 'true' : 'false' %>";
-    
-    const size = document.getElementById('selectedSize').value;
-    const variantId = document.getElementById('selectedVariant').value;
-    const productId = '<%= product._id %>'; 
-    
-    if (!size) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Oops...',
-            text: 'Please select a size before adding to cart!',
-            confirmButtonColor: '#384aeb'
-        });
-        return false;
-    }
-    
-    // If not logged in, show login prompt
-    if (!isLoggedIn) {
-        showLoginRequiredAlert();
-        return false;
-    }
-    
-    // Removed the color extraction logic
-    
-    fetch(`/addToCart/${productId}`, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            size: size,
-            variantId: variantId,
-            quantity: 1
-        })
-    })
-    .then(response => {
-        if (!response.ok) {
-            return response.json().then(errorData => {
-                // Check for unauthorized error
-                if (response.status === 401 || errorData.status === 'unauthorized') {
-                    showLoginRequiredAlert();
-                    throw new Error('Unauthorized');
-                }
-                throw errorData;
-            });
-        }
-        return response.json();
-    })
-    .then(data => {
-        if (data.status === 'success') {
-            Swal.fire({
-                icon: 'success',
-                title: 'Added to Cart!',
-                text: data.message,
-                showConfirmButton: true,
-                confirmButtonText: 'Go to Cart',
-                confirmButtonColor: '#384aeb',
-                showCancelButton: true,
-                cancelButtonColor: '#6c757d',
-                cancelButtonText: 'Continue Shopping'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/userCart';
-                }
-            });
-        }
-    })
-    .catch(error => {
-        // Only show error if it's not an unauthorized error (which is already handled)
-        if (error.message !== 'Unauthorized') {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: error.message || 'There was a problem adding the product to cart.',
-                confirmButtonColor: '#384aeb'
-            });
-        }
-    });
-    
-    return false;
-}
-
-
-		
-		// Initialize any necessary elements on page load
-		document.addEventListener('DOMContentLoaded', function() {
-			// Any initialization code can go here
-			console.log('Product page initialized');
-		});
-</script>
-
-
-
-
-
-
-<script>
-	document.addEventListener('DOMContentLoaded', function() {
-		const searchIcon = document.getElementById('search');
-		const searchInputBox = document.getElementById('search_input_box');
-		const closeSearch = document.getElementById('close_search');
-	
-		// Initially hide the search input box
-		searchInputBox.style.display = 'none';
-		searchInputBox.style.opacity = '0';
-		searchInputBox.style.visibility = 'hidden';
-	
-		// Toggle search input box
-		searchIcon.addEventListener('click', function(e) {
-			e.preventDefault();
-			if (searchInputBox.style.visibility === 'hidden') {
-				// Show search box with animation
-				searchInputBox.style.display = 'block';
-				setTimeout(() => {
-					searchInputBox.style.opacity = '1';
-					searchInputBox.style.visibility = 'visible';
-				}, 10);
-			}
-		});
-	
-		// Close search input box
-		closeSearch.addEventListener('click', function(e) {
-			e.preventDefault();
-			searchInputBox.style.opacity = '0';
-			
-			// Wait for opacity transition before hiding
-			setTimeout(() => {
-				searchInputBox.style.display = 'none';
-				searchInputBox.style.visibility = 'hidden';
-			}, 300); // Match this with transition duration
-		});
-	});
-	</script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    <!-- Remove the deals of the week section entirely and replace with this related products section -->
-<section class="related-product-area section_gap_bottom">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-6 text-center">
-                <div class="section-title">
-                    <h1>Related Products</h1>
-                    <p>More products from <%= categoryName %></p>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <% if (typeof relatedProducts !== 'undefined' && relatedProducts.length > 0) { %>
-                <% relatedProducts.forEach(relatedProduct => { %>
-                    <div class="col-lg-3 col-md-6 mb-4">
-                        <div class="card h-100 product-card">
-                            <% 
-                            let productImage = '/images/default-product.jpg';
-                            if (relatedProduct.variants && 
-                                relatedProduct.variants.length > 0 && 
-                                relatedProduct.variants[0].images && 
-                                relatedProduct.variants[0].images.length > 0) {
-                                productImage = `/uploads/product-images/${relatedProduct.variants[0].images[0].filename}`;
-                            }
-                            %>
-                            <a href="/productDetails?id=<%= relatedProduct._id %>">
-                                <img src="<%= productImage %>" class="card-img-top" alt="<%= relatedProduct.productName %>">
-                            </a>
-                            <div class="card-body">
-                                <h5 class="card-title">
-                                    <a href="/productDetails?id=<%= relatedProduct._id %>" class="text-dark">
-                                        <%= relatedProduct.productName %>
-                                    </a>
-                                </h5>
-                                <div class="price-container">
-                                    <% if (relatedProduct.offerPercentage > 0) { %>
-                                        <span class="original-price">₹<%= relatedProduct.regularPrice.toFixed(2) %></span>
-                                        <span class="discounted-price">₹<%= (relatedProduct.regularPrice * (1 - relatedProduct.offerPercentage/100)).toFixed(2) %></span>
-                                        <span class="discount-badge"><%= relatedProduct.offerPercentage %>% OFF</span>
-                                    <% } else { %>
-                                        <span class="current-price">₹<%= relatedProduct.regularPrice.toFixed(2) %></span>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                <% }); %>
-            <% } else { %>
-                <div class="col-12 text-center">
-                    <p>No related products found</p>
-                </div>
-            <% } %>
-        </div>
-    </div>
-</section>
-
-<style>
-.product-card {
-    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
-    border: none;
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-.product-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-.product-card .card-img-top {
-    height: 200px;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-
-.product-card:hover .card-img-top {
-    transform: scale(1.05);
-}
-
-.price-container {
-    margin-top: 10px;
-}
-
-.original-price {
-    text-decoration: line-through;
-    color: #999;
-    font-size: 0.9em;
-    margin-right: 8px;
-}
-
-.discounted-price, .current-price {
-    color: #384aeb;
-    font-weight: bold;
-    font-size: 1.1em;
-}
-
-.discount-badge {
-    background-color: #ff4757;
-    color: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.8em;
-    margin-left: 8px;
-}
-
-.card-title {
-    font-size: 1em;
-    margin-bottom: 10px;
-    line-height: 1.4;
-}
-
-.card-title a {
-    color: inherit;
-    text-decoration: none;
-}
-
-.card-title a:hover {
-    color: #384aeb;
-}
-</style>
-
-<script>
-
-    // Add this to your getProductDetails function in userController.js
-const getProductDetails = async (req, res) => {
-    try {
-        const productId = req.query.id;
-        const product = await Product.findById(productId)
-            .populate('category')
-            .populate('variants');
-        
-        if (!product) {
-            return res.status(404).render('error', { message: 'Product not found' });
-        }
-
-        // Find applicable offers
-        const offers = await Offer.find({
-            $or: [
-                { offerType: 'product', productIds: productId },
-                { offerType: 'category', categoryIds: product.category._id }
-            ],
-            status: 'active',
-            expireDate: { $gte: new Date() }
-        });
-
-        // Calculate the maximum discount (existing code remains the same)
-        let maxDiscount = 0;
-        let applicableOfferName = '';
-        
-        offers.forEach(offer => {
-            if (offer.offerType === 'product' && offer.productIds.includes(productId)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            } else if (offer.offerType === 'category' && offer.categoryIds.includes(product.category._id)) {
-                maxDiscount = Math.max(maxDiscount, offer.discount);
-                applicableOfferName = offer.offerName;
-            }
-        });
-
-        // Calculate discounted price
-        const discountedPrice = product.regularPrice * (1 - maxDiscount / 100);
-
-        // Fetch related products from the same category
-        const relatedProducts = await Product.find({
-            category: product.category._id,
-            _id: { $ne: product._id }, // Exclude current product
-            isBlocked: false
-        })
-        .populate('category')
-        .limit(4) // Show only 4 related products
-        .lean();
-
-        // Calculate offers for related products
-        const relatedProductsWithOffers = await Promise.all(relatedProducts.map(async (relatedProduct) => {
-            const productOffers = await Offer.find({
-                $or: [
-                    { offerType: 'product', productIds: relatedProduct._id },
-                    { offerType: 'category', categoryIds: relatedProduct.category._id }
-                ],
-                status: 'active',
-                expireDate: { $gte: new Date() }
-            });
-
-            let maxOfferPercentage = 0;
-            productOffers.forEach(offer => {
-                maxOfferPercentage = Math.max(maxOfferPercentage, offer.discount);
-            });
-
-            return {
-                ...relatedProduct,
-                offerPercentage: maxOfferPercentage
-            };
-        }));
-
-        const variants = product.variants.filter(variant => variant.isListed);
-        const initialVariant = variants[0];
-
-        const variantSizes = initialVariant.sizes.map(sizeObj => ({
-            size: sizeObj.size,
-            quantity: sizeObj.quantity
-        }));
-
-        res.render('product', {
-            product: {
-                ...product.toObject(),
-                regularPrice: product.regularPrice,
-                discountedPrice: discountedPrice,
-                maxDiscount,
-                applicableOfferName
-            },
-            variants,
-            initialVariant,
-            variantSizes,
-            categoryName: product.category.name,
-            relatedProducts: relatedProductsWithOffers,
-            isLoggedIn: !!req.session.user,
-        });
     } catch (error) {
-        console.error('Error fetching product details:', error);
-        res.status(500).render('error', { message: 'Internal Server Error' });
+        console.log('Home Page Not Found', error);
+        res.status(500).send('Server Error Home Page Not Found');
+    }
+}
+
+
+const loadLogin = async (req, res) => {
+    try {
+        
+        if(!req.session.user){
+            return res.render('login')
+        } else {
+            res.redirect('/')
+        }
+
+    } catch (error) {
+        console.log('Login page not loading: ', error);
+        res.render('user-error', { error: 'Login page not loading' }); 
+    }
+}
+
+
+const login= async(req,res)=>{
+    try{
+    
+        const {email,password}=req.body;
+        console.log(req.body);
+
+        const findUser= await User.findOne({isAdmin:0,email:email});
+        console.log('User found',findUser);
+
+        if(!findUser){
+            return res.render('login',{message:"User not found"});
+        }
+
+        if(findUser.isBlocked){
+            return res.render('login',{message:"User is blocked by admin"});
+        }
+
+        const passwordMatch= await bcrypt.compare(password,findUser.password);
+
+        if(!passwordMatch){
+            return res.render('login',{message:'Incorrect Password'});
+        }
+
+        req.session.user= findUser;
+        res.redirect('/')
+    } catch(error){
+        console.error('login error',error);
+        res.render('login',{message:'login failed. Please try again later'})
+        
+    }
+}
+
+
+const logout= async (req,res) => {
+
+    try {
+        
+        req.session.destroy((err)=>{
+            if(err){
+                console.log('session destruction error',err.message);
+                return res.redirect('/pageNotFound')
+            }
+            return res.redirect('/login');
+        })
+    } catch (error) {
+        console.log('Logount error',error);
+        res.redirect('/user-error')
+    }
+    
+}
+ 
+
+const loadSignup = async (req, res) => {
+    try {
+        return res.render('signup');
+    } catch (error) {
+        console.log('Signup page not loading: ', error);
+        res.redirect('/user-error')
+    }
+}
+
+
+const signUp = async (req, res) => {
+    try {
+        const { name, phone, email, password, cPassword, referralCode } = req.body;
+
+        // Password match validation
+        if (password !== cPassword) {
+            return res.render("signup", { 
+                message: "Passwords do not match",
+                inputData: req.body
+            });
+        }
+
+        // Check existing user
+        const findUser = await User.findOne({ email });
+        if (findUser) {
+            return res.render("signup", { 
+                message: "An account with this email already exists",
+                inputData: req.body
+            });
+        }
+
+        // Check referral code if provided
+        let referrer = null;
+        if (referralCode) {
+            const referral = await Referral.findOne({ 
+                referralCode: referralCode,
+                status: 'Active' // Check only if the referral is active
+            });
+
+            if (!referral) {
+                return res.render("signup", { 
+                    message: "Invalid or expired referral code",
+                    inputData: req.body
+                });
+            }
+            referrer = referral.referrer;
+        }
+        
+        const otp = generateOtp();
+        const emailSent = await sendVerificationEmail(email, otp);
+
+        if (!emailSent) {
+            return res.json("email-error");
+        }
+
+        req.session.userOtp = otp;
+        req.session.userData = { 
+            name, 
+            phone, 
+            email, 
+            password,
+            referralCode,
+            referrerId: referrer ? referrer.toString() : null
+        };
+        res.render("verify-otp");
+        console.log("OTP Sent:", otp);
+    } catch (error) {
+        console.error("Signup error", error);
+        res.redirect("/user-error");
+    }
+}
+
+
+const securePassword = async (password) => {
+    try {
+        return await bcrypt.hash(password, 10);
+    } catch (error) {
+        console.error("Error securing password:", error);
+        throw error;
+    }
+}
+
+
+const verifyOtp = async (req, res) => {
+    try {
+        const { otp } = req.body;
+
+        if (otp === req.session.userOtp) {
+            const userData = req.session.userData;
+            const passwordHash = await securePassword(userData.password);
+
+            // Create new user
+            const newUser = new User({
+                name: userData.name,
+                email: userData.email,
+                phone: userData.phone,
+                password: passwordHash
+            });
+            await newUser.save();
+
+            // Create wallet for new user
+            const newUserWallet = new Wallet({
+                userId: newUser._id,
+                balance: 0
+            });
+            await newUserWallet.save();
+
+            // Handle referral if code was provided
+            if (userData.referrerId && userData.referralCode) {
+                const referral = await Referral.findOne({
+                    referralCode: userData.referralCode,
+                    referrer: userData.referrerId,
+                    status: 'Active'
+                });
+
+                if (referral) {
+                    // Add new referee to the existing referral
+                    referral.referees.push({
+                        user: newUser._id,
+                        rewardAmount: 50,
+                        rewardStatus: 'Completed'
+                    });
+
+                    referral.totalRewards += 25; // Update total rewards
+                    await referral.save();
+
+                    // Add bonus to referrer's wallet (₹25)
+                    const referrerWallet = await Wallet.findOne({ userId: userData.referrerId });
+                    if (referrerWallet) {
+                        referrerWallet.balance += 25;
+                        referrerWallet.transactions.push({
+                            amount: 25,
+                            type: 'credit',
+                            description: 'Referral bonus for referring ' + newUser.email,
+                            balance: referrerWallet.balance
+                        });
+                        await referrerWallet.save();
+                    }
+
+                    // Add bonus to new user's wallet (₹50)
+                    newUserWallet.balance += 50;
+                    newUserWallet.transactions.push({
+                        amount: 50,
+                        type: 'credit',
+                        description: 'Welcome bonus for using referral code',
+                        balance: newUserWallet.balance
+                    });
+                    await newUserWallet.save();
+                }
+            }
+
+            req.session.user = newUser;
+            res.json({ success: true, redirectUrl: '/' });
+        } else {
+            res.status(400).json({ success: false, message: "Invalid OTP, please try again" });
+        }
+    } catch (error) {
+        console.error("Error verifying OTP:", error);
+        res.status(500).json({ success: false, message: "An error occurred" });
+    }
+}
+
+
+const resendOtp = async (req, res) => {
+    try {
+        const { email } = req.session.userData;
+
+       
+        if (!email) {
+            return res.status(400).json({ success: false, message: "Email not found in session" });
+        }
+
+        
+        const otp = generateOtp();
+        req.session.userOtp = otp;
+
+        
+        const emailSent = await sendVerificationEmail(email, otp);
+
+        if (emailSent) {
+            console.log("Resend OTP:", otp);
+            res.status(200).json({ success: true, message: "OTP Resent Successfully" });
+        } else {
+            res.status(500).json({ success: false, message: "Failed to resend OTP. Please try again" });
+        }
+    } catch (error) {
+        console.error("Error resending OTP:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error. Please try again" });
     }
 };
-</script>
+
+

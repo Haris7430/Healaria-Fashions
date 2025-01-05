@@ -10,6 +10,8 @@ const db=require('./config/db');
 const adminRouter= require('./routes/adminRouter')
 const userRouter= require('./routes/userRouter');
 const flash = require('connect-flash');
+const { errorHandler, notFoundHandler } = require('./middleware/errorMiddleware');
+
 
 db()
 
@@ -60,7 +62,8 @@ app.use('/',userRouter)
 app.use('/admin',adminRouter);
        
 
-
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 
 
