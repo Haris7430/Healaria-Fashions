@@ -212,6 +212,15 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentPage = 1;
     
     
+    function updateGrowthIndicator(elementId, growth) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        const formattedGrowth = Math.abs(growth).toFixed(1);
+        const isPositive = growth >= 0;
+        element.className = isPositive ? 'text-success' : 'text-danger';
+        element.textContent = `(${isPositive ? '+' : '-'}${formattedGrowth}%)`;
+    }
+}
 
     // Initialize Charts
     function initializeCharts() {
@@ -340,42 +349,127 @@ async function updateTopCategories(data) {
 }
 
 
-    // Fetch and Update Dashboard Data
-    async function updateDashboard() {
-    try {
-        const response = await fetch('/admin/api/dashboard-data');
-        const data = await response.json();
-        
-        // Update overview cards
-        updateOverviewCard('totalRevenue', data.totalRevenue, data.revenueGrowth);
-        updateOverviewCard('totalOrders', data.totalOrders, data.orderGrowth);
-        updateOverviewCard('totalCustomers', data.totalCustomers, data.customerGrowth);
-        updateOverviewCard('totalDiscounts', data.totalDiscounts);
+function updateCharts(data) {
+    // Update Top Products Chart
+    const productNames = data.topProducts.map(p => p.name);
+    const productQuantities = data.topProducts.map(p => p.quantity);
 
-        // Update charts
-        updateTopProducts(data);
-        updateTopCategories(data);
+    topProductsChart.updateOptions({
+        xaxis: {
+            categories: productNames
+        },
+        yaxis: {
+            title: {
+                text: 'Units Sold'
+            }
+        },
+        tooltip: {
+            y: {
+                formatter: (value) => `${value} units`
+            }
+        }
+    });
 
-    } catch (error) {
-        console.error('Error updating dashboard:', error);
-    }
+    topProductsChart.updateSeries([{
+        name: 'Units Sold',
+        data: productQuantities
+    }]);
+
+    // Update Top Categories Chart
+    const categoryNames = data.topCategories.map(c => c.name);
+    const categorySales = data.topCategories.map(c => c.totalQuantity);
+
+    topCategoriesChart.updateOptions({
+        labels: categoryNames,
+        tooltip: {
+            y: {
+                formatter: (value) => `${value} units`
+            }
+        }
+    });
+    topCategoriesChart.updateSeries(categorySales);
+
+    // Update Overview Cards
+    document.getElementById('totalRevenue').textContent = 
+        data.totalRevenue.toLocaleString('en-IN');
+    document.getElementById('totalOrders').textContent = 
+        data.totalOrders.toLocaleString('en-IN');
+    document.getElementById('totalCustomers').textContent = 
+        data.totalCustomers.toLocaleString('en-IN');
+    document.getElementById('totalDiscounts').textContent = 
+        data.totalDiscounts.toLocaleString('en-IN');
+
+    // Update growth indicators
+    updateGrowthIndicator('revenueGrowth', data.revenueGrowth);
+    updateGrowthIndicator('orderGrowth', data.orderGrowth);
+    updateGrowthIndicator('customerGrowth', data.customerGrowth);
+    updateGrowthIndicator('discountGrowth', data.discountGrowth);
 }
+
+
+    // Fetch and Update Dashboard Data
+    async function updateDashboard(range = 'monthly', startDate = null, endDate = null) {
+        try {
+            let url = `/admin/api/dashboard-data?range=${range}`;
+            if (range === 'custom' && startDate && endDate) {
+                url += `&startDate=${startDate}&endDate=${endDate}`;
+            }
+            
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch dashboard data');
+            }
+            
+            const data = await response.json();
+            
+            // Update overview cards with bounded growth rates
+            updateOverviewCard('totalRevenue', data.totalRevenue, data.revenueGrowth);
+            updateOverviewCard('totalOrders', data.totalOrders, data.orderGrowth);
+            updateOverviewCard('totalCustomers', data.totalCustomers, data.customerGrowth);
+            updateOverviewCard('totalDiscounts', data.totalDiscounts, data.discountGrowth);
+
+            // Update charts
+            updateCharts(data);
+            
+        } catch (error) {
+            console.error('Error updating dashboard:', error);
+        }
+    }
 
     
 
-    function updateOverviewCard(elementId, value, growth = null) {
+function calculateBoundedGrowth(current, previous) {
+        if (!previous || previous === 0) return 0;
+        const growth = ((current - previous) / previous) * 100;
+        // Bound growth between -100% and 100%
+        return Math.max(Math.min(growth, 100), -100);
+    }
+
+    // Format growth for display
+    function formatGrowthIndicator(growth) {
+        const isPositive = growth >= 0;
+        return {
+            value: Math.abs(growth).toFixed(1),
+            class: isPositive ? 'text-success' : 'text-danger',
+            icon: isPositive ? '↑' : '↓'
+        };
+    }
+
+
+    function updateOverviewCard(elementId, value, growth) {
         const valueElement = document.getElementById(elementId);
-        const growthElement = document.getElementById(elementId + 'Growth');
+        const growthElement = document.getElementById(`${elementId}Growth`);
         
-        valueElement.textContent = value.toLocaleString('en-IN');
+        if (valueElement) {
+            valueElement.textContent = value.toLocaleString('en-IN');
+        }
         
         if (growthElement && growth !== null) {
-            const growthClass = growth >= 0 ? 'text-success' : 'text-danger';
-            const growthIcon = growth >= 0 ? '↑' : '↓';
-            growthElement.className = growthClass;
-            growthElement.textContent = `${growthIcon} ${Math.abs(growth)}%`;
+            const growthInfo = formatGrowthIndicator(growth);
+            growthElement.className = growthInfo.class;
+            growthElement.textContent = `(${growthInfo.icon} ${growthInfo.value}%)`;
         }
-    }
+    };
 
     // Handle Sales Report Generation
     function validateDateRange() {
@@ -413,34 +507,59 @@ async function updateTopCategories(data) {
 
 // Update the generateSalesReport function
 async function generateSalesReport(page = 1) {
-    const range = document.getElementById('salesReportRange').value;
-    let url = `/admin/api/sales-report?range=${range}&page=${page}`;
+        try {
+            const range = document.getElementById('salesReportRange').value;
+            let url = `/admin/api/sales-report?range=${range}&page=${page}`;
+            
+            if (range === 'custom') {
+                if (!validateDateRange()) {
+                    return;
+                }
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                url += `&startDate=${startDate}&endDate=${endDate}`;
+                
+                // Update dashboard with same date range
+                await updateDashboard(range, startDate, endDate);
+            } else {
+                // Update dashboard with same range
+                await updateDashboard(range);
+            }
 
-    if (range === 'custom') {
-        if (!validateDateRange()) {
-            return;
+            const response = await fetch(url);
+            if (!response.ok) {
+                throw new Error('Failed to fetch sales report');
+            }
+            
+            const result = await response.json();
+
+            if (result.error) {
+                throw new Error(result.error);
+            }
+
+            // Update sales chart
+            updateSalesChart(result.data);
+            
+            // Update sales summary table with growth rates
+            updateSalesSummaryTable(result.data);
+            
+            // Update pagination
+            updatePagination(result.pagination);
+
+        } catch (error) {
+            console.error('Error generating sales report:', error);
+            alert('Error generating sales report: ' + error.message);
         }
-        const startDate = document.getElementById('startDate').value;
-        const endDate = document.getElementById('endDate').value;
-        url += `&startDate=${startDate}&endDate=${endDate}`;
     }
 
-    try {
-        const response = await fetch(url);
-        const result = await response.json();
-
-        if (result.error) {
-            alert(result.error);
-            return;
-        }
-
-        // Update sales chart
-        const chartData = result.data.map(item => ({
+    
+    function updateSalesChart(data) {
+        const chartData = data.map(item => ({
             x: new Date(item._id).getTime(),
             y: parseFloat(item.netSales.toFixed(2))
         }));
 
-        const orderData = result.data.map(item => ({
+        const orderData = data.map(item => ({
             x: new Date(item._id).getTime(),
             y: item.ordersCount
         }));
@@ -455,18 +574,7 @@ async function generateSalesReport(page = 1) {
                 data: orderData
             }
         ]);
-
-        // Update sales summary table
-        updateSalesSummaryTable(result.data);
-        
-        // Update pagination
-        updatePagination(result.pagination);
-
-    } catch (error) {
-        console.error('Error generating sales report:', error);
-        alert('Error generating sales report');
     }
-}
 
 
 
@@ -702,7 +810,13 @@ function constructDateQuery(range, startDate, endDate) {
         const tbody = document.getElementById('salesSummaryTable');
         tbody.innerHTML = '';
 
-        data.forEach(item => {
+        data.forEach((item, index) => {
+            // Calculate growth compared to previous period
+            let growth = 0;
+            if (index < data.length - 1) {
+                growth = calculateBoundedGrowth(item.netSales, data[index + 1].netSales);
+            }
+
             const totalDiscounts = item.productDiscounts + item.couponDiscounts;
             const row = document.createElement('tr');
             
@@ -725,8 +839,8 @@ function constructDateQuery(range, startDate, endDate) {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2
                 })}</td>
-                <td class="${item.growth >= 0 ? 'text-success' : 'text-danger'}">
-                    ${item.growth >= 0 ? '+' : ''}${item.growth?.toFixed(2) || 0}%
+                <td class="${growth >= 0 ? 'text-success' : 'text-danger'}">
+                    ${growth >= 0 ? '+' : ''}${growth.toFixed(1)}%
                 </td>
             `;
             tbody.appendChild(row);
@@ -828,15 +942,17 @@ function constructDateQuery(range, startDate, endDate) {
     }
 }
 
-    // Event Listeners
-    document.getElementById('salesReportRange').addEventListener('change', function(e) {
-        const customRange = document.getElementById('customDateRange');
-        customRange.style.display = e.target.value === 'custom' ? 'block' : 'none';
-    });
 
-    document.getElementById('generateReport').addEventListener('click', generateSalesReport);
+
+    document.getElementById('generateReport').addEventListener('click', () => generateSalesReport(1));
     document.getElementById('downloadPDF').addEventListener('click', () => downloadReport('pdf'));
     document.getElementById('downloadExcel').addEventListener('click', () => downloadReport('excel'));
+
+    document.getElementById('salesReportRange').addEventListener('change', function(e) {
+        const customRange = document.getElementById('customDateRange');
+        customRange.classList.toggle('d-none', e.target.value !== 'custom');
+        generateSalesReport();
+    });
 
     // Initialize everything
     initializeCharts();
@@ -844,7 +960,7 @@ function constructDateQuery(range, startDate, endDate) {
     generateSalesReport(1);
 
     // Update dashboard periodically
-    setInterval(updateDashboard, 300000); // Every 5 minutes
+    setInterval(updateDashboard, 300000); 
 });
 </script>
 

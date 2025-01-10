@@ -47,78 +47,105 @@ const Product = mongoose.model("Product", productSchema);
 module.exports = Product;
 
  
-This is my referralSchema.js code:- 
+This is my offerSchema.js code:- 
+const mongoose = require("mongoose");
 
-
-
-
-const mongoose = require('mongoose');
-
-
-
-
-const mongoose = require('mongoose');
-
-const referralSchema = new mongoose.Schema({
+const offerSchema = new mongoose.Schema(
+  {
+    offerType: {
+      type: String,
+      enum: ["product", "category", "referral"],
+      required: true,
+    },
+    offerName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    discount: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100
+    },
+    expireDate: {
+      type: Date,
+      required: true
+    },
+    productIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: function () {
+        return this.offerType === "product";
+      },
+    }],
+    categoryIds: [{ 
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      required: function () {
+        return this.offerType === "category";
+      },
+    }],
     referralCode: {
-        type: String,
-        required: true,
-        unique: true,
+      type: String,
+      required: function () {
+        return this.offerType === "referral";
+      },
+      unique: true,
+      sparse: true
     },
-    referrer: {
-        type: mongoose.Schema.Types.ObjectId,
+    status: {
+      type: String,
+      enum: ["active", "inactive"],
+      default: "active",
+    },
+    isListed: {
+      type: Boolean,
+      default: true
+    }
+  },
+  { timestamps: true }
+);
+const Offer = mongoose.model("Offer", offerSchema);
+module.exports = Offer;
+
+
+This is my wishlistSchema.js code:- 
+
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const wishlistSchema = new Schema({
+    userId: {
+        type: Schema.Types.ObjectId,
         ref: 'User',
-        required: true,
+        required: true
     },
-    referees: [{
-        user: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User'
+    items: [{
+        productId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true
         },
-        joinedAt: {
+        selectedVariant: {
+            color: String,
+            size: Number
+        },
+        addedAt: {
             type: Date,
             default: Date.now
-        },
-        rewardStatus: {
-            type: String,
-            enum: ['Pending', 'Completed', 'Failed'],
-            default: 'Pending'
-        },
-        rewardAmount: {
-            type: Number,
-            default: 0
-        },
-        walletTransactionId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Wallet'
-        }
-    }],
-    status: {
-        type: String,
-        enum: ['Active', 'Expired', 'Deactivated'],
-        default: 'Active'
-    },
-    hasUsedReferral: {
-      type: Boolean,
-      default: false
-  },
-    totalRewards: {
-        type: Number,
-        default: 0
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+        } 
+    }]
+}, { timestamps: true });
 
-module.exports = mongoose.model('Referral', referralSchema);
-
+const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+module.exports = Wishlist; 
 
 This is my orderSchema.js code:- 
-
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
+
+
 
 const returnRequestSchema = new Schema({
     itemId: {
@@ -320,1124 +347,764 @@ const orderSchema = new Schema({
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;
 
-This is my walletSchema.js code:- 
+This is my userSchema.js code:- 
 
-const mongoose = require('mongoose');
-const { Schema } = mongoose;
 
-const walletTransactionSchema = new Schema({
-    amount: {
-        type: Number,
-        required: true
-    },
-    type: {
-        type: String,
-        enum: ['credit', 'debit'],
-        required: true
-    },
-    description: {
+
+const mongoose= require("mongoose");
+const {Schema}= mongoose;
+
+const userSchema= new Schema ({
+    name:{
         type: String,
         required: true
     },
-    orderId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Order',
-        default: null
-    },
-    balance: {
-        type: Number,
-        required: true
-    }
-}, { timestamps: true });
-
-const walletSchema = new Schema({
-    userId: {
-        type: Schema.Types.ObjectId,
-        ref: 'User',
+    email: {
+        type: String,
         required: true,
-        unique: true
+        unique:true
     },
-    balance: {
+    phone: {
+        type:String,
+        required: false,
+        unique: true,
+        sparse:true,
+        default:undefined
+    },
+    googleId:{
+        type:String,
+        unique:true,
+        sparse:true
+    },
+    password: {
+        type:String,
+        required: false
+    },
+    isBlocked: {
+        type: Boolean,
+        default:false
+    },
+    isAdmin: {
+        type: Boolean,
+        default: false
+    },
+    cart: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Cart'
+    }],
+    
+    wallet: {
         type: Number,
-        default: 0,
-        min: 0
+        default:0,
     },
-    transactions: [walletTransactionSchema]
-});
-
-const Wallet = mongoose.model('Wallet', walletSchema);
-module.exports = Wallet;
-
-
-This is my userRouter.js code:- 
-
-const express=require('express');
-const router=express.Router();
-const userController= require("../controllers/user/userController");
-const userCartController = require('../controllers/user/userCartController');
-const userProfileController = require('../controllers/user/userProfileController');
-const checkoutController = require('../controllers/user/checkOutController')
-const wishlistController = require('../controllers/user/wishlistController')
-const { userAuth, adminAuth } = require('../middleware/auth');
-const passport = require('passport');
-
-
-
-router.get('/',userController.loadHomePage);
-router.get('/signup',userController.loadSignup)
-router.get('/login',userController.loadLogin);
-router.get('/logout',userController.logout)
-
-router.post('/login',userController.login);
-router.post('/signup',userController.signUp)
-router.post('/verify-otp',userController.verifyOtp);
-router.post("/resend-otp",userController.resendOtp);
-
-
-router.get("/auth/google",passport.authenticate('google',{scope:['profile','email']}));
-router.get('/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
-
-    req.session.user = req.user;
-    res.redirect('/')
-    
-});
-
-
-
-This is my userProfileController.js code just for your reference:- 
-
-const User = require('../../models/userSchema'); // User schema
-const Address = require('../../models/addressSchema');
-const Order = require('../../models/orderSchema');
-const mongoose = require('mongoose');
-const Product = require('../../models/productSchema');
-const bcrypt = require('bcrypt'); 
-const Wallet = require('../../models/walletSchema');
-const Referral = require('../../models/referralSchema')
-const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
-
-
-const getUserProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.session.user._id);
-        const section = req.params.section; 
-        
-        let data = [];
-        if (section === 'orders') {
-            data = await Order.find({ userId: user._id });
-        } else if (section === 'addresses') {
-            data = user.addresses;
-        }
-        
-        // Render the profile page with activeSection and data
-        res.render('userProfile', {
-            user,
-            activeSection: section || 'profile', 
-            data
-        });
-    } catch (err) {
-        console.error(err);
-        res.redirect('/login');
-    }
-};
-
-
-const generateUniqueCode = () => {
-    const prefix = 'REF';
-    const timestamp = Date.now().toString().slice(-6);
-    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
-    return `${prefix}-${timestamp}-${random}`;
-};
-
-
-// Controller to get referrals
-const getReferrals = async (req, res) => {
-    try {
-        const user = await User.findById(req.session.user._id);
-        
-        // Get all referrals for the user
-        const referrals = await Referral.find({ referrer: user._id })
-            .populate('referees.user', 'name email')
-            .sort({ createdAt: -1 });
-
-        // Calculate statistics
-        const referralStats = {
-            totalReferrals: referrals.reduce((sum, ref) => sum + ref.referees.length, 0),
-            pendingRewards: referrals.reduce((sum, ref) => 
-                sum + ref.referees
-                    .filter(referee => referee.rewardStatus === 'Pending')
-                    .reduce((refSum, referee) => refSum + referee.rewardAmount, 0), 0),
-            totalEarned: referrals.reduce((sum, ref) => ref.totalRewards + sum, 0)
-        };
-
-        // Flatten referees array for display
-        const referralHistory = referrals.flatMap(referral => 
-            referral.referees.map(referee => ({
-                code: referral.referralCode,
-                user: referee.user,
-                joinedAt: referee.joinedAt,
-                rewardStatus: referee.rewardStatus,
-                rewardAmount: referee.rewardAmount
-            }))
-        ).sort((a, b) => b.joinedAt - a.joinedAt);
-
-        res.render('userProfile', {
-            user,
-            activeSection: 'referrals',
-            referrals: referralHistory,
-            referralStats,
-            activeReferral: referrals.find(r => r.status === 'Active')
-        });
-    } catch (error) {
-        console.error('Error fetching referrals:', error);
-        res.status(500).render('error', {
-            message: 'Error fetching referral data',
-            error: error.message
-        });
-    }
-};
-
-// Controller to generate referral code
-const generateReferralCode = async (req, res) => {
-    try {
-        const user = await User.findById(req.session.user._id);
-        
-        // Find all referrals for this user
-        const userReferrals = await Referral.find({
-            referrer: user._id
-        });
-
-        // Check if user can generate a new code
-        const activeReferral = userReferrals.find(ref => ref.status === 'Active');
-        const hasUsedReferrals = userReferrals.some(ref => 
-            ref.referees.length > 0 && 
-            ref.referees.some(referee => referee.rewardStatus === 'Completed')
-        );
-
-        // Allow new code generation if no active code or has successful referrals
-        if (!activeReferral || hasUsedReferrals) {
-            let isUnique = false;
-            let newCode;
-
-            while (!isUnique) {
-                newCode = generateUniqueCode();
-                const existingCode = await Referral.findOne({ referralCode: newCode });
-                if (!existingCode) {
-                    isUnique = true;
-                }
-            }
-
-            // If there's an active code, deactivate it
-            if (activeReferral) {
-                activeReferral.status = 'Expired';
-                await activeReferral.save();
-            }
-
-            // Create new referral record
-            const newReferral = await Referral.create({
-                referralCode: newCode,
-                referrer: user._id,
-                status: 'Active'
-            });
-
-            // Update user's current referral code
-            user.referralCode = newCode;
-            await user.save();
-
-            res.status(200).json({
-                success: true,
-                referralCode: newCode,
-                message: 'New referral code generated successfully'
-            });
-        } else {
-            res.status(400).json({
-                success: false,
-                message: 'Cannot generate new code until current code is used'
-            });
-        }
-    } catch (error) {
-        console.error('Error generating referral code:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error generating referral code',
-            error: error.message
-        });
-    }
-};
-
-
-
-const processReferralReward = async (req, res) => {
-    try {
-        const { referralCode } = req.body;
-        const userId = req.session.user._id;
-
-        const referral = await Referral.findOne({ 
-            referralCode,
-            status: 'Active'
-        });
-
-        if (!referral) {
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid or expired referral code'
-            });
-        }
-
-        // Check if user has already used any referral code
-        const existingReferral = await Referral.findOne({
-            'referees.user': userId
-        });
-
-        if (existingReferral) {
-            return res.status(400).json({
-                success: false,
-                message: 'You have already used a referral code'
-            });
-        }
-
-        // Add new referee to the referral
-        referral.referees.push({
-            user: userId,
-            rewardAmount: 50 // Referee reward amount
-        });
-
-        // Update referrer's wallet
-        const referrerWallet = await Wallet.findOne({ userId: referral.referrer });
-        const referrerReward = 25; // Referrer reward amount
-
-        if (referrerWallet) {
-            referrerWallet.balance += referrerReward;
-            const transaction = {
-                amount: referrerReward,
-                type: 'credit',
-                description: 'Referral reward for new user signup',
-                balance: referrerWallet.balance
-            };
-            referrerWallet.transactions.push(transaction);
-            await referrerWallet.save();
-        }
-
-        // Update referee's wallet
-        const refereeWallet = await Wallet.findOne({ userId });
-        if (refereeWallet) {
-            refereeWallet.balance += 50; // Referee reward
-            refereeWallet.transactions.push({
-                amount: 50,
-                type: 'credit',
-                description: 'Reward for using referral code',
-                balance: refereeWallet.balance
-            });
-            await refereeWallet.save();
-        }
-
-        // Update referral statistics
-        referral.totalRewards += referrerReward;
-        
-        // Update reward status
-        const refereeIndex = referral.referees.length - 1;
-        referral.referees[refereeIndex].rewardStatus = 'Completed';
-
-        await referral.save();
-
-        res.status(200).json({
-            success: true,
-            message: 'Referral reward processed successfully'
-        });
-    } catch (error) {
-        console.error('Error processing referral reward:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error processing referral reward',
-            error: error.message
-        });
-    }
-};
-
-
-This is my signup.ejs page code:- 
-
-
-
-<link rel="stylesheet" href="css/main.css">
-
-    <title>Sign Up</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
-
-        body {
-            height: 100vh;
-            background: linear-gradient(135deg, #bdc3c7, #2c3e50);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .signup-container {
-    display: flex;
-    width: 60%;
-    max-width: 700px; 
-    background-color: white;
-    border-radius: 10px;
-    box-shadow: 0px 10px 30px rgba(0, 0, 0, 0.2);
-    overflow: hidden;
-    transform: scale(1);
-    transition: transform 0.5s ease;
-}
-
-        .signup-container:hover {
-            transform: scale(1.05);
-        }
-
-        .signup-form {
-    padding: 30px; /* Reduced from 40px */
-    flex: 1;
-}
-
-        .signup-form h2 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 2rem;
-            opacity: 0;
-            animation: fadeIn 1s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            to {
-                opacity: 1;
-            }
-        }
-
-        .input-group {
-    margin-bottom: 15px; /* Reduced from 20px */
-}
-
-
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #333;
-            opacity: 0;
-            animation: fadeIn 1s ease forwards;
-            animation-delay: 0.3s;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .input-group input:focus {
-            border-color: #ff6700;
-            box-shadow: 0px 0px 10px rgba(255, 103, 0, 0.3);
-        }
-
-        .btn-submit {
-            width: 100%;
-            padding: 10px;
-            background-color: #ff6700;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-
-        .btn-submit:hover {
-            background-color: #ff4500;
-            transform: translateY(-3px);
-        }
-
-        .signup-google {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 100%;
-            padding: 10px;
-            background-color: white;
-            color: #555;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-top: 20px;
-            cursor: pointer;
-            font-size: 18px;
-            transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .signup-google img {
-            width: 20px;
-            height: 20px;
-            margin-right: 10px;
-        }
-
-        .signup-google:hover {
-            background-color: #f5f5f5;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .signup-image {
-            flex: 0.8;
-            overflow: hidden;
-            position: relative;
-            opacity: 0;
-            animation: slideIn 1s ease forwards;
-            animation-delay: 0.6s;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 15px;
-        }
-
-        .signup-image img {
-            width: 100%;
-            max-height: 300px;
-            object-fit: contain;
-            margin-bottom: 20px;
-        }
-
-        .login-option {
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .login-option a {
-            text-decoration: none;
-            color: #ff6700;
-            font-weight: bold;
-            transition: color 0.3s ease;
-        }
-
-        .login-option a:hover {
-            color: #ff4500;
-        }
-
-        @keyframes slideIn {
-            from {
-                transform: translateX(-100%);
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-
-        .error-message {
-            color: red;
-            font-size: 0.75rem;
-            display: none;
-        }
-    </style>
-
-<style>
-    .alert-message {
-        background-color: #ff6b6b;
-        color: white;
-        padding: 12px;
-        border-radius: 5px;
-        margin-bottom: 20px;
-        text-align: center;
-        font-size: 14px;
-        animation: slideDown 0.3s ease-out;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    @keyframes slideDown {
-        from {
-            transform: translateY(-20px);
-            opacity: 0;
-        }
-        to {
-            transform: translateY(0);
-            opacity: 1;
-        }
-    }
-</style>
-    <style>
-
-    </style>
-</head>
-<body>
-    
-    
-    <div class="signup-container">
-        <div class="signup-image">
-            <img src="/img/i added/user-signup-3.jpg" alt="Sign Up Image">
-            <div class="login-option">
-                <p>Already registered? <a href="/login">Login</a></p>
-            </div>
-        </div>
-        <div class="signup-form">
-            <h2>Create an Account</h2>
-            <form id="signform" action="/signup" method="POST">
-                <div class="input-group">
-                    <label for="username">Username</label>
-                    <input type="text" id="username" name="name" required>
-                    <div id="error1" class="error-message"></div>
-                </div>
-                <div class="input-group">
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" required>
-                    <div id="error2" class="error-message"></div>
-                </div>
-                <div class="input-group">
-                    <label for="phone">Phone Number</label>
-                    <input type="tel" id="phone" name="phone" required pattern="\d{10}" title="Enter a 10-digit phone number">
-                    <div id="error3" class="error-message"></div>
-                </div>
-                <div class="input-group">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" required>
-                    <div id="error4" class="error-message"></div>
-                </div>
-                <div class="input-group">
-                    <label for="confirmPassword">Confirm Password</label>
-                    <input type="password" id="confirmPassword" name="cPassword" required>
-                    <div id="error5" class="error-message"></div>
-                </div>
-                <div class="input-group">
-                    <label for="referralCode">Referral Code (Optional)</label>
-                    <input type="text" id="referralCode" name="referralCode" placeholder="Enter referral code if you have one">
-                    <div id="error6" class="error-message"></div>
-                </div>
-
-                <%if(locals.message && message.length>0){%>
-                    <div class="alert-message">
-                        <%=message%>
-                    </div>
-                <%}%>
-
-                <button type="submit" class="btn-submit">Sign Up</button>
-            </form>
-            
-            <div class="signup-google">
-                <a href="/auth/google" class="btn btn-outline-danger">
-                    <img 
-                    src="/img/i added/user signup 2.png" 
-                    alt="Google Logo"
-                    style="width:24px; height: 24px;">
-                </a>
-                <span> Sign up with Google</span>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const username = document.getElementById("username");
-        const email = document.getElementById("email");
-        const phone = document.getElementById('phone');
-        const password = document.getElementById('password');
-        const confirmPassword = document.getElementById('confirmPassword');
-        const error1 = document.getElementById('error1');
-        const error2 = document.getElementById('error2');
-        const error3 = document.getElementById('error3');
-        const error4 = document.getElementById('error4');
-        const error5 = document.getElementById('error5');
-        const error6 = document.getElementById('error6')
-        const signform = document.getElementById('signform');
-
-        function nameValidateChecking() {
-            const nameval = username.value.trim();
-            const namepattern = /^[A-Za-z\s]{3,20}$/;
-            if (nameval === "") {
-                error1.style.display = "block";
-                error1.innerHTML = "Please enter a valid name.";
-            } else if (!namepattern.test(nameval)) {
-                error1.style.display = "block";
-                error1.innerHTML = "Name can only contain alphabets and spaces (3-20 characters).";
-            } else {
-                error1.style.display = "none";
-                error1.innerHTML = "";
-            }
-        }
-
-        function emailValidateChecking() {
-            const emailval = email.value.trim();
-            const emailpattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-            if (emailval === "") {
-                error2.style.display = "block";
-                error2.innerHTML = "Email is required.";
-            } else if (!emailpattern.test(emailval)) {
-                error2.style.display = "block";
-                error2.innerHTML = "Invalid email format.";
-            } else {
-                error2.style.display = "none";
-                error2.innerHTML = "";
-            }
-        }
-
-        function phoneValidateChecking() {
-            const phoneval = phone.value.trim();
-            const phonepattern = /^\d{10}$/;
-            if (phoneval === '') {
-                error3.style.display = "block";
-                error3.innerHTML = "Phone number is required.";
-            } else if (!phonepattern.test(phoneval)) {
-                error3.style.display = "block";
-                error3.innerHTML = "Invalid phone number format.";
-            } else {
-                error3.style.display = "none";
-                error3.innerHTML = "";
-            }
-        }
-
-        function passwordValidateChecking() {
-            const passval = password.value.trim();
-            if (passval.length < 6) {
-                error4.style.display = "block";
-                error4.innerHTML = "Password should be at least 6 characters long.";
-            } else {
-                error4.style.display = "none";
-                error4.innerHTML = "";
-            }
-        }
-
-        function confirmPasswordValidateChecking() {
-            const confirmPassval = confirmPassword.value.trim();
-            const passval = password.value.trim();
-            if (confirmPassval !== passval) {
-                error5.style.display = "block";
-                error5.innerHTML = "Passwords do not match.";
-            } else {
-                error5.style.display = "none";
-                error5.innerHTML = "";
-            }
-        }
-
-        function referralCodeValidateChecking() {
-    const referralCode = document.getElementById('referralCode').value.trim();
-    const error6 = document.getElementById('error6');
-    
-    if (referralCode !== '' && !/^REF-\d{6}-[A-Z0-9]{3}$/.test(referralCode)) {
-        error6.style.display = "block";
-        error6.innerHTML = "Invalid referral code format";
-    } else {
-        error6.style.display = "none";
-        error6.innerHTML = "";
-    }
-}
-
-// Add this event listener
-document.getElementById('referralCode').addEventListener("blur", referralCodeValidateChecking);
-
-
-        username.addEventListener("blur", nameValidateChecking);
-        email.addEventListener("blur", emailValidateChecking);
-        phone.addEventListener("blur", phoneValidateChecking);
-        password.addEventListener("blur", passwordValidateChecking);
-        confirmPassword.addEventListener("blur", confirmPasswordValidateChecking);
-
-        signform.addEventListener('submit', function (event) {
-            nameValidateChecking();
-            emailValidateChecking();
-            phoneValidateChecking();
-            passwordValidateChecking();
-            confirmPasswordValidateChecking();
-            referralCodeValidateChecking();
-    
-    if (error1.innerHTML !== "" || error2.innerHTML !== "" || 
-        error3.innerHTML !== "" || error4.innerHTML !== "" || 
-        error5.innerHTML !== "" || error6.innerHTML !== "") {
-        event.preventDefault();
-    }
-        });
-    </script>
-</body>
-</html>
-
-
-This is my userController.js code:- 
-
-
-const User = require('../../models/userSchema');
-const Category= require('../../models/categorySchema');
-const Product = require('../../models/productSchema');
-const Cart = require('../../models/cartSchema')
-const Offer = require('../../models/offerSchema');
-const bcrypt = require('bcrypt');
-const nodemailer = require('nodemailer');
-const session= require("express-session");
-const env = require('dotenv').config();
-const Wishlist = require('../../models/wishlistSchema')
-const Referral = require('../../models/referralSchema');
-const Wallet = require('../../models/walletSchema')
-
-
-function generateOtp() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-
-async function sendVerificationEmail(email, otp) {
-    try {
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            port: 587,
-            secure: false,
-            requireTLS: true,
-            auth: {
-                user: process.env.NODEMAILER_EMAIL,
-                pass: process.env.NODEMAILER_PASSWORD
-            }
-        });
-
-        const info = await transporter.sendMail({
-            from: process.env.NODEMAILER_EMAIL,
-            to: email,
-            subject: "Verify your account",
-            text: `Your OTP is ${otp}`,
-            html: `<b>Your OTP is ${otp}</b>`
-        });
-
-        return info.accepted.length > 0;
-    } catch (error) {
-        console.error("Error sending email:", error);
-        return false;
-    }
-}
-
-
-const loadHomePage = async (req, res) => {
-    try {
-        const user = req.session.user;
-        const categories = await Category.find({isListed: true});
-        
-        // Find active offers
-        const activeOffers = await Offer.find({
-            status: 'active',
-            isListed: true,
-            expireDate: { $gte: new Date() }
-        });
-
-        let productData = await Product.find({
-            isBlocked: false,
-            category: {$in: categories.map(category => category._id)}
-        }).populate('category');
-
-        // Process offers and calculate best discount for each product
-        const productsWithOffers = productData.map(product => {
-            // Find product-specific offers
-            const productOffers = activeOffers.filter(offer => 
-                offer.offerType === 'product' && 
-                offer.productIds.some(id => id.toString() === product._id.toString())
-            );
-
-            // Find category offers
-            const categoryOffers = activeOffers.filter(offer => 
-                offer.offerType === 'category' && 
-                offer.categoryIds.some(id => id.toString() === product.category._id.toString())
-            );
-
-            // Combine and find maximum offer
-            const allRelevantOffers = [...productOffers, ...categoryOffers];
-            const maxOffer = allRelevantOffers.length > 0 
-                ? Math.max(...allRelevantOffers.map(offer => offer.discount))
-                : 0;
-
-            // Calculate offer price
-            const offerPrice = maxOffer > 0 
-                ? product.regularPrice * (1 - maxOffer / 100)
-                : null;
-
-            return {
-                ...product.toObject(),
-                maxOfferPercentage: maxOffer,
-                offerPrice: offerPrice ? Math.round(offerPrice) : null
-            };
-        });
-
-        // Sort by createdAt timestamp
-        productsWithOffers.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
-        // Limit to 8 products
-        const limitedProducts = productsWithOffers.slice(0, 8);
-
-        if (user) {
-            const userData = await User.findOne({_id: user._id});
-            res.render("home", {user: userData, products: limitedProducts});
-        } else {
-            return res.render('home', {products: limitedProducts});
-        }
-        
-    } catch (error) {
-        console.log('Home Page Not Found', error);
-        res.status(500).send('Server Error Home Page Not Found');
-    }
-}
-
-
-const loadLogin = async (req, res) => {
-    try {
-        
-        if(!req.session.user){
-            return res.render('login')
-        } else {
-            res.redirect('/')
-        }
-
-    } catch (error) {
-        console.log('Login page not loading: ', error);
-        res.render('user-error', { error: 'Login page not loading' }); 
-    }
-}
-
-
-const login= async(req,res)=>{
-    try{
-    
-        const {email,password}=req.body;
-        console.log(req.body);
-
-        const findUser= await User.findOne({isAdmin:0,email:email});
-        console.log('User found',findUser);
-
-        if(!findUser){
-            return res.render('login',{message:"User not found"});
-        }
-
-        if(findUser.isBlocked){
-            return res.render('login',{message:"User is blocked by admin"});
-        }
-
-        const passwordMatch= await bcrypt.compare(password,findUser.password);
-
-        if(!passwordMatch){
-            return res.render('login',{message:'Incorrect Password'});
-        }
-
-        req.session.user= findUser;
-        res.redirect('/')
-    } catch(error){
-        console.error('login error',error);
-        res.render('login',{message:'login failed. Please try again later'})
-        
-    }
-}
-
-
-const logout= async (req,res) => {
-
-    try {
-        
-        req.session.destroy((err)=>{
-            if(err){
-                console.log('session destruction error',err.message);
-                return res.redirect('/pageNotFound')
-            }
-            return res.redirect('/login');
-        })
-    } catch (error) {
-        console.log('Logount error',error);
-        res.redirect('/user-error')
-    }
-    
-}
+    wishlist: [{
+        type: Schema.Types.ObjectId,
+        ref: "wishlist"
+    }],
+    orderHistory: [{
+        type: Schema.Types.ObjectId,
+        ref: "Order"
+    }],
+    createdOn : {
+        type:Date,
+        default:Date.now,
+    },
+    referralCode: {
+        type: String,
+        // required:true
+    },
+    redeemed: {
+        type: Boolean,
+        // defaulte:false
  
+    },
+    redeemedUsers: [{
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        // required:true
+    }],
+    searchHistory: [{
+        category: {
+            type: Schema.Types.ObjectId,
+            ref: "Category"
+        },
+        Brand: {
+            type: String,
 
-const loadSignup = async (req, res) => {
-    try {
-        return res.render('signup');
-    } catch (error) {
-        console.log('Signup page not loading: ', error);
-        res.redirect('/user-error')
+        },
+        searchOn: {
+            type: Date,
+            default: Date.now
+        }
+    }]
+},{timestamps:true})
+const user= mongoose.model("User",userSchema);
+module.exports= user
+
+This is my adminRouter.js code:- 
+
+router.get('/admin-dashboard', adminAuth, adminController.loadDashboard);
+router.get('/api/dashboard-data', adminAuth, adminController.getDashboardData);
+router.get('/api/sales-report', adminAuth, adminController.getSalesReport);
+router.get('/api/download-report/:format', adminAuth, adminController.downloadReport);
+
+
+This is my adminRouter.js code :- 
+const express = require('express');
+const router = express.Router();
+const path= require('path')
+// Import multer
+const adminController = require('../controllers/admin/adminController');
+const { userAuth, adminAuth } = require('../middleware/auth');
+const customerController = require('../controllers/admin/customerController');
+const categoryController = require('../controllers/admin/categoryController');
+const productController = require('../controllers/admin/productController');
+const orderController = require('../controllers/admin/orderController')
+const offerController = require('../controllers/admin/offerController');
+const couponController = require('../controllers/admin/couponController')
+const multer = require('multer'); 
+const storage = multer.memoryStorage(); // Store files in memory
+const upload = multer({ storage }).array('images', 10);
+
+// Define routes
+router.get('/pageerror', adminController.pageerror);
+router.get('/admin-login', adminController.loadLogin);
+router.post('/admin-login', adminController.login);
+router.get('/admin-dashboard', adminAuth, adminController.loadDashboard);
+
+router.get('/api/dashboard-data', adminAuth, adminController.getDashboardData);
+router.get('/api/sales-report', adminAuth, adminController.getSalesReport);
+router.get('/api/download-report/:format', adminAuth, adminController.downloadReport);
+
+This is my adminController.js page code:- 
+
+
+const User= require('../../models/userSchema');
+const mongoose= require('mongoose');
+const bcrypt= require('bcrypt');
+const Order = require('../../models/orderSchema');
+const Product = require('../../models/productSchema');
+const Category = require('../../models/categorySchema');
+const PDFDocument = require('pdfkit');
+const ExcelJS = require('exceljs');
+
+const loadLogin= (req,res)=>{
+    if(req.session.isAdmin){
+        return res.redirect('/admin/admin-dashboard');
     }
+    res.render('admin-login',{error:null})
 }
 
 
-const signUp = async (req, res) => {
+const login = async(req, res) => {
     try {
-        const { name, phone, email, password, cPassword, referralCode } = req.body;
-
-        // Password match validation
-        if (password !== cPassword) {
-            return res.render("signup", { 
-                message: "Passwords do not match",
-                inputData: req.body
-            });
-        }
-
-        // Check existing user
-        const findUser = await User.findOne({ email });
-        if (findUser) {
-            return res.render("signup", { 
-                message: "An account with this email already exists",
-                inputData: req.body
-            });
-        }
-
-        // Check referral code if provided
-        let referrer = null;
-        if (referralCode) {
-            const referral = await Referral.findOne({ 
-                referralCode: referralCode,
-                status: 'Active' // Check only if the referral is active
-            });
-
-            if (!referral) {
-                return res.render("signup", { 
-                    message: "Invalid or expired referral code",
-                    inputData: req.body
-                });
+        const {email, password} = req.body;
+        const admin = await User.findOne({email, isAdmin: true});
+        if(admin) {
+            const passwordMatch = await bcrypt.compare(password, admin.password);
+            
+            if(passwordMatch) {
+                req.session.isAdmin = true;
+                return res.redirect('/admin/admin-dashboard') // Changed from /admin/admin-dashboard
+            } else {
+                console.log('admin password not match');
+                return res.render('admin-login', { error: 'Invalid credentials' });
             }
-            referrer = referral.referrer;
+        } else {
+            console.log('user not admin');
+            return res.render('admin-login', { error: 'Invalid credentials' });
         }
-        
-        const otp = generateOtp();
-        const emailSent = await sendVerificationEmail(email, otp);
-
-        if (!emailSent) {
-            return res.json("email-error");
-        }
-
-        req.session.userOtp = otp;
-        req.session.userData = { 
-            name, 
-            phone, 
-            email, 
-            password,
-            referralCode,
-            referrerId: referrer ? referrer.toString() : null
-        };
-        res.render("verify-otp");
-        console.log("OTP Sent:", otp);
-    } catch (error) {
-        console.error("Signup error", error);
-        res.redirect("/user-error");
+    } catch(error) {
+        console.log('login error', error);
+        return res.redirect('/admin/pageerror');
     }
 }
 
 
-const securePassword = async (password) => {
-    try {
-        return await bcrypt.hash(password, 10);
-    } catch (error) {
-        console.error("Error securing password:", error);
-        throw error;
+const loadDashboard= async(req,res)=>{
+    if(req.session.isAdmin){
+        try{
+            res.render('admin-dashboard');
+        } catch(error){
+            res.redirect('/pageerror')
+        }
     }
 }
 
 
-const verifyOtp = async (req, res) => {
-    try {
-        const { otp } = req.body;
+const constructPreviousPeriodQuery = (range, startDate, endDate) => {
+    const now = new Date();
+    let query = {};
 
-        if (otp === req.session.userOtp) {
-            const userData = req.session.userData;
-            const passwordHash = await securePassword(userData.password);
-
-            // Create new user
-            const newUser = new User({
-                name: userData.name,
-                email: userData.email,
-                phone: userData.phone,
-                password: passwordHash
-            });
-            await newUser.save();
-
-            // Create wallet for new user
-            const newUserWallet = new Wallet({
-                userId: newUser._id,
-                balance: 0
-            });
-            await newUserWallet.save();
-
-            // Handle referral if code was provided
-            if (userData.referrerId && userData.referralCode) {
-                const referral = await Referral.findOne({
-                    referralCode: userData.referralCode,
-                    referrer: userData.referrerId,
-                    status: 'Active'
-                });
-
-                if (referral) {
-                    // Add new referee to the existing referral
-                    referral.referees.push({
-                        user: newUser._id,
-                        rewardAmount: 50,
-                        rewardStatus: 'Completed'
-                    });
-
-                    referral.totalRewards += 25; // Update total rewards
-                    await referral.save();
-
-                    // Add bonus to referrer's wallet (₹25)
-                    const referrerWallet = await Wallet.findOne({ userId: userData.referrerId });
-                    if (referrerWallet) {
-                        referrerWallet.balance += 25;
-                        referrerWallet.transactions.push({
-                            amount: 25,
-                            type: 'credit',
-                            description: 'Referral bonus for referring ' + newUser.email,
-                            balance: referrerWallet.balance
-                        });
-                        await referrerWallet.save();
+    switch (range) {
+        case 'daily':
+            const yesterdayStart = new Date(now);
+            yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+            query = {
+                createdAt: {
+                    $gte: new Date(yesterdayStart.setHours(0, 0, 0, 0)),
+                    $lt: new Date(yesterdayStart.setHours(23, 59, 59, 999))
+                }
+            };
+            break;
+        case 'weekly':
+            const twoWeeksAgo = new Date(now);
+            const oneWeekAgo = new Date(now);
+            twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            query = {
+                createdAt: {
+                    $gte: twoWeeksAgo,
+                    $lt: oneWeekAgo
+                }
+            };
+            break;
+        // Similar patterns for monthly and yearly...
+        case 'custom':
+            if (startDate && endDate) {
+                const start = new Date(startDate);
+                const end = new Date(endDate);
+                const duration = end - start;
+                const previousStart = new Date(start);
+                previousStart.setTime(previousStart.getTime() - duration);
+                const previousEnd = new Date(start);
+                query = {
+                    createdAt: {
+                        $gte: previousStart,
+                        $lt: previousEnd
                     }
+                };
+            }
+            break;
+    }
+    return query;
+};
 
-                    // Add bonus to new user's wallet (₹50)
-                    newUserWallet.balance += 50;
-                    newUserWallet.transactions.push({
-                        amount: 50,
-                        type: 'credit',
-                        description: 'Welcome bonus for using referral code',
-                        balance: newUserWallet.balance
-                    });
-                    await newUserWallet.save();
+
+function calculatePeriodMetrics(orders) {
+    return orders.reduce((acc, order) => {
+        acc.revenue += order.total;
+        acc.discounts += (order.totalDiscount || 0) + 
+                        (order.couponApplied?.discountAmount || 0);
+        return acc;
+    }, { revenue: 0, discounts: 0 });
+}
+
+const getDashboardData = async (req, res) => {
+    try {
+        const { range = 'monthly', startDate, endDate } = req.query;
+        const dateQuery = constructDateQuery(range, startDate, endDate);
+        const previousDateQuery = constructPreviousPeriodQuery(range, startDate, endDate);
+
+        // Get orders for both periods
+        const [currentPeriodOrders, previousPeriodOrders] = await Promise.all([
+            Order.find({
+                ...dateQuery,
+                status: { $ne: 'cancelled' }
+            }),
+            Order.find({
+                ...previousDateQuery,
+                status: { $ne: 'cancelled' }
+            })
+        ]);
+
+        // Calculate metrics including discounts
+        const currentMetrics = calculatePeriodMetrics(currentPeriodOrders);
+        const previousMetrics = calculatePeriodMetrics(previousPeriodOrders);
+        
+        // Get top products with proper aggregation
+        const topProducts = await Order.aggregate([
+            { 
+                $match: { 
+                    ...dateQuery, 
+                    status: { $ne: 'cancelled' } 
+                } 
+            },
+            { $unwind: '$items' },
+            {
+                $group: {
+                    _id: '$items.productId',
+                    totalQuantity: { $sum: '$items.quantity' },
+                    totalRevenue: { $sum: '$items.totalPrice' }
+                }
+            },
+            { $sort: { totalQuantity: -1 } },
+            { $limit: 10 },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'productDetails'
+                }
+            },
+            { $unwind: '$productDetails' },
+            {
+                $project: {
+                    name: '$productDetails.productName',
+                    quantity: '$totalQuantity',
+                    revenue: '$totalRevenue'
                 }
             }
+        ]);
 
-            req.session.user = newUser;
-            res.json({ success: true, redirectUrl: '/' });
-        } else {
-            res.status(400).json({ success: false, message: "Invalid OTP, please try again" });
-        }
+        // Get top categories
+        const topCategories = await Order.aggregate([
+            { 
+                $match: { 
+                    ...dateQuery, 
+                    status: { $ne: 'cancelled' } 
+                } 
+            },
+            { $unwind: '$items' },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: 'items.productId',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            { $unwind: '$product' },
+            {
+                $lookup: {
+                    from: 'categories',
+                    localField: 'product.category',
+                    foreignField: '_id',
+                    as: 'category'
+                }
+            },
+            { $unwind: '$category' },
+            {
+                $group: {
+                    _id: '$category._id',
+                    name: { $first: '$category.name' },
+                    totalQuantity: { $sum: '$items.quantity' },
+                    totalRevenue: { $sum: '$items.totalPrice' }
+                }
+            },
+            { $sort: { totalQuantity: -1 } },
+            { $limit: 10 }
+        ]);
+
+        // Calculate growth rates
+        const calculateGrowth = (current, previous) => {
+            if (!previous || previous === 0) return 0;
+            return ((current - previous) / previous) * 100;
+        };
+
+        res.json({
+            totalRevenue: currentMetrics.revenue,
+            totalOrders: currentPeriodOrders.length,
+            totalCustomers: await User.countDocuments({ ...dateQuery, isAdmin: false }),
+            totalDiscounts: currentMetrics.discounts,
+            revenueGrowth: calculateGrowth(currentMetrics.revenue, previousMetrics.revenue),
+            orderGrowth: calculateGrowth(currentPeriodOrders.length, previousPeriodOrders.length),
+            customerGrowth: calculateGrowth(
+                await User.countDocuments({ ...dateQuery, isAdmin: false }),
+                await User.countDocuments({ ...previousDateQuery, isAdmin: false })
+            ),
+            discountGrowth: calculateGrowth(currentMetrics.discounts, previousMetrics.discounts),
+            topProducts,
+            topCategories
+        });
+
     } catch (error) {
-        console.error("Error verifying OTP:", error);
-        res.status(500).json({ success: false, message: "An error occurred" });
+        console.error('Dashboard data error:', error);
+        res.status(500).json({ error: 'Internal server error' });
     }
-}
+};
 
 
-const resendOtp = async (req, res) => {
-    try {
-        const { email } = req.session.userData;
+
+// Add these helper functions at the top of adminController.js
+
+const constructDateQuery = (range, startDate, endDate) => {
+    const now = new Date();
+    let query = {};
+
+    switch (range) {
+        case 'daily':
+            query = {
+                createdAt: {
+                    $gte: new Date(now.setHours(0, 0, 0, 0)),
+                    $lt: new Date(now.setHours(23, 59, 59, 999))
+                }
+            };
+            break;
+        case 'weekly':
+            const weekAgo = new Date(now);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            query = { createdAt: { $gte: weekAgo } };
+            break;
+        case 'monthly':
+            const monthAgo = new Date(now);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            query = { createdAt: { $gte: monthAgo } };
+            break;
+        case 'yearly':
+            const yearAgo = new Date(now);
+            yearAgo.setFullYear(yearAgo.getFullYear() - 1);
+            query = { createdAt: { $gte: yearAgo } };
+            break;
+        case 'custom':
+            if (startDate && endDate) {
+                query = {
+                    createdAt: {
+                        $gte: new Date(startDate),
+                        $lte: new Date(new Date(endDate).setHours(23, 59, 59, 999))
+                    }
+                };
+            }
+            break;
+    }
+    return query;
+};
+
+This is my header.ejs page code:- 
+
+<!DOCTYPE html>
+
+
+<!-- =========================================================
+* Materio - Bootstrap Material Design Admin Template | v2.0.1
+==============================================================
+
+* Product Page: https://themeselection.com/item/materio-bootstrap-html-admin-template/
+* Created by: ThemeSelection
+* License: You must have a valid license purchased in order to legally use the theme for your project.
+* Copyright ThemeSelection (https://themeselection.com)
+
+=========================================================
+ -->
+<!-- beautify ignore:start -->
+
+
+<html lang="en" class="light-style layout-navbar-fixed layout-menu-fixed layout-compact " dir="ltr" data-theme="theme-default" data-assets-path="/dashboard-assets/" data-template="vertical-menu-template" data-style="light">
+
+  
+<!-- Mirrored from demos.themeselection.com/materio-bootstrap-html-admin-template/html/vertical-menu-template/app-ecommerce-dashboard.html by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 25 Jun 2024 05:47:18 GMT -->
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0" />
+
+    <title>Dashboard - eCommerce | Materio - Bootstrap Material Design Admin Template</title>
+
+    
+    <meta name="description" content="Start your development with a Dashboard for Bootstrap 5" />
+    <meta name="keywords" content="dashboard, material, material design, bootstrap 5 dashboard, bootstrap 5 design, bootstrap 5">
+    <!-- Canonical SEO -->
+    <link rel="canonical" href="https://themeselection.com/item/materio-bootstrap-html-admin-template/">
+    
+    
+    <!-- ? PROD Only: Google Tag Manager (Default ThemeSelection: GTM-5DDHKGP, PixInvent: GTM-5J3LMKC) -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      '../../../../www.googletagmanager.com/gtm5445.html?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','GTM-5DDHKGP');</script>
+    <!-- End Google Tag Manager -->
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="https://demos.themeselection.com/materio-bootstrap-html-admin-template/assets/img/favicon/favicon.ico" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com/">
+    <link rel="preconnect" href="https://fonts.gstatic.com/" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;ampdisplay=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="/dashboard-assets/vendor/fonts/remixicon/remixicon.css" />
+    <link rel="stylesheet" href="/dashboard-assets/vendor/fonts/flag-icons.css" />
+    
+    <!-- Menu waves for no-customizer fix -->
+    <link rel="stylesheet" href="/dashboard-assets/vendor/libs/node-waves/node-waves.css" />
+
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="/dashboard-assets/vendor/css/rtl/core.css" class="template-customizer-core-css" />
+    <link rel="stylesheet" href="/dashboard-assets/vendor/css/rtl/theme-default.css" class="template-customizer-theme-css" />
+    <link rel="stylesheet" href="/dashboard-assets/css/demo.css" />
+    
+    <!-- Vendors CSS -->
+    <link rel="stylesheet" href="/dashboard-assets/vendor/libs/perfect-scrollbar/perfect-scrollbar.css" />
+    <link rel="stylesheet" href="/dashboard-assets/vendor/libs/typeahead-js/typeahead.css" /> 
+    <link rel="stylesheet" href="/dashboard-assets/vendor/libs/apex-charts/apex-charts.css" />
+
+    
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.14.4/dist/sweetalert2.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+
+
+    <!-- Page CSS -->
+    <link rel="stylesheet" href="/dashboard-assets/vendor/css/pages/app-ecommerce-dashboard.css" />
+
+
+
+    <!-- Helpers -->
+    <script src="/dashboard-assets/vendor/js/helpers.js"></script>
+    <!--! Template customizer & Theme config files MUST be included after core stylesheets and helpers.js in the <head> section -->
+    <!--? Template customizer: To hide customizer set displayCustomizer value false in config.js.  -->
+    <script src="/dashboard-assets/vendor/js/template-customizer.js"></script>
+    <!--? Config:  Mandatory theme config file contain global vars & default theme options, Set your preferred theme option in this file.  -->
+    <script src="/dashboard-assets/js/config.js"></script>
+    
+</head>
+
+<body>
+
+  
+
+  
+  <!-- ?PROD Only: Google Tag Manager (noscript) (Default ThemeSelection: GTM-5DDHKGP, PixInvent: GTM-5J3LMKC) -->
+  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-5DDHKGP" height="0" width="0" style="display: none; visibility: hidden"></iframe></noscript>
+  <!-- End Google Tag Manager (noscript) -->
+  
+  <!-- Layout wrapper -->
+<div class="layout-wrapper layout-content-navbar  ">
+  <div class="layout-container">
+
+    
+    
+
+
+
+
+<!-- Menu -->
+
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme">
+
+  
+  <div class="app-brand demo ">
+    <a href="index.html" class="app-brand-link">
+      <span class="app-brand-logo demo me-1">
+<span style="color:var(--bs-primary);">
+  <svg width="30" height="24" viewBox="0 0 250 196" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.3002 1.25469L56.655 28.6432C59.0349 30.1128 60.4839 32.711 60.4839 35.5089V160.63C60.4839 163.468 58.9941 166.097 56.5603 167.553L12.2055 194.107C8.3836 196.395 3.43136 195.15 1.14435 191.327C0.395485 190.075 0 188.643 0 187.184V8.12039C0 3.66447 3.61061 0.0522461 8.06452 0.0522461C9.56056 0.0522461 11.0271 0.468577 12.3002 1.25469Z" fill="currentColor" />
+    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M0 65.2656L60.4839 99.9629V133.979L0 65.2656Z" fill="black" />
+    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M0 65.2656L60.4839 99.0795V119.859L0 65.2656Z" fill="black" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.71 1.22393L193.355 28.5207C190.97 29.9889 189.516 32.5905 189.516 35.3927V160.631C189.516 163.469 191.006 166.098 193.44 167.555L237.794 194.108C241.616 196.396 246.569 195.151 248.856 191.328C249.605 190.076 250 188.644 250 187.185V8.09597C250 3.64006 246.389 0.027832 241.935 0.027832C240.444 0.027832 238.981 0.441882 237.71 1.22393Z" fill="currentColor" />
+    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M250 65.2656L189.516 99.8897V135.006L250 65.2656Z" fill="black" />
+    <path opacity="0.077704" fill-rule="evenodd" clip-rule="evenodd" d="M250 65.2656L189.516 99.0497V120.886L250 65.2656Z" fill="black" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.2787 1.18923L125 70.3075V136.87L0 65.2465V8.06814C0 3.61223 3.61061 0 8.06452 0C9.552 0 11.0105 0.411583 12.2787 1.18923Z" fill="currentColor" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M12.2787 1.18923L125 70.3075V136.87L0 65.2465V8.06814C0 3.61223 3.61061 0 8.06452 0C9.552 0 11.0105 0.411583 12.2787 1.18923Z" fill="white" fill-opacity="0.15" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.721 1.18923L125 70.3075V136.87L250 65.2465V8.06814C250 3.61223 246.389 0 241.935 0C240.448 0 238.99 0.411583 237.721 1.18923Z" fill="currentColor" />
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M237.721 1.18923L125 70.3075V136.87L250 65.2465V8.06814C250 3.61223 246.389 0 241.935 0C240.448 0 238.99 0.411583 237.721 1.18923Z" fill="white" fill-opacity="0.3" />
+  </svg>
+</span>
+</span>
+      <span class="app-brand-text demo menu-text fw-semibold ms-2">Healaria</span>
+    </a>
+
+    <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+      <i class="menu-toggle-icon d-xl-block align-middle"></i>
+    </a>
+  </div>
+
+  <div class="menu-inner-shadow"></div>
+
+  
+  
+  <ul class="menu-inner py-1">
+   
+
+   
+
+   
+
+
+    <!-- Apps & Pages -->
+    <li class="menu-header mt-7">
+      <span class="menu-header-text" data-i18n="Apps & Pages">Apps &amp; Pages</span>
+    </li>
+    
+    <!-- e-commerce-app menu start -->
+    <li class="menu-item active open">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class='menu-icon tf-icons ri-shopping-bag-3-line'></i>
+        <div data-i18n="eCommerce">eCommerce</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item active">
+          <a href="/admin/admin-dashboard" class="menu-link">
+            <div data-i18n="Dashboard">Dashboard</div>
+          </a>
+        </li>
+        <li class="menu-item">
+          <a href="javascript:void(0);" class="menu-link menu-toggle">
+            <div data-i18n="Products">Products</div>
+          </a>
+          <ul class="menu-sub">
+            <li class="menu-item">
+              <a href="/admin/products" class="menu-link">
+                <div data-i18n="Product List">Product List</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="/admin/addProducts" class="menu-link">
+                <div data-i18n="Add Product">Add Product</div>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="/admin/category" class="menu-link">
+                <div data-i18n="Category List">Category List</div>
+              </a>
+            </li>
+          </ul>
+        </li>
+        <li class="menu-item">
+          <a href="/admin/orders" class="menu-link">
+            <div data-i18n="Order List">Order List</div>
+          </a>
+        </li>
+        
+        <li class="menu-item">
+          <a href="/admin/all-customers" class="menu-link">
+            <div data-i18n="All Customers">All Customers</div>
+          </a>
+        </li>
 
        
-        if (!email) {
-            return res.status(400).json({ success: false, message: "Email not found in session" });
-        }
+        <li class="menu-item">
+          <a href="javascript:void(0);" class="menu-link menu-toggle">
+            <div >Offers/Coupons</div>
+          </a>
+          <ul class="menu-sub">
+            <li class="menu-item">
+              <a href="/admin/offers" class="menu-link">
+                <div>Offers</div>
+              </a>
+            </li>
+            
+            <li class="menu-item">
+              <a href="/admin/coupons" class="menu-link">
+                  <div>Coupons</div>
+              </a>
+          </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+    <!-- e-commerce-app menu end -->
+  </ul>
+  
+
+</aside>
+<!-- / Menu -->
+    <!-- Layout container -->
+    <div class="layout-page">
+      
+<!-- Navbar -->
+
+<nav class="layout-navbar container-xxl navbar navbar-expand-xl navbar-detached align-items-center bg-navbar-theme" id="layout-navbar">
+  
+      
+      <div class="layout-menu-toggle navbar-nav align-items-xl-center me-4 me-xl-0   d-xl-none ">
+        <a class="nav-item nav-link px-0 me-xl-6" href="javascript:void(0)">
+          <i class="ri-menu-fill ri-24px"></i>
+        </a>
+      </div>
+      
+
+      <div class="navbar-nav-right d-flex align-items-center" id="navbar-collapse">
 
         
-        const otp = generateOtp();
-        req.session.userOtp = otp;
-
+        <!-- Search -->
+        <div class="navbar-nav align-items-center">
+          <div class="nav-item navbar-search-wrapper mb-0">
+            <a class="nav-item nav-link search-toggler fw-normal px-0" href="javascript:void(0);">
+              <i class="ri-search-line ri-22px scaleX-n1-rtl me-1_5"></i>
+              <span class="d-none d-md-inline-block text-muted ms-1_5">Search (Ctrl+/)</span>
+            </a>
+          </div>
+        </div>
+        <!-- /Search -->
         
-        const emailSent = await sendVerificationEmail(email, otp);
+        <ul class="navbar-nav flex-row align-items-center ms-auto">
+          <!-- User -->
+          <li class="nav-item navbar-dropdown dropdown-user dropdown">
+            <a class="nav-link dropdown-toggle hide-arrow p-0" href="javascript:void(0);" data-bs-toggle="dropdown">
+              <div class="avatar avatar-online">
+                <img src="/dashboard-assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle">
+              </div>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end mt-3 py-2">
+              <li>
+                <a class="dropdown-item" href="pages-account-settings-account.html">
+                  <div class="d-flex align-items-center">
+                    <div class="flex-shrink-0 me-2">
+                      <div class="avatar avatar-online">
+                        <img src="/dashboard-assets/img/avatars/1.png" alt class="w-px-40 h-auto rounded-circle">
+                      </div>
+                    </div>
+                    <div class="flex-grow-1">
+                      <h6 class="mb-0 small">John Doe</h6>
+                      <small class="text-muted">Admin</small>
 
-        if (emailSent) {
-            console.log("Resend OTP:", otp);
-            res.status(200).json({ success: true, message: "OTP Resent Successfully" });
-        } else {
-            res.status(500).json({ success: false, message: "Failed to resend OTP. Please try again" });
-        }
-    } catch (error) {
-        console.error("Error resending OTP:", error);
-        res.status(500).json({ success: false, message: "Internal Server Error. Please try again" });
-    }
-};
+                    </div>
+                  </div>
+                </a>
+              </li>
+              
+              <li>
+                <div class="d-grid px-4 pt-2 pb-1">
+                  <form action="/admin/admin-logout" method="GET" style="margin: 0; width: 100%;">
+                    <button type="submit" class="btn btn-danger d-flex" 
+                            style="width: 100%; border: none; background-color: #dc3545; padding: 10px 0; height: 50px;">
+                      <small class="align-middle">Logout</small>
+                      <i class="ri-logout-box-r-line ms-2 ri-16px"></i>
+                    </button>
+                  </form>
+                </div>
+              </li>
+            </ul>
+          </li>
+          <!--/ User -->
+        </ul>
+      </div>
+      <!-- Search Small Screens -->
+      <div class="navbar-search-wrapper search-input-wrapper  d-none">
+        <input type="text" class="form-control search-input container-xxl border-0" placeholder="Search..." aria-label="Search...">
+        <i class="ri-close-fill search-toggler cursor-pointer"></i>
+      </div>
+  
+</nav>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div class="flex-grow-1">
+    <h6 class="mb-0 small"><%= admin ? admin.name : 'Admin' %></h6>
+    <small class="text-muted">Admin</small>
+</div>
+<div class="avatar avatar-online">
+    <img src="/dashboard-assets/img/avatars/1.png" alt="<%= admin ? admin.name : 'Admin' %>" class="w-px-40 h-auto rounded-circle">
+</div>
+
+
 
 

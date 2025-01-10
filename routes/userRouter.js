@@ -13,6 +13,7 @@ const passport = require('passport');
 
 
 router.get('/',userController.loadHomePage);
+router.get('/category/:categoryId', userController.getProductsByCategory);
 router.get('/signup',userController.loadSignup)
 router.get('/login',userController.loadLogin);
 router.get('/logout',userController.logout)

@@ -48,21 +48,42 @@ const listOrders = async (req, res) => {
             query.paymentStatus = paymentStatus;
         }
 
-        // Fetch orders with pagination and populate
-        const orders = await Order.find(query)
-            .populate('userId', 'name email')
+        // Fetch orders with pagination and populate with error handling
+        const ordersQuery = Order.find(query)
+            .populate({
+                path: 'userId',
+                select: 'name email',
+                // Add default values if user is not found
+                transform: doc => {
+                    if (!doc) {
+                        return { name: 'Deleted User', email: 'N/A' };
+                    }
+                    return doc;
+                }
+            })
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        // Count total documents for pagination
-        const totalOrders = await Order.countDocuments(query);
+        const [orders, totalOrders] = await Promise.all([
+            ordersQuery.exec(),
+            Order.countDocuments(query)
+        ]);
+
+        // Process orders to handle null users
+        const processedOrders = orders.map(order => {
+            const orderObj = order.toObject();
+            if (!orderObj.userId) {
+                orderObj.userId = { name: 'Deleted User', email: 'N/A' };
+            }
+            return orderObj;
+        });
+
         const totalPages = Math.ceil(totalOrders / limit);
 
         // Determine no results message
-        if (searchApplied && orders.length === 0) {
+        if (searchApplied && processedOrders.length === 0) {
             if (search) {
-                // Check if search term exists in any field
                 const orderIdExists = await Order.findOne({ orderId: { $regex: search, $options: 'i' } });
                 const userExists = await User.findOne({ name: { $regex: search, $options: 'i' } });
 
@@ -89,7 +110,6 @@ const listOrders = async (req, res) => {
                 }
             }
 
-            // Combination search message
             if (search && status) {
                 noResultsMessage = `No orders found for "${search}" with status "${status}".`;
             }
@@ -100,7 +120,7 @@ const listOrders = async (req, res) => {
         }
 
         res.render('order-list', {
-            orders,
+            orders: processedOrders,
             currentPage: page,
             totalPages,
             search,
