@@ -6,7 +6,6 @@ const path= require('path')
 const env= require('dotenv').config()
 const passport= require("./config/passport")
 const session= require('express-session');
-const MongoStore = require('connect-mongo');
 const db=require('./config/db');
 const adminRouter= require('./routes/adminRouter')
 const userRouter= require('./routes/userRouter');
