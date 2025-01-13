@@ -1,0 +1,48 @@
+
+This is my productSchema.js code:- 
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const productSchema = new Schema({
+    productName: {
+        type: String,
+        required: true
+    },
+    description: {
+        type: String,
+        default: ''
+    },
+    category: {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+        required: true
+    },
+    regularPrice: {
+        type: Number,
+        required: true
+    },
+    
+    variants: [{
+        color: { type: String, required: true },
+        sizes: [{
+            size: { type: Number, required: true },
+            quantity: { type: Number, required: true }
+        }],
+        images: [{
+            filename: { type: String, required: true },
+            contentType: { type: String, default: 'image/jpeg' }
+        }],
+        isListed: { type: Boolean, default: true },
+        mainImage: { type: Boolean, default: false }  
+    }],
+    
+    isBlocked: {
+        type: Boolean,
+        default: false
+    },
+   
+}, { timestamps: true });
+
+
+
+

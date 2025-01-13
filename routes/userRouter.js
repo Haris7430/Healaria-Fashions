@@ -24,15 +24,17 @@ router.post('/verify-otp',userController.verifyOtp);
 router.post("/resend-otp",userController.resendOtp);
 
 
-router.get("/auth/google",passport.authenticate('google',{scope:['profile','email']}));
-router.get('/google/callback',passport.authenticate('google',{failureRedirect:'/signup'}),(req,res)=>{
+router.get("/auth/google", passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account'  // Always show account selector
+}));
 
+router.get('/google/callback', passport.authenticate('google', {failureRedirect: '/signup'}), (req, res) => {
     req.session.user = req.user;
     res.redirect('/')
-    
 });
 
-
+  
 router.get('/forgot-password',userController.getForgotPassword);
 router.post('/forgot-email-valid', userController.forgotEmailValid);
 router.post('/verify-passForgot-otp',userController.verifyForgotPassOtp);
@@ -93,7 +95,6 @@ router.get('/order/:orderId/download-pdf', userAuth, userProfileController.gener
 router.post('/order/:orderId/retry-payment', userAuth, userProfileController.retryPayment);
 router.post('/order/:orderId/return-item/:itemId', userAuth, userProfileController.returnOrderItem);
 router.get('/profile/wallet', userAuth, userProfileController.getWallet);
-
 
 
 

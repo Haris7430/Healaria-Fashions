@@ -5,7 +5,8 @@ const app= express();
 const path= require('path')
 const env= require('dotenv').config()
 const passport= require("./config/passport")
-const session= require('express-session')
+const session= require('express-session');
+const MongoStore = require('connect-mongo');
 const db=require('./config/db');
 const adminRouter= require('./routes/adminRouter')
 const userRouter= require('./routes/userRouter');
@@ -32,6 +33,13 @@ maxAge:24*60*60*1000
 
 app.use(flash());
 
+app.use((req, res, next) => {
+    res.locals.user = req.session.user || null;
+    res.locals.authMessage = req.session.authMessage;
+    // Clear the message after using it
+    delete req.session.authMessage;
+    next();
+});
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());

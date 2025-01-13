@@ -859,18 +859,9 @@
 
     } catch (error) {
       console.error('Failed to initialize wishlist states:', error);
-      // Show error notification
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to load wishlist status',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 3000
-      });
+      
     }
-  }
+  };
   
 	  // Handle wishlist toggle
 	  async function handleWishlistToggle(button) {
