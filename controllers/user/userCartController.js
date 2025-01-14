@@ -17,7 +17,7 @@ const getCartPage = async (req, res) => {
                 model: 'Product',
                 populate: {
                     path: 'variants',
-                    model: 'Product'
+                    model: 'Product' 
                 }
             });
 
